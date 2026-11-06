@@ -574,3 +574,8 @@ a.btn {
 .top .btn-primary {
   white-space: nowrap;
 }
+
+/* un bouton masqué reste masqué même si .btn fixe display */
+.btn[hidden] {
+  display: none;
+}

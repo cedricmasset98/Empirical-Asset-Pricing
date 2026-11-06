@@ -143,6 +143,7 @@ function renderHeader(): void {
   const months = ds.dates.filter((_, i) => ds.data[ASSET_COL[state.asset]]?.[i] != null);
   const span = months.length ? `${ASSET_INFO[state.asset].short} ${monthLabel(months[0])} → ${monthLabel(months[months.length - 1])}` : `aucun rendement pour ${ASSET_INFO[state.asset].label}`;
   $<HTMLAnchorElement>('report-link').href = state.asset === 'FUND' ? './report/rapport_fonds.pdf' : './report/rapport_bcv.pdf';
+  $<HTMLAnchorElement>('presentation-link').hidden = state.asset !== 'FUND';
   $('subtitle').innerHTML = state.asset === 'FUND'
     ? 'Fonds <b>BCV Swiss Equity A</b> <span class="mono">(BCV Asset Management)</span> · ISIN CH0006018706 · CHF'
     : 'Action <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF';
