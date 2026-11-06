@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = ROOT / "data" / "raw"  # téléchargements bruts (non versionnés)
 MANUAL_DIR = ROOT / "data" / "manual"  # fichiers d'import manuel (prioritaires)
+HISTORY_DIR = ROOT / "data" / "history"  # historiques longs raccordés aux sources en ligne
 PROCESSED_DIR = ROOT / "data" / "processed"
 PUBLIC_DATA = ROOT / "public" / "data"
 REFERENCE_DIR = ROOT / "tests" / "reference"
@@ -24,6 +25,10 @@ YAHOO_BCV = "BCVN.SW"
 # calculé comme indice de performance (dividendes réinvestis). Le pipeline ne
 # remplace JAMAIS cette série par un indice de prix.
 YAHOO_SPI_TR = "^SSHI"
+# Yahoo ne remonte qu'à mars 2013 : data/history/spi_tr_history.csv (date,spi_tr,
+# SPI TR quotidien depuis 1988) prolonge la série vers le passé, après contrôle
+# de concordance sur la période commune (pipeline.transform.splice_history).
+SPI_TR_HISTORY = "spi_tr_history.csv"
 # Indice de prix SMI : utilisé uniquement pour un contrôle de plausibilité du
 # caractère « total return » de ^SSHI, jamais comme benchmark.
 YAHOO_SMI_PRICE = "^SSMI"

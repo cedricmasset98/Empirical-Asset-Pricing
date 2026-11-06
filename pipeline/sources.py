@@ -17,12 +17,14 @@ import json
 import time
 import zipfile
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable
 
 import pandas as pd
 import requests
 
 from . import config as C
+from .transform import splice_history
 
 Info = dict[str, Any]
 
@@ -60,6 +62,10 @@ def _manual_csv(name: str, value_col: str) -> pd.Series | None:
     path = C.MANUAL_DIR / name
     if not path.exists():
         return None
+    return _read_level_csv(path, value_col)
+
+
+def _read_level_csv(path: Path, value_col: str) -> pd.Series:
     df = pd.read_csv(path)
     if "date" not in df.columns or value_col not in df.columns:
         raise ValueError(f"{path.name} : colonnes attendues 'date' et '{value_col}'.")
@@ -125,6 +131,15 @@ def fetch_spi_tr() -> tuple[pd.Series | None, Info]:
         _save_raw("spi_daily.csv", h)
         s = h["Close"].astype(float)
         info.update(status="ok", coverage=_coverage(s.index))
+        hist_path = C.HISTORY_DIR / C.SPI_TR_HISTORY
+        if hist_path.exists():
+            hist = _read_level_csv(hist_path, "spi_tr")
+            sp = splice_history(hist, s)
+            info["splice"] = {"ok": sp.ok, "message": sp.message, "file": f"data/history/{C.SPI_TR_HISTORY}"}
+            if sp.ok:
+                s = sp.series
+                info.update(coverage=_coverage(s.index),
+                            provider=f"{info['provider']} ; avant le {sp.junction.date()} : historique data/history/{C.SPI_TR_HISTORY}")
         return s, info
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")

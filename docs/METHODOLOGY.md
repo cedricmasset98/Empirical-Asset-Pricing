@@ -37,7 +37,8 @@ Les rendements ne sont calculés qu'entre mois consécutifs. Un mois manquant re
 - Source : Yahoo Finance `^SSHI`, c'est-à-dire le SPI (symbole SIX `SXGE`). SIX calcule le SPI comme indice de performance, dividendes réinvestis.
 - Le pipeline ne remplace **jamais** cette série par un indice de prix. Si elle est indisponible, les modèles qui l'utilisent affichent une erreur.
 - Contrôle de plausibilité : rendement moyen SPI − SMI, ce dernier étant un indice de prix. Ce n'est qu'un indicateur, car les compositions diffèrent.
-- Alternative : import manuel `data/manual/spi_tr_daily.csv`, par exemple un export SIX.
+- Historique long : Yahoo ne remonte qu'à mars 2013. Avant, la série est prolongée par `data/history/spi_tr_history.csv` (SPI TR quotidien depuis janvier 1988). Le raccord n'a lieu que si les deux séries concordent sur leur période commune : niveau, absence de dérive (qui trahirait un indice de prix) et jours divergents. Sinon, il est refusé et signalé dans le rapport de construction. Les niveaux Yahoo sont conservés ; l'historique est remis à leur échelle à la date de jonction.
+- Alternative : import manuel `data/manual/spi_tr_daily.csv`, par exemple un export SIX. Il remplace alors entièrement la source Yahoo et l'historique.
 
 ## 4. Taux sans risque : SARON
 
@@ -144,6 +145,6 @@ Tolérance relative : 10⁻⁸ à 10⁻⁹.
 ## 10. Limites connues
 
 - Les ajustements de Yahoo Finance peuvent contenir des erreurs. Les contrôles automatiques en détectent une partie seulement. En cas de doute, utilisez l'import manuel.
-- La couverture du SARON quotidien sur le portail BNS (depuis août 2009) et celle du SPI sur Yahoo Finance (depuis mars 2013) limitent l'échantillon : le Single Index Model commence en avril 2013. Un historique SPI TR plus long peut être fourni par import manuel.
+- Le SPI TR remonte à 1988 grâce à l'historique raccordé. La contrainte devient le SARON quotidien du portail BNS, disponible depuis août 2009 : les modèles avec taux sans risque commencent en septembre 2009.
 - Les rendements French sont révisés occasionnellement par l'auteur : les résultats peuvent changer légèrement d'une mise à jour à l'autre.
 - Le facteur momentum européen démarre plus tard que les fichiers 3 et 5 facteurs. L'échantillon commun de la comparaison commence donc à cette date au plus tôt.
