@@ -1,0 +1,263 @@
+% =============================================================================
+% Empirical Asset Pricing — présentation vulgarisée du fonds BCV Swiss Equity A
+% Gabarit : seul le texte est écrit ici. Les chiffres du fonds proviennent de
+% generated/macros.tex et les graphiques de generated/, produits par
+% pipeline/presentation.py. Compilation : latexmk -xelatex presentation.tex
+% =============================================================================
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{french}
+\setmainfont{TeX Gyre Pagella}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[most]{tcolorbox}
+
+\definecolor{bleu}{HTML}{1F5FA8}
+\definecolor{vert}{HTML}{2B8A3E}
+\definecolor{orange}{HTML}{D9480F}
+\definecolor{gris}{HTML}{4B5563}
+\definecolor{fond}{HTML}{F5F7FA}
+
+\usetheme{default}
+\usefonttheme{serif}
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{frametitle}{fg=bleu}
+\setbeamerfont{frametitle}{size=\Large,series=\bfseries}
+\setbeamercolor{normal text}{fg=black!85}
+\setbeamercolor{structure}{fg=bleu}
+\setbeamertemplate{itemize item}{\color{bleu}\textbullet}
+\setbeamertemplate{itemize subitem}{\color{gris}–}
+\setbeamertemplate{footline}{%
+  \hbox to \paperwidth{\hspace{1.2em}\color{gris}\tiny Empirical Asset Pricing · Fonds BCV Swiss Equity A\hfill\insertframenumber/\inserttotalframenumber\hspace{1.2em}}\vspace{0.6em}}
+\setlength{\parskip}{0.4em}
+
+\newtcolorbox{cle}{halign=flush left,colback=bleu!6,colframe=bleu,boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,top=4pt,bottom=4pt}
+\newcommand{\gros}[2]{{\color{#1}\bfseries\LARGE #2}}
+
+\input{generated/macros.tex}
+
+\hypersetup{pdftitle={Le fonds BCV Swiss Equity A a-t-il battu le marché suisse ?},pdfauthor={Empirical Asset Pricing},pdflang=fr}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+\begin{frame}[plain]
+  \vfill
+  {\color{gris}\small EMPIRICAL ASSET PRICING · PRÉSENTATION}\par\medskip
+  {\color{bleu}\huge\bfseries Le fonds BCV Swiss Equity A\\[2pt] a-t-il battu le marché suisse ?}\par\medskip
+  {\large Ce que disent les chiffres, et le lien avec Fama et French (2010)}\par\bigskip
+  {\small\color{gris} Rendements mensuels en CHF · données du \DateDonnees{} · générée le \DateRapport{} (version \texttt{\Commit})}
+  \vfill
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{La question}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      Un fonds \textbf{géré activement} : une équipe choisit les actions suisses qu'elle pense les meilleures, au lieu de simplement acheter tout le marché.
+
+      Ce travail a un prix : des \textbf{frais annuels} prélevés sur le fonds.
+
+      \begin{cle}
+        La question est simple : ce choix actif rapporte-t-il plus que le marché suisse, une fois les frais payés ?
+      \end{cle}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \footnotesize
+      \begin{tabular}{@{}ll@{}}
+        \toprule
+        Fonds & BCV Swiss Equity A \\
+        Gestion & active \\
+        Gérant & BCV Asset Management \\
+        Lancement & avril 1997 \\
+        Indice de référence & SPI \\
+        Frais (TER) & \TER{} par an \\
+        \bottomrule
+      \end{tabular}\par\medskip
+      {\scriptsize\color{gris} Le SPI regroupe presque toutes les actions suisses cotées, dividendes réinvestis. TER au \TERDate.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Premier regard : 100 CHF placés en \LongDebut}
+  \centering
+  \includegraphics[width=0.9\textwidth]{generated/fig_cent.pdf}\par
+  \raggedright
+  En \LongAnnees{} ans, le fonds a rapporté \CAGRFonds{} par an et le SPI \CAGRSPI{} : environ \CAGREcart{} point de moins chaque année, et le fonds n'a battu le SPI que pendant \MoisGagnants{} des mois.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Comparer à armes égales : le risque pris}
+  \begin{columns}[c]
+    \begin{column}{0.48\textwidth}
+      \centering\includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{generated/fig_suivi.pdf}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \small
+      Un fonds plus risqué que le marché \emph{devrait} rapporter plus en moyenne. Ici, chaque point est un mois, et tous sont collés à la diagonale :
+      \begin{itemize}
+        \item le SPI explique \textbf{\RDeux} des variations du fonds ;
+        \item SPI $+1$~\% $\Rightarrow$ fonds $+$\textbf{\Beta~\%} en moyenne (le « bêta »).
+      \end{itemize}
+      Le fonds prend \textbf{le même risque que le marché} : il en est presque une copie.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{L'alpha : la mesure de la valeur ajoutée}
+  \begin{cle}
+    \centering
+    \textbf{alpha} = rendement du fonds $-$ rendement \emph{attendu} vu le risque qu'il prend sur le marché
+  \end{cle}
+  \begin{itemize}
+    \item \textbf{alpha positif} : le gérant a fait mieux que ce que son exposition au marché laissait prévoir ;
+    \item \textbf{alpha nul} : il n'a rien ajouté ni retiré ;
+    \item \textbf{alpha négatif} : il a fait moins bien.
+  \end{itemize}
+  Pour savoir si l'alpha est réel ou dû au hasard, on regarde sa \textbf{statistique $t$} : au-delà de 2 environ (en valeur absolue), le hasard devient une explication peu crédible.
+
+  {\small\color{gris} Mesure faite de \PeriodeDebut{} à \PeriodeFin{} (\NObs{} mois), période où le taux sans risque suisse (SARON) est disponible. Modèle de marché (Single Index), erreurs standards de Newey-West.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Résultat : un alpha négatif, et pas par hasard}
+  \begin{columns}[c]
+    \begin{column}{0.38\textwidth}
+      \centering
+      \gros{orange}{\AlphaNet}\par
+      {\small par an, après frais}\par\medskip
+      {\small statistique $t$ = \AlphaNetT}\par
+      {\scriptsize\color{gris} probabilité qu'un tel écart soit dû au hasard : \AlphaNetP}
+    \end{column}
+    \begin{column}{0.58\textwidth}
+      \AlphaNetLecture
+
+      Le fonds suit le SPI de très près : même un petit écart, répété mois après mois, devient clairement visible.
+
+      {\small En ajoutant les facteurs de taille, de style et de tendance (modèle de Carhart), on trouve \AlphaCarNet{} par an ($t$ = \AlphaCarNetT) : le verdict ne change pas.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{D'où vient l'écart ? Les frais}
+  \centering
+  \includegraphics[width=0.78\textwidth]{generated/fig_frais.pdf}\par
+  \raggedright
+  Si l'on réajoute les frais du fonds (\TER{} par an), l'alpha devient \textbf{\AlphaBrut} ($t$ = \AlphaBrutT). \AlphaBrutLecture
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Et avec d'autres façons de mesurer le risque ?}
+  \small Les modèles de Fama-French et de Carhart ajoutent au marché des facteurs de taille, de style, de tendance, de rentabilité et d'investissement.
+  \begin{center}
+    \small\input{generated/tab_modeles.tex}
+  \end{center}
+  {\scriptsize\color{gris} En gras : significatif au seuil de 5~\% ($|t|$ supérieur à 2 environ). Avant frais = rendement net + TER/12. Erreurs standards de Newey-West ; facteurs européens (K.~French) convertis en CHF.}\par
+  \begin{cle}\small \NetRobuste{} \ModelesLecture\end{cle}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Fama et French (2010) : chance ou talent ?}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{La question}\par
+      Parmi des milliers de fonds, certains battent forcément le marché, rien que par chance. Comment savoir si les meilleurs ont \emph{vraiment} du talent ?
+
+      \textbf{Les données}\par
+      Les fonds d'actions américains gérés activement, de 1984 à 2006.
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \textbf{L'idée}\par
+      Simuler, par ordinateur, un monde où \emph{aucun} gérant n'a de talent, puis le comparer au monde réel.
+      \begin{itemize}
+        \item si les meilleurs fonds réels ne font pas mieux que les meilleurs fonds « chanceux » simulés, leur succès s'explique par la chance ;
+        \item s'ils font nettement mieux, il y a du talent.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Ce qu'ils ont trouvé}
+  \begin{enumerate}
+    \item Tous ensemble, les fonds actifs détiennent \textbf{à peu près le marché} : ils ressemblent à un fonds indiciel.
+    \item Après frais, cet ensemble perd environ \textbf{\FFNet{} par an} face au marché.
+    \item En réajoutant les frais, l'alpha remonte à environ \textbf{\FFBrut} : les gérants, ensemble, ne créent ni ne détruisent de valeur ; \textbf{les frais expliquent toute la sous-performance}.
+    \item Fonds par fonds : très peu ont assez de talent pour couvrir leurs frais. Avant frais, on voit un peu de vrai talent\ldots{} et un peu de vraie maladresse, aux deux extrémités.
+  \end{enumerate}
+  \begin{cle}
+    En résumé : le marché, c'est la moyenne des gérants, et cette moyenne ne bat pas le marché, frais déduits.
+  \end{cle}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Le parallèle avec le fonds BCV}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \centering\includegraphics[width=\textwidth,height=0.78\textheight,keepaspectratio]{generated/fig_ff.pdf}
+    \end{column}
+    \begin{column}{0.35\textwidth}\small
+      Même portrait, à une autre échelle :
+      \begin{itemize}
+        \item un fonds qui \textbf{ressemble au marché} (bêta \Beta) ;
+        \item un alpha après frais \textbf{\AlphaNet}, pour \TER{} de frais ;
+        \item \AlphaBrutCourt.
+      \end{itemize}
+      Le fonds BCV se comporte comme l'« ensemble des fonds » de Fama et French.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Ce que l'on peut dire, et ce que l'on ne peut pas dire}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{\color{vert}On peut dire}
+      \begin{itemize}
+        \item le fonds a rapporté moins que le SPI pour un risque comparable ;
+        \item \PeutFrais ;
+        \item c'est ce que la recherche observe en moyenne pour les fonds actifs.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{\color{orange}On ne peut pas dire}
+      \begin{itemize}
+        \item \NePeutPas ;
+        \item que l'avenir ressemblera au passé ;
+        \item que la comparaison avec Fama et French est exacte : un seul fonds suisse, une autre période, et le TER actuel appliqué à toute la période.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{À retenir}
+  \begin{enumerate}
+    \item Le fonds BCV Swiss Equity A suit le marché suisse presque à l'identique.
+    \item Après frais, il fait environ \AlphaNet{} par an de moins que ce que son risque laissait attendre, et ce n'est pas un hasard.
+    \item \RetenirTrois
+    \item \RetenirQuatre
+  \end{enumerate}
+  \vfill
+  {\small Pour refaire les calculs (autres modèles, autres périodes) : \URLSite}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Sources}
+  \small
+  \begin{itemize}
+    \item Fama, E. F. et French, K. R. (2010). Luck versus Skill in the Cross-Section of Mutual Fund Returns. \emph{Journal of Finance}, 65(5), 1915–1947.
+    \item Fonds : série officielle de performance, distributions brutes réinvesties, Gérifonds SA ; TER : fiche mensuelle du fonds.
+    \item SPI (Swiss Performance Index, dividendes réinvestis) : Yahoo Finance depuis 2013, historique antérieur raccordé et contrôlé.
+    \item SARON : Banque nationale suisse (data.snb.ch). Facteurs de Carhart : Kenneth R. French Data Library (Europe), convertis en CHF.
+  \end{itemize}
+  \vfill
+  {\scriptsize\color{gris} Toutes les valeurs propres au fonds sont recalculées automatiquement à chaque mise à jour des données. Les chiffres de Fama et French sont ceux de l'article (portefeuille agrégé des fonds, pondéré par les encours, modèle à trois facteurs, arrondis). Ce document n'est pas un conseil en placement.}
+\end{frame}
+
+\end{document}

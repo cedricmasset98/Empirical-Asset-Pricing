@@ -30,6 +30,7 @@ pipeline/            Python : récupération, transformation, contrôles, réfé
   olsref.py          OLS et diagnostics numpy/scipy (même conventions, testés contre statsmodels)
   report.py          -> public/report/rapport_{bcv,fonds,comparaison}.pdf et sources .zip
   report_pair.py     rapport comparatif action / fonds
+  presentation.py    -> public/report/presentation_fonds.pdf (Beamer vulgarisé, fonds vs SPI, lien avec Fama-French 2010)
 report/*.tex         gabarits LaTeX (texte seul ; chiffres injectés par macros)
   tests/             tests unitaires et test de bout en bout hors ligne
 src/
