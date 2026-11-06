@@ -42,6 +42,12 @@ GREEN = "#2b8a3e"
 # alpha net ≈ −0,8 point par an, alpha brut (frais réajoutés) ≈ +0,1 point.
 FF_NET, FF_GROSS = -0.008, 0.001
 
+# modèles estimés avec le SPI comme marché (les variantes « marché européen »
+# mesurent surtout l'écart entre marchés suisse et européen, pas la gestion)
+MODELS_SPI = ["CAPM", "FF3", "CARHART", "FF5"]
+MODEL_LABELS = {"CAPM": "Modèle de marché (Single Index)", "FF3": "Fama-French 3 facteurs",
+                "CARHART": "Carhart (4 facteurs)", "FF5": "Fama-French 5 facteurs"}
+
 
 def _fit(ds: dict, model: str, add: float = 0.0):
     rows = rows_for(ds, required(model, "SPI", "FUND"))
@@ -53,8 +59,12 @@ def compute(ds: dict) -> dict:
     ter = C.FUND["ter"]
     sim, y, X, dates = _fit(ds, "CAPM")
     sim_g, *_ = _fit(ds, "CAPM", ter / 12)
-    car, *_ = _fit(ds, "CARHART")
-    car_g, *_ = _fit(ds, "CARHART", ter / 12)
+    models = []
+    for key in MODELS_SPI:
+        net, *_ = _fit(ds, key)
+        gross, *_ = _fit(ds, key, ter / 12)
+        models.append({"model": key, "net": net, "gross": gross})
+    car = next(m["net"] for m in models if m["model"] == "CARHART")
     if sim.n < 60:
         raise RuntimeError(f"Seulement {sim.n} mois pour le fonds : présentation impossible.")
 
@@ -72,7 +82,7 @@ def compute(ds: dict) -> dict:
     idx, keys = idx[start:], keys[start:]
     fr = np.array([D["fund_ret"][i] for i in idx])
     sr = np.array([D["spi_ret"][i] for i in idx])
-    return {"sim": sim, "sim_g": sim_g, "car": car, "car_g": car_g, "y": y, "X": X, "dates": dates,
+    return {"sim": sim, "sim_g": sim_g, "car": car, "models": models, "y": y, "X": X, "dates": dates,
             "long_dates": keys, "fr": fr, "sr": sr, "ter": ter}
 
 
@@ -81,7 +91,7 @@ def _signif(p: float) -> bool:
 
 
 def macros(ds: dict, r: dict) -> dict[str, str]:
-    sim, sim_g, car, car_g = r["sim"], r["sim_g"], r["car"], r["car_g"]
+    sim, sim_g, car = r["sim"], r["sim_g"], r["car"]
     fr, sr = r["fr"], r["sr"]
     years = len(fr) / 12
     g_f, g_s = float(np.prod(1 + fr)), float(np.prod(1 + sr))
@@ -96,29 +106,62 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
         net_lecture = "Le fonds a rapporté davantage que son exposition au marché le laissait attendre, et cet écart ne s'explique pas par le hasard."
     else:
         net_lecture = "Cet écart reste dans ce que le hasard peut produire : on ne peut pas affirmer que le fonds a fait mieux ou moins bien que prévu."
-    if not _signif(sim_g.pvalue[0]):
-        brut_lecture = "Avant frais, le fonds fait à peu près jeu égal avec le marché : l'écart restant est trop faible pour être distingué du hasard."
-        brut_court = "avant frais, ni talent ni maladresse mesurable"
-    elif a_gross > 0:
-        brut_lecture = "Avant frais, le fonds fait légèrement mieux que le marché, et cet avantage ne s'explique pas par le hasard ; les frais l'absorbent toutefois entièrement."
-        brut_court = "avant frais, un léger avantage, absorbé par les frais"
-    else:
-        brut_lecture = "Même avant frais, le fonds fait moins bien que le marché : les frais n'expliquent pas tout l'écart."
-        brut_court = "même avant frais, un retard sur le marché"
     part_frais = r["ter"] / abs(a_net) if a_net < 0 else float("nan")
+    # lecture du rendement avant frais : sur l'ensemble des modèles, pas un seul
     if not _signif(sim_g.pvalue[0]):
+        brut_lecture = "Dans le modèle de marché, le fonds fait donc à peu près jeu égal avec le marché avant frais : l'écart restant est trop faible pour être distingué du hasard."
+    elif a_gross > 0:
+        brut_lecture = "Dans le modèle de marché, le fonds fait donc légèrement mieux que le marché avant frais, et cet avantage ne s'explique pas par le hasard."
+    else:
+        brut_lecture = "Dans le modèle de marché, le fonds fait donc moins bien que le marché, même avant frais."
+    ms = r["models"]
+    nm = len(ms)
+    n_net_neg = sum(_signif(m["net"].pvalue[0]) and m["net"].params[0] < 0 for m in ms)
+    pos = [m for m in ms if _signif(m["gross"].pvalue[0]) and m["gross"].params[0] > 0]
+    neg = [m for m in ms if _signif(m["gross"].pvalue[0]) and m["gross"].params[0] < 0]
+    all_net_neg = all(m["net"].params[0] < 0 for m in ms)
+    names = lambda lst: ", ".join(MODEL_LABELS[m["model"]] for m in lst)  # noqa: E731
+    net_robuste = (f"Après frais, l'alpha est négatif et significatif dans les {nm} modèles."
+                   if n_net_neg == nm else
+                   f"Après frais, l'alpha est négatif et significatif dans {n_net_neg} modèles sur {nm}.")
+    if neg:
+        cas = "retard"
+    elif not pos:
+        cas = "nul"
+    elif len(pos) * 2 <= nm and all_net_neg:
+        cas = "mixte"
+    else:
+        cas = "talent"
+    if cas == "nul":
+        modeles_lecture = "Avant frais, aucun modèle ne détecte d'alpha significatif : le gérant fait jeu égal avec le marché, quelle que soit la façon de mesurer le risque."
+        brut_court = "avant frais, ni talent ni maladresse mesurable"
         ne_peut_pas = "que le gérant manque de talent : avant frais, il fait à peu près jeu égal avec le marché"
         peut_frais = "cet écart correspond pour l'essentiel aux frais"
-        retenir3 = "Cet écart vient des frais : avant frais, la performance est proche de celle du marché."
+        retenir3 = "Cet écart vient des frais : avant frais, la performance est proche de celle du marché, dans tous les modèles."
         retenir4 = ("C'est la conclusion de Fama et French (2010) pour l'ensemble des fonds actifs : "
                     "\\textbf{ce sont les frais qui font la différence}.")
-    elif a_gross > 0:
+    elif cas == "mixte":
+        qui = f"un seul modèle sur {nm} ({names(pos)}) détecte" if len(pos) == 1 else f"seuls {len(pos)} modèles sur {nm} ({names(pos)}) détectent"
+        modeles_lecture = f"Avant frais, c'est plus nuancé : {qui} un petit avantage significatif, toujours inférieur aux frais."
+        brut_court = "avant frais, jeu égal ou léger avantage selon le modèle, toujours sous les frais"
+        ne_peut_pas = "que le gérant manque de talent : avant frais, il fait jeu égal avec le marché, voire un peu mieux selon le modèle"
+        peut_frais = "les frais absorbent toute la valeur que le gérant a pu ajouter"
+        retenir3 = ("Cet écart vient des frais : avant frais, le fonds fait jeu égal avec le marché, ou un peu mieux selon le modèle, "
+                    "mais cet avantage reste inférieur aux frais.")
+        retenir4 = ("C'est la conclusion de Fama et French (2010) : un peu de vrai talent existe, mais "
+                    "\\textbf{il couvre rarement les frais}.")
+    elif cas == "talent":
+        modeles_lecture = (f"Avant frais, {len(pos)} modèles sur {nm} détectent un avantage significatif : le gérant ajoute de la valeur"
+                           + (", mais moins que ce que coûtent les frais." if all_net_neg else "."))
+        brut_court = "avant frais, un léger avantage" + (", absorbé par les frais" if all_net_neg else "")
         ne_peut_pas = "que le gérant manque de talent : avant frais, il bat légèrement le marché"
-        peut_frais = "les frais absorbent plus que la valeur ajoutée par le gérant"
-        retenir3 = "Avant frais, le gérant ajoute un peu de valeur, mais les frais l'absorbent entièrement."
+        peut_frais = "les frais absorbent plus que la valeur ajoutée par le gérant" if all_net_neg else "le gérant ajoute de la valeur avant frais"
+        retenir3 = "Avant frais, le gérant ajoute un peu de valeur" + (", mais les frais l'absorbent entièrement." if all_net_neg else ".")
         retenir4 = ("Fama et French (2010) observent la même chose chez les rares bons gérants : "
                     "\\textbf{leur talent couvre rarement leurs frais}.")
     else:
+        modeles_lecture = f"Même avant frais, {len(neg)} modèle{'s' if len(neg) > 1 else ''} sur {nm} détecte{'nt' if len(neg) > 1 else ''} un retard significatif sur le marché."
+        brut_court = "même avant frais, un retard sur le marché"
         ne_peut_pas = "que les frais expliquent tout : même avant frais, le fonds reste en retard"
         peut_frais = "les frais n'expliquent qu'une partie de cet écart"
         retenir3 = "Même avant frais, le fonds reste en retard sur le marché : les frais n'expliquent pas tout."
@@ -159,8 +202,9 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
         "TERDate": month_fr(C.FUND["ter_date"][:7]),
         "AlphaBrut": pct(a_gross, 2),
         "AlphaBrutT": num(sim_g.stat[0], 1),
-        "AlphaCarBrut": pct(12 * car_g.params[0], 2),
-        "AlphaCarBrutT": num(car_g.stat[0], 1),
+        "NetRobuste": net_robuste,
+        "ModelesLecture": modeles_lecture,
+        "NbModeles": str(nm),
         "AlphaBrutLecture": brut_lecture,
         "AlphaBrutCourt": brut_court,
         "PartFrais": pct(part_frais, 0) if np.isfinite(part_frais) else "—",
@@ -177,6 +221,22 @@ def write_macros(m: dict[str, str]) -> None:
     lines = ["% Généré par pipeline/presentation.py — ne pas modifier à la main."]
     lines += [f"\\newcommand{{\\{k}}}{{{v}}}" for k, v in m.items()]
     (GEN / "macros.tex").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_table(r: dict) -> None:
+    def cell(f):
+        a, t = pct(12 * f.params[0], 2), num(f.stat[0], 1)
+        if a.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+            a = "+" + a
+        return (f"\\textbf{{{a}}} & \\textbf{{{t}}}" if _signif(f.pvalue[0]) else f"{a} & {t}")
+    lines = ["\\begin{tabular}{@{}lrrcrr@{}}", "\\toprule",
+             " & \\multicolumn{2}{c}{\\textbf{Après frais}} & & \\multicolumn{2}{c}{\\textbf{Avant frais}} \\\\",
+             "\\cmidrule{2-3}\\cmidrule{5-6}",
+             "Modèle (marché : SPI) & alpha/an & $t$ & & alpha/an & $t$ \\\\", "\\midrule"]
+    for m in r["models"]:
+        lines.append(f"{MODEL_LABELS[m['model']]} & {cell(m['net'])} & & {cell(m['gross'])} \\\\")
+    lines += ["\\bottomrule", "\\end{tabular}"]
+    (GEN / "tab_modeles.tex").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_figures(r: dict) -> None:
@@ -287,6 +347,7 @@ def main(argv: list[str] | None = None) -> int:
         r = compute(ds)
         m = macros(ds, r)
         write_macros(m)
+        write_table(r)
         write_figures(r)
         if not args.no_compile:
             compile_pdf()

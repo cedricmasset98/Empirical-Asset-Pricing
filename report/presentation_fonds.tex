@@ -138,7 +138,7 @@
 
       Le fonds suit le SPI de très près : même un petit écart, répété mois après mois, devient clairement visible.
 
-      {\small En ajoutant les facteurs de taille, de style et de tendance (modèle de Carhart), le verdict ne change pas : \AlphaCarNet{} par an ($t$ = \AlphaCarNetT).}
+      {\small En ajoutant les facteurs de taille, de style et de tendance (modèle de Carhart), on trouve \AlphaCarNet{} par an ($t$ = \AlphaCarNetT) : le verdict ne change pas.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -148,7 +148,17 @@
   \centering
   \includegraphics[width=0.78\textwidth]{generated/fig_frais.pdf}\par
   \raggedright
-  Si l'on réajoute les frais du fonds (\TER{} par an), l'alpha devient \textbf{\AlphaBrut} ($t$ = \AlphaBrutT ; Carhart : \AlphaCarBrut, $t$ = \AlphaCarBrutT). \AlphaBrutLecture
+  Si l'on réajoute les frais du fonds (\TER{} par an), l'alpha devient \textbf{\AlphaBrut} ($t$ = \AlphaBrutT). \AlphaBrutLecture
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Et avec d'autres façons de mesurer le risque ?}
+  \small Les modèles de Fama-French et de Carhart ajoutent au marché des facteurs de taille, de style, de tendance, de rentabilité et d'investissement.
+  \begin{center}
+    \small\input{generated/tab_modeles.tex}
+  \end{center}
+  {\scriptsize\color{gris} En gras : significatif au seuil de 5~\% ($|t|$ supérieur à 2 environ). Avant frais = rendement net + TER/12. Erreurs standards de Newey-West ; facteurs européens (K.~French) convertis en CHF.}\par
+  \begin{cle}\small \NetRobuste{} \ModelesLecture\end{cle}
 \end{frame}
 
 % -----------------------------------------------------------------------------
