@@ -186,7 +186,7 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
         beta_sens = "plus sensible au marché que la moyenne des actions"
     r2p = 100 * f.r2
     if r2p < 20:
-        r2_phrase = "Le marché n'explique donc qu'une petite partie des fluctuations mensuelles de l'action : l'essentiel de son risque est propre à BCV (risque idiosyncratique)."
+        r2_phrase = "Le marché n'explique donc qu'une petite partie des fluctuations mensuelles de l'action. Le reste correspond surtout à des événements propres à BCV, mais peut aussi refléter d'autres influences communes que le modèle n'inclut pas."
     elif r2p < 50:
         r2_phrase = "Le marché explique une partie appréciable, mais minoritaire, des fluctuations de l'action."
     else:
@@ -198,7 +198,7 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
                        else "la conclusion au seuil de 5~\\% dépend de la méthode retenue, ce qui appelle à la prudence")
     n_comp = len(comp)
     if n_comp and nsig == n_comp:
-        fact = "Ajouter des facteurs ne fait pas disparaître l'alpha : il reste significatif à 5~\\% dans toutes les spécifications"
+        fact = "Ajouter des facteurs ne fait pas disparaître l'alpha : il reste positif et significatif à 5~\\% dans toutes les spécifications"
         robust = "L'alpha reste du même ordre et significatif à 5~\\% dans"
     elif nsig == 0:
         fact = "Dans aucune spécification l'alpha n'est significatif à 5~\\%"
@@ -208,8 +208,8 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
         robust = f"L'alpha est significatif à 5~\\% dans {nsig} des"
     r2_main = next((c["fit"].r2 for c in comp if c["model"] == "CAPM" and c["universe"] == "SPI"), f.r2)
     r2_gain = max((c["fit"].r2 for c in comp), default=f.r2) - r2_main
-    fact_r2 = ("Les facteurs supplémentaires n'améliorent presque pas l'explication des fluctuations de BCV"
-               f" (gain de $R^2$ d'au plus {num(100 * r2_gain, 1)} point), ce qui suggère qu'ils ne sont pas les bons outils pour décrire cette action"
+    fact_r2 = ("Les facteurs supplémentaires n'améliorent presque pas l'explication des fluctuations mensuelles de BCV"
+               f" (gain de $R^2$ d'au plus {num(100 * r2_gain, 1)} point de pourcentage) : ils ne captent visiblement pas ce qui fait varier cette action d'un mois à l'autre"
                if r2_gain < 0.05 else
                f"Les facteurs supplémentaires améliorent l'explication des fluctuations de BCV (gain de $R^2$ jusqu'à {num(100 * r2_gain, 1)} points)")
     share_sig = float(np.mean(ra_sig)) if roll else 0.0
@@ -217,13 +217,25 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
     roll_limite = ("les fenêtres glissantes montrent d'ailleurs qu'il n'est significatif que sur une minorité de sous-périodes"
                    if share_sig < 0.5 else "même s'il est significatif dans la plupart des fenêtres glissantes, ces fenêtres se chevauchent fortement")
     lowvol = ("et BCV en fait partie" if b < 1 else "ce qui ne concerne toutefois pas directement BCV, dont le bêta dépasse 1")
-    beta_part = ("Avec un bêta faible, le marché ne « justifie » qu'une petite partie du rendement de BCV ; l'alpha est donc, pour l'essentiel, le rendement moyen élevé de l'action elle-même."
-                 if b < 0.7 else "La part expliquée par le marché est donc substantielle.")
-    r2_limite = ("Le faible $R^2$ signifie que les modèles décrivent mal cette action." if f.r2 < 0.2
-                 else "Même avec un $R^2$ correct, des facteurs pertinents peuvent manquer.")
+    beta_part = ("Comme le bêta est faible, l'exposition estimée au marché n'est associée qu'à une partie limitée du rendement moyen excédentaire de BCV"
+                 if b < 0.7 else "L'exposition estimée au marché est associée à une part importante du rendement moyen excédentaire de BCV")
+    r2_limite = ("Le faible $R^2$ indique que les facteurs étudiés expliquent peu les fluctuations mensuelles de BCV. Cela ne signifie pas, à lui seul, que les modèles évaluent incorrectement son rendement moyen ; mais une partie des fluctuations non expliquées peut provenir de facteurs systématiques absents des modèles."
+                 if f.r2 < 0.2 else "Même avec un $R^2$ appréciable, des facteurs pertinents peuvent manquer.")
+
+    perf = ("a progressé davantage que" if grow_bcv > grow_spi else "a progressé moins que")
+    part_mkt = (b * mean_x / mean_y) if mean_y > 0 else float("nan")
+    if n_comp and nsig == n_comp:
+        comp_essentiel = f"L'alpha reste positif et significatif à 5~\\% dans les {n_comp} variantes de modèles testées"
+    elif nsig == 0:
+        comp_essentiel = f"L'alpha n'est significatif à 5~\\% dans aucune des {n_comp} variantes de modèles testées"
+    else:
+        comp_essentiel = f"L'alpha est significatif à 5~\\% dans {nsig} des {n_comp} variantes de modèles testées"
 
     first, last = r["dates"][0], r["dates"][-1]
     out = {
+        "PerfPhrase": perf,
+        "CompEssentiel": comp_essentiel,
+        "PartMarchePct": f"{num(100 * part_mkt, 0)}~\\%" if math.isfinite(part_mkt) else "—",
         "InferenceConclusion": inference_concl,
         "FacteursPhrase": fact,
         "RobustessePhrase": robust,
@@ -285,6 +297,8 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
         "AlphaMaxA": pct(12 * max(comp_alpha), 1) if comp else "—",
         "NbSigCinq": str(nsig),
         "RollFenetre": str(ROLL_WINDOW),
+        "RollAnnees": {12: "l'année précédente", 24: "les deux années précédentes", 36: "les trois années précédentes", 60: "les cinq années précédentes", 120: "les dix années précédentes"}.get(ROLL_WINDOW, f"les {ROLL_WINDOW} mois précédents"),
+        "RollChevauchement": f"{num(100 * (ROLL_WINDOW - 1) / ROLL_WINDOW, 0)}~\\%",
         "RollN": str(len(roll)),
         "RollBetaMin": num(rb[i_min], 2) if roll else "—",
         "RollBetaMinDate": month_fr(roll[i_min]["date"]) if roll else "—",
@@ -418,11 +432,17 @@ def write_figures(r: dict) -> None:
     d = _dates(r["dates"])
 
     # 1. croissance de 100 CHF
-    fig, ax = plt.subplots(figsize=(6.2, 2.7))
-    ax.plot(d, 100 * np.cumprod(1 + r["bcv"]), color=ORANGE, lw=1.6, label="Action BCV (dividendes réinvestis)")
-    ax.plot(d, 100 * np.cumprod(1 + r["spi"]), color=BLUE, lw=1.4, label="SPI Total Return")
-    ax.plot(d, 100 * np.cumprod(1 + r["rf"]), color=GREY, lw=1.0, ls="--", label="Placement au SARON")
-    ax.set_ylabel("Valeur (CHF)")
+    fig, ax = plt.subplots(figsize=(6.2, 2.9))
+    series = ((r["bcv"], ORANGE, 1.7, "-", "Action BCV (dividendes réinvestis)"),
+              (r["spi"], BLUE, 1.5, "-", "SPI Total Return"),
+              (r["rf"], GREY, 1.1, "--", "Placement au SARON"))
+    for ret, col, lw, ls, lab in series:
+        v = 100 * np.cumprod(1 + ret)
+        ax.plot(d, v, color=col, lw=lw, ls=ls, label=lab)
+        ax.annotate(f"{num(v[-1], 0)} CHF", (d[-1], v[-1]), xytext=(4, 0), textcoords="offset points",
+                    va="center", fontsize=8, color=col)
+    ax.set_ylabel("Valeur de 100 CHF investis (CHF)")
+    ax.set_xlim(d[0], d[-1] + (d[-1] - d[0]) * 0.09)
     ax.legend(loc="upper left", fontsize=8)
     fig.savefig(GEN / "fig_croissance.pdf")
     plt.close(fig)
@@ -440,6 +460,17 @@ def write_figures(r: dict) -> None:
     ax.plot(100 * grid, 100 * m, color=ORANGE, lw=2.2, label="Droite estimée (OLS)")
     ax.axhline(0, color=GREY, lw=0.6)
     ax.axvline(0, color=GREY, lw=0.6)
+    a0 = 100 * f.params[0]
+    ax.plot([0], [a0], "o", color=ORANGE, ms=6, mec="white", mew=1.2, zorder=5)
+    ax.annotate(f"α = {num(a0, 2)} % par mois\n(hauteur de la droite\nquand le marché fait 0 %)", (0, a0),
+                xytext=(0.60, 0.20), textcoords="axes fraction", fontsize=8, color="#1f2937", ha="left", va="top",
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#d1d5db", lw=0.6, alpha=0.95),
+                arrowprops=dict(arrowstyle="-|>", color="#374151", lw=0.8, shrinkB=4))
+    xr = 100 * grid[int(len(grid) * 0.86)]
+    ax.annotate(f"pente = β = {num(f.params[1], 2)}\n(+1 % de marché → +{num(f.params[1], 2)} % BCV)", (xr, 100 * (f.params[0] + f.params[1] * xr / 100)),
+                xytext=(0.97, 0.97), textcoords="axes fraction", fontsize=8, color="#1f2937", ha="right", va="top",
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#d1d5db", lw=0.6, alpha=0.95),
+                arrowprops=dict(arrowstyle="-|>", color="#374151", lw=0.8, shrinkB=2))
     ax.set_xlabel("Rendement excédentaire du SPI (% par mois)")
     ax.set_ylabel("Rendement excédentaire de BCV (% par mois)")
     _pct_axis(ax, "y")
@@ -460,7 +491,11 @@ def write_figures(r: dict) -> None:
             ax.errorbar(i, a, yerr=[[a - 1200 * ff.ci_low[0]], [1200 * ff.ci_high[0] - a]], fmt="o" if c["universe"] == "SPI" else "D",
                         color=col, ms=5, capsize=3, lw=1.3)
             labels.append(MODEL_NAMES[c["model"]].replace("Fama-French ", "FF"))
-        ax.axhline(0, color=GREY, lw=0.8)
+        ax.axhline(0, color="#111827", lw=1.3, zorder=0)
+        ax.annotate("α = 0", (len(comp) - 0.55, 0), xytext=(0, 3), textcoords="offset points", fontsize=8, color="#111827", ha="right", va="bottom")
+        ax.set_xlim(-0.6, len(comp) - 0.4)
+        lo_y, hi_y = ax.get_ylim()
+        ax.set_ylim(min(lo_y, -0.12 * (hi_y - min(lo_y, 0))), hi_y)
         ax.set_xticks(range(len(comp)), labels)
         ax.set_ylabel("α annualisé et IC 95 %")
         _pct_axis(ax)
@@ -483,7 +518,10 @@ def write_figures(r: dict) -> None:
             hi = np.array([s * x["fit"].ci_high[j] for x in roll])
             ax.fill_between(rd, lo, hi, color=col, alpha=0.15, lw=0)
             ax.plot(rd, est, color=col, lw=1.6)
-            ax.axhline(0, color=GREY, lw=0.7)
+            ax.axhline(0, color="#111827", lw=1.1)
+            if j == 1:
+                ax.axhline(1, color=GREY, lw=0.8, ls=":")
+                ax.annotate("β = 1 (sensibilité du marché)", (rd[0], 1), xytext=(2, -3), textcoords="offset points", fontsize=7.5, color=GREY, va="top")
             ax.set_title(f"{lab} — fenêtres glissantes de {ROLL_WINDOW} mois (IC 95 %)", loc="left")
             if j == 0:
                 _pct_axis(ax)
