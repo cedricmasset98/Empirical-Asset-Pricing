@@ -2,7 +2,7 @@
  "label": "synthetic",
  "dataset_path": "tests/fixtures/synthetic_dataset.json",
  "dataset_generated_at": "2026-11-06T00:00:00Z",
- "generated_at": "2026-11-06T04:23:22Z",
+ "generated_at": "2026-11-06T06:42:18Z",
  "statsmodels_version": "0.15.0",
  "common_n": 220,
  "cases": [
