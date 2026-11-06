@@ -137,3 +137,52 @@ def convert_long_short_to_chf(factor_usd: pd.Series, fx_ret: pd.Series) -> pd.Se
     Le résultat est exact : le portefeuille autofinancé n'a pas d'exposition
     au change hormis ce terme croisé. Aucun taux sans risque n'intervient."""
     return factor_usd * (1 + fx_ret)
+
+
+# --------------------------------------------------------------- raccord d'historique
+
+@dataclass
+class Splice:
+    series: pd.Series | None  # série raccordée, ou None si le raccord est refusé
+    ok: bool
+    message: str
+    junction: pd.Timestamp | None = None
+
+
+def splice_history(history: pd.Series, recent: pd.Series, *, min_overlap: int = 250,
+                   tol_level: float = 0.01, tol_drift: float = 0.01,
+                   tol_day: float = 0.005, max_outliers: float = 0.02) -> Splice:
+    """Prolonge `recent` vers le passé avec `history`, après vérification que les
+    deux séries décrivent le même indice sur leur période commune :
+    niveau (ratio médian proche de 1), absence de dérive (un indice de prix
+    raccordé à un indice de performance diverge du rendement des dividendes),
+    et peu de jours divergents. Les niveaux de `recent` sont conservés tels
+    quels ; `history` n'est utilisé qu'avant le premier jour de `recent`,
+    remis à l'échelle à cette date."""
+    h = history.dropna().sort_index()
+    r = recent.dropna().sort_index()
+    h, r = h[~h.index.duplicated(keep="last")], r[~r.index.duplicated(keep="last")]
+    common = h.index.intersection(r.index)
+    if len(common) < min_overlap:
+        return Splice(None, False, f"recouvrement trop court ({len(common)} séances, minimum {min_overlap}).")
+    ratio = r.loc[common] / h.loc[common]
+    med = float(ratio.median())
+    first, last = float(ratio.iloc[:60].median()), float(ratio.iloc[-60:].median())
+    outliers = float(((ratio / med - 1).abs() > tol_day).mean())
+    stats = (f"{len(common)} séances communes ({common[0].date()} → {common[-1].date()}) ; "
+             f"ratio médian {med:.5f}, dérive {last / first - 1:+.3%}, jours divergents {outliers:.2%}")
+    if abs(med - 1) > tol_level:
+        return Splice(None, False, f"niveaux différents ({stats}) : autre variante de l'indice ?")
+    if abs(last / first - 1) > tol_drift:
+        return Splice(None, False, f"dérive entre les sources ({stats}) : indice de prix contre indice de performance ?")
+    if outliers > max_outliers:
+        return Splice(None, False, f"trop de jours divergents ({stats}).")
+    junction = r.index[0]
+    if junction in h.index:
+        scale = r.loc[junction] / h.loc[junction]
+    else:  # première date récente absente de l'historique : première date commune
+        junction = common[0]
+        scale = r.loc[junction] / h.loc[junction]
+    before = h[h.index < junction] * scale
+    out = pd.concat([before, r[r.index >= junction]])
+    return Splice(out, True, stats, pd.Timestamp(junction))

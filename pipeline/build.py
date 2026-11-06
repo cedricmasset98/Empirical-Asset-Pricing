@@ -160,6 +160,12 @@ def main(argv: list[str] | None = None) -> int:
     # --- SPI TR
     spi, info = S.fetch_spi_tr()
     sources.append(info)
+    sp = info.get("splice")
+    if sp:
+        check(checks, "spi-history", "pass" if sp["ok"] else "warn",
+              (f"SPI : historique {sp['file']} raccordé à ^SSHI après contrôle de concordance — {sp['message']}"
+               if sp["ok"] else
+               f"SPI : raccord de l'historique {sp['file']} refusé, série Yahoo seule conservée — {sp['message']}"))
     if spi is not None:
         lv = month_end_levels(spi, gap, last_complete)
         cols["spi_ret"] = simple_returns(lv.values)
@@ -171,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
             if len(common) >= 24:
                 d = annual_mean(cols["spi_ret"][common]) - annual_mean(smi_r[common])
                 check(checks, "spi-total-return", "pass" if d > 0 else "warn",
-                      f"Plausibilité « total return » de ^SSHI : rendement moyen SPI − SMI (indice de prix) = {d:+.2%} par an sur "
+                      f"Plausibilité « total return » du SPI : rendement moyen SPI − SMI (indice de prix) = {d:+.2%} par an sur "
                       f"{len(common)} mois. Indicateur seulement (compositions différentes) ; la nature TR repose sur la définition SIX du SPI.")
 
     # --- SARON

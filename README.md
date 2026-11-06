@@ -93,7 +93,7 @@ Le workflow installe LaTeX et régénère le rapport à chaque exécution. L'arc
 | Série | Source | Remarque |
 |---|---|---|
 | BCV | Yahoo Finance `BCVN.SW`, `Adj Close` | Dividendes et splits ajustés ; split 10:1 de mai 2020 contrôlé |
-| SPI TR | Yahoo Finance `^SSHI` (SPI, SXGE) | Indice de performance ; jamais remplacé par un indice de prix. Historique Yahoo disponible depuis mars 2013 seulement : pour remonter plus loin, importer l'historique SIX dans `data/manual/spi_tr_daily.csv` |
+| SPI TR | Yahoo Finance `^SSHI` (SPI, SXGE) | Indice de performance ; jamais remplacé par un indice de prix. Historique Yahoo disponible depuis mars 2013 seulement ; prolongé jusqu'en 1988 par `data/history/spi_tr_history.csv`, après contrôle de concordance (cf. `data/history/README.md`) |
 | SARON | BNS data.snb.ch, cube `snbgwdzid` | Fixing quotidien depuis août 2009, capitalisé ACT/360 |
 | Facteurs Europe | Kenneth R. French Data Library | 3F, 5F, Momentum ; USD, RF US |
 | Fonds BCV Swiss Equity A | Gérifonds, page publique du fonds : graphique « Évolution de la performance (dividendes réinvestis) », quotidien depuis 1997 | Série officielle, distributions brutes réinvesties, nette de frais. Contrôles automatiques : rendements quotidiens recalculés à partir des VNI et des distributions publiées, chaque distribution retrouvée une seule fois, performance YTD = publiée |
