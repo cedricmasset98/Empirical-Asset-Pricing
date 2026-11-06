@@ -1,0 +1,99 @@
+name: Données, tests et déploiement
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # le 4 de chaque mois à 05:23 UTC : le mois précédent est alors complet
+    # et les séries Fama-French ont généralement été mises à jour.
+    - cron: '23 5 4 * *'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Dépendances Python
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Tests du pipeline
+        run: mkdir -p logs && python -m unittest discover -s pipeline/tests -t . -v 2>&1 | tee logs/pipeline-tests.log
+
+      - name: Téléchargement et construction des données
+        run: python -m pipeline.build 2>&1 | tee logs/data-build.log
+
+      - name: Références statsmodels
+        run: python -m pipeline.validate 2>&1 | tee logs/validate.log
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Dépendances Node
+        run: npm install --no-audit --no-fund
+
+      - name: Vérification des types
+        run: npm run typecheck 2>&1 | tee logs/typecheck.log
+
+      - name: Tests du moteur (dont comparaison à statsmodels)
+        env:
+          STRICT_REFERENCE: '1'
+        run: npm test 2>&1 | tee logs/tests.log
+
+      - name: Compilation du site
+        run: npm run build 2>&1 | tee logs/build.log
+
+      - name: Archivage des données dans le dépôt
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if python -m pipeline.changed; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/data data/processed tests/reference
+            git commit -m "Données : mise à jour automatique [skip ci]" || exit 0
+            git push
+          else
+            echo "Données inchangées : aucun commit."
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Résumé des erreurs
+        if: failure()
+        run: |
+          for f in logs/*.log; do
+            [ -f "$f" ] || continue
+            msg=$(tail -n 40 "$f" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=$(basename $f)::$msg"
+          done
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

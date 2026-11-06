@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Empirical Asset Pricing — Banque Cantonale Vaudoise (BCVN)</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%231d4f91%22/%3E%3Cpath d=%22M6 24 L26 9%22 stroke=%22%23ff8a3d%22 stroke-width=%223%22/%3E%3Ccircle cx=%2210%22 cy=%2218%22 r=%222%22 fill=%22white%22/%3E%3Ccircle cx=%2217%22 cy=%2217%22 r=%222%22 fill=%22white%22/%3E%3Ccircle cx=%2222%22 cy=%2210%22 r=%222%22 fill=%22white%22/%3E%3C/svg%3E" />
+    <meta name="description" content="Estimation du Single Index Model et des modèles Fama-French / Carhart pour l'action BCV (BCVN), en CHF avec le SARON." />
+    <script>
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('eap-theme'); } catch (e) {}
+        if (!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <h1>Empirical Asset Pricing</h1>
+        <p class="subtitle">Banque Cantonale Vaudoise <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF</p>
+      </div>
+      <div class="meta" id="data-meta" aria-live="polite">Chargement des données…</div>
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Basculer le mode clair / sombre" title="Mode clair / sombre"></button>
+    </header>
+
+    <form class="controls" id="controls" aria-label="Paramètres de l'estimation" onsubmit="return false">
+      <label>Début
+        <input type="month" id="start" required />
+      </label>
+      <label>Fin
+        <input type="month" id="end" required />
+      </label>
+      <label>Fréquence
+        <select id="frequency">
+          <option value="monthly" selected>Mensuelle</option>
+          <option value="weekly" disabled>Hebdomadaire — non disponible (v1)</option>
+          <option value="daily" disabled>Journalière — non disponible (v1)</option>
+        </select>
+      </label>
+      <label>Marché
+        <select id="universe">
+          <option value="SPI">SPI Total Return (CHF)</option>
+          <option value="EUROPE">Europe Fama-French (CHF)</option>
+        </select>
+      </label>
+      <label>Modèle
+        <select id="model">
+          <option value="CAPM">CAPM / Single Index</option>
+          <option value="FF3">Fama-French 3 facteurs</option>
+          <option value="CARHART">Carhart 4 facteurs</option>
+          <option value="FF5">Fama-French 5 facteurs</option>
+        </select>
+      </label>
+      <label>Inférence
+        <select id="cov">
+          <option value="classical">OLS classique</option>
+          <option value="HC3">Robuste HC3</option>
+          <option value="HAC">Newey-West HAC</option>
+        </select>
+      </label>
+      <label id="hac-wrap" hidden>Retards NW
+        <select id="hac-lags"></select>
+      </label>
+      <label>Fenêtre mobile
+        <select id="window">
+          <option value="36">36 mois</option>
+          <option value="60" selected>60 mois</option>
+          <option value="120">120 mois</option>
+        </select>
+      </label>
+      <div class="toggles">
+        <label class="check"><input type="checkbox" id="band" checked /> Intervalles de confiance</label>
+        <label class="check"><input type="checkbox" id="by-year" /> Couleur par année</label>
+      </div>
+    </form>
+
+    <div id="alerts" class="alerts" aria-live="polite"></div>
+
+    <main>
+      <section id="cards" class="cards" aria-label="Statistiques synthétiques"></section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 id="reg-title">Régression</h2>
+          <div class="actions">
+            <button type="button" id="export-table" class="btn">Tableau (CSV)</button>
+            <button type="button" id="export-sample" class="btn">Échantillon (CSV)</button>
+          </div>
+        </div>
+        <div id="reg-table" class="table-wrap"></div>
+      </section>
+
+      <nav class="tabs" role="tablist" aria-label="Analyses">
+        <button role="tab" type="button" data-tab="scatter" aria-selected="true">A. Single Index</button>
+        <button role="tab" type="button" data-tab="fitted" aria-selected="false">B. Observé vs prédit</button>
+        <button role="tab" type="button" data-tab="diagnostics" aria-selected="false">C. Diagnostics</button>
+        <button role="tab" type="button" data-tab="rolling" aria-selected="false">D. Régression mobile</button>
+        <button role="tab" type="button" data-tab="comparison" aria-selected="false">E. Comparaison</button>
+        <button role="tab" type="button" data-tab="data" aria-selected="false">Données &amp; méthodologie</button>
+      </nav>
+
+      <section class="panel tab-panel" id="tab-scatter" role="tabpanel">
+        <h2>Single Index Model : BCV contre le SPI Total Return</h2>
+        <p class="lead">R<sub>BCV,t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, rendements mensuels en CHF, R<sub>f</sub> = SARON capitalisé.</p>
+        <div id="scatter-note"></div>
+        <div id="scatter-stats" class="strip"></div>
+        <div id="chart-scatter" class="chart chart-lg"></div>
+      </section>
+
+      <section class="panel tab-panel" id="tab-fitted" role="tabpanel" hidden>
+        <h2>Rendements observés et prédits</h2>
+        <p class="lead" id="fitted-lead"></p>
+        <div id="chart-fitted" class="chart"></div>
+        <div id="chart-fitted-scatter" class="chart chart-sm"></div>
+      </section>
+
+      <section class="panel tab-panel" id="tab-diagnostics" role="tabpanel" hidden>
+        <h2>Diagnostics des résidus</h2>
+        <p class="lead" id="diag-lead"></p>
+        <div class="grid-2">
+          <div id="chart-resid" class="chart chart-sm"></div>
+          <div id="chart-hist" class="chart chart-sm"></div>
+          <div id="chart-qq" class="chart chart-sm"></div>
+          <div id="chart-acf" class="chart chart-sm"></div>
+        </div>
+        <div id="tests-table" class="table-wrap"></div>
+      </section>
+
+      <section class="panel tab-panel" id="tab-rolling" role="tabpanel" hidden>
+        <h2>Régression mobile</h2>
+        <p class="lead" id="rolling-lead"></p>
+        <div id="rolling-charts"></div>
+      </section>
+
+      <section class="panel tab-panel" id="tab-comparison" role="tabpanel" hidden>
+        <div class="panel-head">
+          <h2>Comparaison des modèles</h2>
+          <div class="actions"><button type="button" id="export-comparison" class="btn">Comparaison (CSV)</button></div>
+        </div>
+        <p class="lead" id="comparison-lead"></p>
+        <div id="chart-comparison" class="chart"></div>
+        <div id="comparison-table" class="table-wrap"></div>
+      </section>
+
+      <section class="panel tab-panel" id="tab-data" role="tabpanel" hidden>
+        <h2>Sources des données</h2>
+        <div id="sources" class="table-wrap"></div>
+
+        <h2>Import manuel (CSV)</h2>
+        <p>Si une source n’est pas accessible, importez un fichier CSV : colonne <code>date</code> (AAAA-MM) puis les colonnes du schéma, en <strong>rendements mensuels décimaux</strong> (0.012 = 1,2 %). Colonnes obligatoires : <code>bcv_ret</code>, <code>rf_saron</code> ; le Single Index exige <code>spi_ret</code> ; les modèles multifactoriels exigent les facteurs déjà convertis en CHF (<code>mkt_eu_chf</code>, <code>smb3_chf</code>, <code>hml3_chf</code>, <code>wml_chf</code>, <code>smb5_chf</code>, <code>hml5_chf</code>, <code>rmw5_chf</code>, <code>cma5_chf</code>). Les cellules vides sont des valeurs manquantes (aucune interpolation). Les données importées restent dans votre navigateur.</p>
+        <div class="actions">
+          <label class="btn file-btn">Importer un CSV<input type="file" id="csv-input" accept=".csv,text/csv" /></label>
+          <button type="button" id="export-dataset" class="btn">Télécharger les données actuelles (CSV)</button>
+          <button type="button" id="reset-data" class="btn" hidden>Revenir aux données du pipeline</button>
+        </div>
+
+        <h2>Méthodologie</h2>
+        <div class="method">
+          <h3>Rendements</h3>
+          <p>BCV : R<sub>t</sub> = P<sup>adj</sup><sub>t</sub>/P<sup>adj</sup><sub>t−1</sub> − 1 sur le dernier cours de chaque mois, P<sup>adj</sup> étant ajusté des dividendes et opérations sur titres (dont le split 10:1 de mai 2020, contrôlé par le pipeline). Marché suisse : SPI, indice de performance (dividendes réinvestis), jamais remplacé par un indice de prix. Un mois incomplet ou manquant rend les rendements adjacents manquants : aucun rendement multi-mois n’est présenté comme mensuel.</p>
+          <h3>Taux sans risque</h3>
+          <p>Le SARON est un taux overnight annualisé. Le rendement réalisé du mois m est I(fin m)/I(fin m−1) − 1 avec l’indice capitalisé I<sub>i+1</sub> = I<sub>i</sub>(1 + r<sub>i</sub>·n<sub>i</sub>/360), n<sub>i</sub> = jours calendaires jusqu’au fixing suivant (ACT/360). Le SARON annualisé n’est jamais soustrait directement à un rendement mensuel.</p>
+          <h3>Facteurs Fama-French européens en CHF</h3>
+          <p>Les séries de K. French sont en USD avec un taux sans risque américain. Avec s<sub>t</sub> la variation mensuelle du cours USD/CHF : marché européen en CHF = (1 + Mkt−RF + RF<sub>US</sub>)(1 + s) − 1, puis rendement excédentaire = marché CHF − SARON ; facteurs long-short (SMB, HML, RMW, CMA, WML) : F<sub>CHF</sub> = F<sub>USD</sub>(1 + s), résultat exact puisque chaque jambe se convertit par (1 + R<sub>USD</sub>)(1 + s). L’univers « SPI + facteurs européens » est une <strong>variante hybride</strong>, signalée comme telle.</p>
+          <h3>Inférence</h3>
+          <p>OLS avec constante. Classique : V = s²(X′X)⁻¹, tests de Student à n−k ddl, test F global. HC3 : V = (X′X)⁻¹X′diag(e²/(1−h)²)X(X′X)⁻¹. Newey-West : noyau de Bartlett, L = ⌊4(n/100)<sup>2/9</sup>⌋ par défaut, sans correction de petit échantillon. Pour HC3 et HAC, l’inférence est asymptotique (loi normale) et le test global est un test de Wald χ²(k−1). Les coefficients ne changent pas avec la méthode d’inférence. Alpha annualisé = 12 × alpha mensuel.</p>
+          <h3>Validation</h3>
+          <p>Le moteur de calcul exécuté dans le navigateur est testé automatiquement contre statsmodels (coefficients, erreurs standards, tests, intervalles, diagnostics, fenêtres mobiles) à chaque mise à jour des données.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>Outil de recherche académique. Aucun résultat n’est codé en dur : tout est recalculé dans le navigateur à partir des données publiées. Ceci n’est pas un conseil en investissement.</p>
+    </footer>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

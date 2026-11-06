@@ -1,0 +1,6 @@
+pandas>=2.2
+numpy>=1.26
+scipy>=1.11
+statsmodels>=0.14.2
+yfinance>=0.2.54
+requests>=2.31

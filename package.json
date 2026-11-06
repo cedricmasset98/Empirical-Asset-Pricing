@@ -1,0 +1,27 @@
+{
+  "name": "empirical-asset-pricing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Factor Regression Explorer — Single Index, Fama-French et Carhart pour BCV (BCVN), en CHF avec le SARON",
+  "type": "module",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --no-warnings --test tests/engine.test.ts tests/statsmodels.test.ts tests/ui.test.ts",
+    "data": "python -m pipeline.build && python -m pipeline.validate",
+    "fixtures": "python tests/fixtures/make_fixtures.py"
+  },
+  "dependencies": {
+    "plotly.js-dist-min": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.3.0"
+  }
+}
