@@ -51,16 +51,37 @@ jobs:
       # Le rapport ne doit jamais bloquer la publication du site : en cas de panne
       # (miroirs apt, LaTeX), le PDF archivé dans le dépôt est conservé et une
       # alerte apparaît dans le résumé de l'exécution.
-      - name: Installation de LaTeX (XeLaTeX, français, TeX Gyre)
-        id: latex
+      - name: Installation de LaTeX (XeLaTeX, français, TeX Gyre) — paquets en cache
+        id: latex1
         continue-on-error: true
-        timeout-minutes: 12
+        timeout-minutes: 10
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-lang-french latexmk lmodern fonts-texgyre
+          version: '1'
+          execute_install_scripts: true
+
+      - name: Test de compilation LaTeX
+        id: check1
+        continue-on-error: true
+        run: bash .github/scripts/latex-smoke.sh
+
+      - name: Installation de LaTeX — seconde tentative (apt direct)
+        id: latex2
+        if: steps.check1.outcome != 'success'
+        continue-on-error: true
+        timeout-minutes: 10
         run: |
           APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
           sudo apt-get $APT update -q
           sudo apt-get $APT install -y -q --no-install-recommends \
             texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
             texlive-lang-french latexmk lmodern fonts-texgyre
+
+      - name: Vérification de LaTeX
+        id: latex
+        continue-on-error: true
+        run: bash .github/scripts/latex-smoke.sh
 
       - name: Rapport de synthèse (LaTeX -> PDF)
         id: report
