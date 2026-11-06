@@ -39,6 +39,19 @@ function alertHtml(level: Level, title: string, text: string): string {
 
 // ------------------------------------------------------------------ état / URL
 
+/** Plage utile : du premier au dernier mois où le rendement BCV existe. */
+function bounds(ds: Dataset): [string, string] {
+  const months = ds.dates.filter((_, i) => ds.data.bcv_ret?.[i] != null);
+  return months.length ? [months[0], months[months.length - 1]] : [ds.dates[0], ds.dates[ds.dates.length - 1]];
+}
+
+function clampRange(s: UIState, ds: Dataset): void {
+  const [lo, hi] = bounds(ds);
+  if (s.range.start < lo || s.range.start > hi) s.range.start = lo;
+  if (s.range.end > hi || s.range.end < lo) s.range.end = hi;
+  if (s.range.start > s.range.end) [s.range.start, s.range.end] = [lo, hi];
+}
+
 function defaultState(ds: Dataset): UIState {
   const first = ds.dates.find((_, i) => ds.data.bcv_ret?.[i] != null && ds.data.rf_saron?.[i] != null) ?? ds.dates[0];
   return {
@@ -92,8 +105,8 @@ function syncControls(): void {
   const ds = data!;
   const start = $<HTMLInputElement>('start');
   const end = $<HTMLInputElement>('end');
-  start.min = end.min = ds.dates[0];
-  start.max = end.max = ds.dates[ds.dates.length - 1];
+  [start.min, start.max] = bounds(ds);
+  [end.min, end.max] = bounds(ds);
   start.value = state.range.start;
   end.value = state.range.end;
   $<HTMLSelectElement>('model').value = state.model;
@@ -141,7 +154,12 @@ function renderAlerts(): void {
     if (main.coherence === 'hybrid') {
       out.push(alertHtml('warn', 'Variante hybride.', ' Le marché est le SPI TR (Suisse) tandis que SMB, HML, MOM, RMW, CMA sont des facteurs européens Fama-French convertis en CHF : l’univers de facteurs n’est pas homogène. Pour un univers cohérent, choisissez « Europe Fama-French ».'));
     }
-    for (const w of main.warnings) out.push(alertHtml('warn', 'Échantillon.', ` ${h(w)}`));
+    const s = main.sample;
+    const eff = `${s.dates[0]} → ${s.dates[s.dates.length - 1]}, ${s.y.length} mois`;
+    if (s.droppedMonths > 0) {
+      out.push(alertHtml('info', 'Échantillon effectif :', ` ${eff}. ${s.droppedMonths} mois de la plage choisie n’ont pas toutes les séries requises et sont exclus (aucune interpolation).`));
+    }
+    for (const w of main.warnings.filter((x) => !x.includes('exclus faute'))) out.push(alertHtml('warn', 'Échantillon.', ` ${h(w)}`));
     if (main.result.cov !== 'classical') {
       out.push(alertHtml('info', 'Inférence robuste.', ` ${COV_LABELS[main.result.cov]} : statistiques z, p-values et intervalles fondés sur la loi normale ; le test global est un test de Wald χ² (une statistique F classique ne serait pas robuste).`));
     }
@@ -205,7 +223,7 @@ function renderTab(): void {
     case 'diagnostics': {
       if (!needFit($('tests-table'), main)) return;
       const d = diagnose(main);
-      $('diag-lead').textContent = `${main.label} — résidus OLS (N = ${main.result.n}, σ̂ = ${pct(main.result.sigma, 2)} par mois).`;
+      $('diag-lead').textContent = `${main.label} — résidus OLS (N = ${main.result.n}, écart-type s = ${pct(main.result.sigma, 2)} par mois).`;
       plotDiagnostics({ time: $('chart-resid'), hist: $('chart-hist'), qq: $('chart-qq'), acf: $('chart-acf') }, main, d, t);
       $('tests-table').innerHTML = testsTable(d);
       break;
@@ -252,6 +270,7 @@ function compute(): void {
 }
 
 function renderAll(): void {
+  clampRange(state, data!);
   compute();
   syncControls();
   renderHeader();

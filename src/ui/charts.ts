@@ -61,6 +61,13 @@ function layout(t: Theme, extra: Record<string, unknown> = {}): Record<string, u
 
 const P = (x: number) => x * 100;
 
+/** Couleur hexadécimale (#rrggbb) avec transparence. */
+function withAlpha(hex: string, a: number): string {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (!m) return hex;
+  return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${a})`;
+}
+
 // ------------------------------------------------------------------ A. Scatter
 
 export function plotScatter(el: HTMLElement, fit: FitOk, t: Theme, opts: { band: boolean; colorByYear: boolean; marketLabel: string }): void {
@@ -170,7 +177,7 @@ export function plotDiagnostics(els: { time: HTMLElement; hist: HTMLElement; qq:
     els.time,
     [
       { x: fit.sample.dates, y: e, type: 'bar', marker: { color: t.points }, name: 'Résidu', hovertemplate: '%{x|%Y-%m} : %{y:.2f} %<extra></extra>' },
-      { x: [fit.sample.dates[0], fit.sample.dates.at(-1)], y: [2 * s, 2 * s], mode: 'lines', line: { color: t.muted, dash: 'dot' }, name: '±2σ̂', hoverinfo: 'skip' },
+      { x: [fit.sample.dates[0], fit.sample.dates.at(-1)], y: [2 * s, 2 * s], mode: 'lines', line: { color: t.muted, dash: 'dot' }, name: '±2s', hoverinfo: 'skip' },
       { x: [fit.sample.dates[0], fit.sample.dates.at(-1)], y: [-2 * s, -2 * s], mode: 'lines', line: { color: t.muted, dash: 'dot' }, showlegend: false, hoverinfo: 'skip' },
     ],
     layout(t, { title: { text: 'Résidus dans le temps', font: { size: 13 } }, yaxis: { ticksuffix: ' %' }, xaxis: { type: 'date' }, showlegend: false, margin: { l: 55, r: 10, t: 36, b: 40 } }),
@@ -185,7 +192,7 @@ export function plotDiagnostics(els: { time: HTMLElement; hist: HTMLElement; qq:
     els.hist,
     [
       { x: e, type: 'histogram', xbins: { start: lo, end: hi + 1e-9, size: width }, marker: { color: t.points, opacity: 0.75 }, name: 'Résidus' },
-      { x: gx, y: gx.map((v) => (e.length * width * normPdf(v / s)) / s), mode: 'lines', line: { color: t.line, width: 2 }, name: 'Densité normale N(0, σ̂²)' },
+      { x: gx, y: gx.map((v) => (e.length * width * normPdf(v / s)) / s), mode: 'lines', line: { color: t.line, width: 2 }, name: 'Densité normale N(0, s²)' },
     ],
     layout(t, { title: { text: 'Histogramme des résidus', font: { size: 13 } }, xaxis: { ticksuffix: ' %' }, bargap: 0.04, showlegend: false, margin: { l: 45, r: 10, t: 36, b: 40 } }),
     CONFIG,
@@ -199,7 +206,7 @@ export function plotDiagnostics(els: { time: HTMLElement; hist: HTMLElement; qq:
       { x: q.theoretical, y: q.sample, mode: 'markers', marker: { color: t.points, size: 5 }, name: 'Résidus standardisés', hovertemplate: 'théorique %{x:.2f} · empirique %{y:.2f}<extra></extra>' },
       { x: [qlo, qhi], y: [qlo, qhi], mode: 'lines', line: { color: t.line, width: 2 }, name: 'Loi normale', hoverinfo: 'skip' },
     ],
-    layout(t, { title: { text: 'Q-Q plot normal', font: { size: 13 } }, xaxis: { title: { text: 'Quantiles théoriques' } }, yaxis: { title: { text: 'Résidus / σ̂' } }, showlegend: false, margin: { l: 55, r: 10, t: 36, b: 45 } }),
+    layout(t, { title: { text: 'Q-Q plot normal', font: { size: 13 } }, xaxis: { title: { text: 'Quantiles théoriques' } }, yaxis: { title: { text: 'Résidus standardisés (e / s)' } }, showlegend: false, margin: { l: 55, r: 10, t: 36, b: 45 } }),
     CONFIG,
   );
   const lags = d.acf.map((_, i) => i + 1);
@@ -229,18 +236,21 @@ export function plotRolling(container: HTMLElement, roll: RollingResult, t: Them
     div.className = 'chart chart-sm';
     container.appendChild(div);
     const scale = name === 'const' ? P : (x: number) => x;
+    // α garde la couleur de la droite OLS ; les facteurs évitent cette teinte (s2)
+    const palette = t.series.filter((_, i) => i !== 1);
+    const color = j === 0 ? t.line : palette[(j - 1) % palette.length];
     const traces: unknown[] = [];
     if (showBand) {
       traces.push(
         { x: roll.dates, y: roll.low[j].map(scale), mode: 'lines', line: { width: 0 }, hoverinfo: 'skip', showlegend: false },
-        { x: roll.dates, y: roll.high[j].map(scale), mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: t.band, name: 'IC 95 %', hoverinfo: 'skip' },
+        { x: roll.dates, y: roll.high[j].map(scale), mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: withAlpha(color, 0.18), name: 'IC 95 %', hoverinfo: 'skip' },
       );
     }
     traces.push({
       x: roll.dates,
       y: roll.beta[j].map(scale),
       mode: 'lines',
-      line: { color: j === 0 ? t.line : t.series[(j - 1) % t.series.length], width: 2 },
+      line: { color, width: 2 },
       name: coefLabel(name),
       customdata: roll.low[j].map((lo, i) => [scale(lo), scale(roll.high[j][i])]),
       hovertemplate: `%{x|%Y-%m} : %{y:.3f}${name === 'const' ? ' %' : ''}<br>IC [%{customdata[0]:.3f} ; %{customdata[1]:.3f}]<extra></extra>`,

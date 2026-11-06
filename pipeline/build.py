@@ -217,7 +217,10 @@ def main(argv: list[str] | None = None) -> int:
         print("ERREUR : aucune série de base (BCV, SPI, SARON) n'a pu être construite.", file=sys.stderr)
 
     # --- assemblage
-    all_idx = sorted(set().union(*[set(s.dropna().index) for s in cols.values()])) if cols else []
+    # l'index couvre les séries d'analyse ; les séries auxiliaires (change, USD)
+    # remontant plus loin ne l'étendent pas
+    analysis = [c for c in cols if c in ("bcv_ret", "spi_ret", "rf_saron") or c.endswith("_chf")]
+    all_idx = sorted(set().union(*[set(cols[c].dropna().index) for c in analysis])) if analysis else []
     all_idx = [p for p in all_idx if p <= last_complete]
     if all_idx:
         index = pd.period_range(all_idx[0], all_idx[-1], freq="M")
