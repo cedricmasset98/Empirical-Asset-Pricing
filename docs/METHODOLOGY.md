@@ -55,7 +55,7 @@ Elles sont publiées en USD et en pourcentage, et la colonne RF est le T-bill am
 
 ### Conversion
 
-Soit X_t le cours USD/CHF (CHF par USD) en fin de mois, source FRED `DEXSZUS`, et s_t = X_t/X_{t−1} − 1.
+Soit X_t le cours USD/CHF (CHF par USD) en fin de mois, et s_t = X_t/X_{t−1} − 1. La source principale est la BNS (cube `devkum`, cours de fin de mois) ; en cas d'échec, le pipeline se replie sur FRED `DEXSZUS` puis sur Yahoo `CHF=X`. La source utilisée figure dans le manifeste.
 
 - **Marché européen en CHF** :
   - R_M^USD = (Mkt−RF) + RF_US ;
@@ -71,7 +71,7 @@ Soit X_t le cours USD/CHF (CHF par USD) en fin de mois, source FRED `DEXSZUS`, e
 
 ### Limites
 
-- Le cours FRED est fixé à midi à New York. Les rendements French sont mesurés à la clôture de fin de mois. Ce décalage de quelques heures est négligeable en mensuel, mais il existe.
+- Le cours de fin de mois de la BNS (ou le cours de midi à New York pour FRED) n'est pas relevé exactement à l'heure de clôture utilisée pour les rendements French. Ce décalage de quelques heures est négligeable en mensuel, mais il existe.
 - La conversion suppose que l'investisseur CHF ne couvre pas son risque de change.
 
 ### Univers de facteurs
@@ -134,6 +134,6 @@ Tolérance relative : 10⁻⁸ à 10⁻⁹.
 ## 10. Limites connues
 
 - Les ajustements de Yahoo Finance peuvent contenir des erreurs. Les contrôles automatiques en détectent une partie seulement. En cas de doute, utilisez l'import manuel.
-- La couverture du SARON quotidien sur le portail BNS détermine le début possible de l'échantillon.
+- La couverture du SARON quotidien sur le portail BNS (depuis août 2009) et celle du SPI sur Yahoo Finance (depuis mars 2013) limitent l'échantillon : le Single Index Model commence en avril 2013. Un historique SPI TR plus long peut être fourni par import manuel.
 - Les rendements French sont révisés occasionnellement par l'auteur : les résultats peuvent changer légèrement d'une mise à jour à l'autre.
 - Le facteur momentum européen démarre plus tard que les fichiers 3 et 5 facteurs. L'échantillon commun de la comparaison commence donc à cette date au plus tôt.

@@ -19,7 +19,7 @@ Toutes les statistiques sont **recalculées dans le navigateur** à partir de fi
 
 ```
 pipeline/            Python : récupération, transformation, contrôles, références statsmodels
-  sources.py         Yahoo Finance (BCV, SPI), BNS (SARON), K. French (Europe), FRED (USD/CHF)
+  sources.py         Yahoo Finance (BCV, SPI), BNS (SARON, USD/CHF), K. French (Europe)
   transform.py       fins de mois, rendements, capitalisation SARON ACT/360, conversion CHF
   build.py           -> public/data/dataset.json, data/processed/monthly.csv, build_report.md
   validate.py        -> tests/reference/statsmodels_*.json
@@ -67,10 +67,10 @@ Pour régénérer les jeux de test synthétiques : `npm run fixtures`. Ces jeux 
 | Série | Source | Remarque |
 |---|---|---|
 | BCV | Yahoo Finance `BCVN.SW`, `Adj Close` | Dividendes et splits ajustés ; split 10:1 de mai 2020 contrôlé |
-| SPI TR | Yahoo Finance `^SSHI` (SPI, SXGE) | Indice de performance ; jamais remplacé par un indice de prix |
-| SARON | BNS data.snb.ch, cube `snbgwdzid` | Fixing quotidien, capitalisé ACT/360 |
+| SPI TR | Yahoo Finance `^SSHI` (SPI, SXGE) | Indice de performance ; jamais remplacé par un indice de prix. Historique Yahoo disponible depuis mars 2013 seulement : pour remonter plus loin, importer l'historique SIX dans `data/manual/spi_tr_daily.csv` |
+| SARON | BNS data.snb.ch, cube `snbgwdzid` | Fixing quotidien depuis août 2009, capitalisé ACT/360 |
 | Facteurs Europe | Kenneth R. French Data Library | 3F, 5F, Momentum ; USD, RF US |
-| USD/CHF | FRED `DEXSZUS` (repli : Yahoo `CHF=X`) | Fin de mois |
+| USD/CHF | BNS, cube `devkum` (cours de fin de mois) ; replis : FRED `DEXSZUS`, Yahoo `CHF=X` | Fin de mois |
 
 Si une source échoue, elle est marquée « ERREUR » et ses colonnes restent vides. L'interface affiche alors une erreur explicite pour les modèles concernés, sans aucun résultat de substitution. Pour contourner une source inaccessible, vous pouvez déposer des fichiers dans `data/manual/` (voir son README) ou importer un CSV mensuel directement dans le navigateur.
 
@@ -96,7 +96,7 @@ Vite est configuré avec `base: './'` et les données sont chargées par un chem
 
 - **Yahoo Finance** : les conditions d'utilisation limitent la redistribution. Le dépôt ne publie que des **rendements mensuels dérivés**, jamais les cours bruts, car `data/raw/` est ignoré par git.
 - **SIX** (SPI, SARON) : les données d'indices sont la propriété de SIX Index AG, et leur diffusion publique peut nécessiter une licence.
-- **BNS** et **FRED** : données publiques ; la source doit être citée.
+- **BNS** et **FRED** (repli pour USD/CHF) : données publiques ; la source doit être citée.
 - **Kenneth R. French** : usage libre avec citation.
 
 Si la publication des rendements SPI ou SARON n'est pas autorisée dans votre contexte, deux options :

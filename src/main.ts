@@ -118,9 +118,11 @@ function renderHeader(): void {
   const errors = ds.sources.filter((s) => s.status === 'error');
   const when = new Date(ds.generated_at);
   const date = Number.isNaN(when.getTime()) ? ds.generated_at : when.toLocaleString('fr-CH', { dateStyle: 'long', timeStyle: 'short' });
-  const origin = ds.origin === 'manual-csv' ? 'Import manuel CSV' : 'Pipeline (Yahoo Finance, BNS/SIX, K. French, FRED)';
+  const origin = ds.origin === 'manual-csv' ? 'Import manuel CSV' : 'Yahoo Finance (BCV, SPI TR) · BNS (SARON, USD/CHF) · K. French (facteurs Europe)';
+  const bcv = ds.dates.filter((_, i) => ds.data.bcv_ret?.[i] != null);
+  const span = bcv.length ? `BCV ${monthLabel(bcv[0])} → ${monthLabel(bcv[bcv.length - 1])}` : 'aucun rendement BCV';
   $('data-meta').innerHTML =
-    `<div><b>Source :</b> ${h(origin)}</div><div><b>Actualisé :</b> ${h(date)} · données ${monthLabel(ds.dates[0])} → ${monthLabel(ds.dates[ds.dates.length - 1])}</div>` +
+    `<div><b>Sources :</b> ${h(origin)}</div><div><b>Actualisé :</b> ${h(date)} · ${h(span)}</div>` +
     (errors.length ? `<div style="color:var(--err)"><b>${errors.length} source(s) en erreur</b> (voir « Données & méthodologie »)</div>` : '');
 }
 
