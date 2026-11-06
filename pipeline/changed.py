@@ -18,6 +18,9 @@ def essence(ds: dict) -> dict:
 
 
 def main() -> int:
+    tracked = subprocess.run(["git", "ls-files", "--error-unmatch", "public/report/rapport_bcv.pdf"], capture_output=True)
+    if tracked.returncode != 0:
+        return 0  # rapport jamais archivé
     try:
         old = subprocess.run(["git", "show", f"HEAD:{PATH}"], capture_output=True, text=True, check=True).stdout
     except subprocess.CalledProcessError:

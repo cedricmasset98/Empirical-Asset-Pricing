@@ -1,0 +1,237 @@
+% =============================================================================
+% Empirical Asset Pricing — rapport de synthèse sur l'action BCV
+% Gabarit : seul le texte est écrit ici. Tous les nombres proviennent de
+% generated/macros.tex et des tableaux/figures produits par pipeline/report.py.
+% Compilation : latexmk -xelatex rapport.tex
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{french}
+\setmainfont{TeX Gyre Pagella}
+\usepackage[a4paper,margin=2.4cm,headheight=14pt]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{bleu}{HTML}{1F5FA8}
+\definecolor{orange}{HTML}{D9480F}
+\definecolor{gris}{HTML}{4B5563}
+\captionsetup{font=small,labelfont=bf,labelsep=period}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+
+\newtcolorbox{essentiel}{colback=bleu!5,colframe=bleu,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=6pt,bottom=6pt,
+  fonttitle=\bfseries,title=L'essentiel en cinq points}
+\newtcolorbox{attention}[1]{colback=orange!5,colframe=orange,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries,title=#1}
+\newtcolorbox{lexique}{colback=gray!6,colframe=gray!60,boxrule=0.5pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries\color{black},title=Lexique}
+
+\input{generated/macros.tex}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gris} Empirical Asset Pricing — Banque Cantonale Vaudoise}
+\fancyhead[R]{\small\color{gris} \DateRapport}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\hypersetup{pdftitle={L'action BCV bat-elle le marché ? Rapport de synthèse},pdfauthor={Empirical Asset Pricing},pdflang=fr}
+
+\begin{document}
+
+\begin{center}
+  {\small\color{gris} EMPIRICAL ASSET PRICING · RAPPORT DE SYNTHÈSE}\\[6pt]
+  {\LARGE\bfseries L'action BCV bat-elle le marché ?}\\[4pt]
+  {\large Ce que disent — et ne disent pas — les modèles factoriels}\\[8pt]
+  {\small Banque Cantonale Vaudoise (BCVN, SIX) · rendements mensuels en CHF · \PeriodeDebut{} – \PeriodeFin{}}\\[2pt]
+  {\small\color{gris} Rapport généré automatiquement le \DateRapport{} à partir des données du \DateDonnees{} · version \texttt{\Commit}}
+\end{center}
+
+\vspace{4pt}
+
+\begin{essentiel}
+\begin{enumerate}[leftmargin=*,label=\textbf{\arabic*.}]
+  \item \textbf{Performance.} Sur \Annees{} ans, 100~CHF investis dans l'action BCV (dividendes réinvestis) sont devenus \CroissanceBCV{}, contre \CroissanceSPI{} pour le marché suisse (SPI) : \RendAnnBCV{} par an contre \RendAnnSPI{}.
+  \item \textbf{Risque de marché.} Le bêta de BCV vaut \BetaM{} : l'action est \BetaSens.
+  \item \textbf{Alpha.} Une fois cette faible exposition au marché prise en compte, il reste un rendement moyen inexpliqué (alpha) de \AlphaA{} par an, \AlphaVerdict{} (statistique $z$ = \AlphaZ{}). Mais l'incertitude est grande : l'intervalle de confiance à 95~\% va de \AlphaALo{} à \AlphaAHi{} par an.
+  \item \textbf{Robustesse.} \RobustessePhrase{} \NbSpecs{} variantes de modèles testées (alpha de \AlphaMinA{} à \AlphaMaxA{} par an). Le marché n'explique toutefois que \RDeuxPct{} des fluctuations de l'action.
+  \item \textbf{Prudence.} Ce résultat décrit le passé \emph{d'une seule action}. Ce n'est ni une preuve que les modèles d'évaluation sont faux, ni une stratégie d'investissement exploitable (section~\ref{sec:limites}).
+\end{enumerate}
+\end{essentiel}
+
+% -----------------------------------------------------------------------------
+\section{La question posée}
+
+Une action peut rapporter beaucoup simplement parce qu'elle est risquée : les investisseurs exigent une rémunération pour supporter le risque de marché. La question intéressante n'est donc pas « l'action a-t-elle bien rapporté ? », mais \emph{« a-t-elle rapporté plus que ce que justifie son risque ? »}.
+
+Les modèles d'évaluation des actifs répondent en comparant le rendement de l'action à celui de \emph{facteurs de risque}. Le plus simple est le \textbf{modèle de marché} (Single Index Model, version empirique du CAPM) :
+\[
+  \underbrace{R_{\text{BCV},t} - R_{f,t}}_{\text{rendement excédentaire de BCV}}
+  \;=\; \alpha \;+\; \beta_M \,\underbrace{\left(R_{\text{SPI},t} - R_{f,t}\right)}_{\text{rendement excédentaire du marché}} \;+\; \varepsilon_t .
+\]
+Le \textbf{bêta} mesure la sensibilité de l'action au marché. L'\textbf{alpha} est la partie du rendement moyen que le marché n'explique pas : s'il est positif et fiable, l'action a fait « mieux que prévu » compte tenu de son risque.
+
+\begin{lexique}\small
+\textbf{Rendement excédentaire} : rendement moins celui d'un placement sans risque (ici le SARON, taux interbancaire au jour le jour en CHF). \textbf{Statistique $t$ ou $z$} : estimation divisée par son erreur standard ; au-delà d'environ 2 en valeur absolue, l'estimation est jugée significativement différente de zéro au seuil de 5~\%. \textbf{$p$-value} : probabilité d'observer un résultat au moins aussi extrême si la vraie valeur était nulle. \textbf{Intervalle de confiance (IC) à 95~\%} : fourchette de valeurs compatibles avec les données. \textbf{$R^2$} : part des fluctuations de l'action expliquée par le modèle.
+\end{lexique}
+
+% -----------------------------------------------------------------------------
+\section{Données}
+
+L'étude porte sur \NObs{} rendements mensuels, de \PeriodeDebut{} à \PeriodeFin{}\Contigu. Les rendements de BCV incluent les dividendes et sont corrigés des opérations sur titres (dont la division d'action de mai 2020, dans un rapport de 10 pour 1). Le marché suisse est représenté par le SPI \emph{Total Return}, qui inclut lui aussi les dividendes. Le taux sans risque est le SARON, capitalisé jour après jour pour obtenir un rendement mensuel réellement acquis (\RendAnnRf{} par an en moyenne sur la période, avec des taux négatifs entre 2015 et 2022). Le début de l'échantillon est fixé par la disponibilité de l'historique du SPI. Les sources détaillées figurent en annexe.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_croissance.pdf}
+  \caption{Valeur de 100~CHF investis au début de la période (dividendes et intérêts réinvestis).}
+\end{figure}
+
+% -----------------------------------------------------------------------------
+\section{Résultats}
+
+\subsection{Le modèle de marché}
+
+La figure~\ref{fig:nuage} représente chaque mois par un point : en abscisse le rendement excédentaire du marché, en ordonnée celui de BCV. La droite est l'estimation par moindres carrés ordinaires (MCO).
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.92\textwidth]{generated/fig_nuage.pdf}
+  \caption{Rendements excédentaires mensuels de BCV et du SPI. La pente de la droite est le bêta ; sa hauteur à l'origine est l'alpha mensuel.}
+  \label{fig:nuage}
+\end{figure}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Bêta = \BetaM{}} (IC 95~\% : \BetaIC). \BetaPhrase. L'action BCV est donc \BetaSens.
+  \item \textbf{Alpha = \AlphaM{} par mois}, soit \textbf{\AlphaA{} par an} (12 × l'alpha mensuel). Il est \AlphaSens{} et \AlphaVerdict{} ($z$ = \AlphaZ, $p$~\AlphaPEq).
+  \item \textbf{$R^2$ = \RDeux{}}. \RDeuxPhrase{} La volatilité annualisée du rendement excédentaire de BCV est de \VolBCV{}, contre \VolSPI{} pour le SPI ; la volatilité résiduelle, propre à BCV, est de \SigmaA{}.
+\end{itemize}
+
+\paragraph{D'où vient l'alpha ?} Une propriété des MCO permet de décomposer exactement le rendement excédentaire moyen de BCV :
+\[
+  \underbrace{\text{\MoyBCVADeux}}_{\text{rendement excédentaire moyen de BCV}}
+  \;=\; \underbrace{\text{\AlphaADeux}}_{\alpha \text{ annualisé}}
+  \;+\; \underbrace{\text{\PartMarcheADeux}}_{\beta_M \,\times\, \text{prime moyenne du marché (\MoyMktA)}} .
+\]
+\BetaPartPhrase
+
+\subsection{La conclusion dépend-elle de la méthode statistique ?}
+
+Les rendements boursiers ne respectent pas toujours les hypothèses des MCO classiques (variance constante, absence d'autocorrélation). On recalcule donc la précision des estimations avec deux méthodes robustes. Les coefficients sont \emph{identiques} ; seules les erreurs standards changent.
+
+\begin{table}[h]
+  \centering\small
+  \input{generated/tab_inference.tex}
+  \caption{Modèle de marché selon la méthode d'inférence. Les méthodes robustes (HC3 : hétéroscédasticité ; Newey-West : hétéroscédasticité et autocorrélation) utilisent une approximation par la loi normale.}
+\end{table}
+
+La statistique de l'alpha vaut \AlphaTClassique{} avec les MCO classiques, \AlphaZHC{} avec HC3 et \AlphaZ{} avec Newey-West (\NWLags{} retards) : \InferenceConclusion. Le reste du rapport utilise Newey-West.
+
+\subsection{Et avec d'autres facteurs de risque ?}
+
+Le modèle de marché ignore d'autres sources de rendement connues : la taille des entreprises (SMB), le style « valeur » (HML), le momentum (MOM), la rentabilité (RMW) et l'investissement (CMA). On estime donc aussi les modèles de Fama-French à 3 et 5 facteurs et de Carhart à 4 facteurs, avec deux définitions du marché : le SPI, ou le marché européen de Fama et French. Ces facteurs sont publiés en dollars ; ils sont convertis en francs suisses et le taux sans risque utilisé est toujours le SARON. Pour une comparaison équitable, toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode).
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_alphas.pdf}
+  \caption{Alpha annualisé et intervalle de confiance à 95~\% selon le modèle et la définition du marché.}
+\end{figure}
+
+\begin{table}[h]
+  \centering\small
+  \input{generated/tab_comparaison.tex}
+  \caption{Comparaison des modèles (erreurs standards de Newey-West). \textsuperscript{h} Variante hybride : marché suisse et facteurs européens, univers de facteurs non homogène.}
+\end{table}
+
+\FacteursPhrase{} ; selon la spécification, il varie entre \AlphaMinA{} et \AlphaMaxA{} par an. \FacteursRDeuxPhrase{} (section~\ref{sec:limites}).
+
+\subsection{Le résultat est-il stable dans le temps ?}
+
+On ré-estime le modèle de marché sur des fenêtres glissantes de \RollFenetre{} mois (\RollN{} estimations). Le bêta varie de \RollBetaMin{} (fenêtre se terminant en \RollBetaMinDate) à \RollBetaMax{} (\RollBetaMaxDate). L'alpha est positif dans \RollAlphaPosPct{} des fenêtres, \RollPhrase\RollAlphaSigPct{} d'entre elles. Sur cinq ans de données, un alpha reste difficile à mesurer précisément.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_rolling.pdf}
+  \caption{Bêta et alpha estimés sur fenêtres glissantes ; la date est celle de fin de fenêtre.}
+\end{figure}
+
+\subsection{Le modèle est-il bien spécifié ?}
+
+Trois tests portent sur les résidus du modèle de marché (la partie non expliquée) :
+\begin{itemize}[leftmargin=*]
+  \item le test de Ljung-Box à \LBLags{} retards \LBVerdict{} ($Q$ = \LBQ, $p$~\LBpEq) ;
+  \item le test de Breusch-Pagan \BPVerdict{} ($LM$ = \BPLM, $p$~\BPpEq) ;
+  \item le test de Jarque-Bera \JBVerdict{} ($JB$ = \JB, $p$~\JBpEq ; asymétrie \Asym, kurtosis \Kurt{} contre 3 pour une loi normale).
+\end{itemize}
+Des queues de distribution épaisses sont habituelles pour une action individuelle. Elles rendent les intervalles de confiance approximatifs et justifient l'usage d'erreurs standards robustes.
+
+% -----------------------------------------------------------------------------
+\section{Comment interpréter — et ne pas interpréter — ces résultats}
+\label{sec:limites}
+
+\begin{attention}{À retenir}
+Un alpha positif et « significatif » pour une action, sur une période donnée, \emph{ne démontre pas} que le marché se trompe, ni qu'il aurait été possible de l'exploiter. Les points ci-dessous expliquent pourquoi.
+\end{attention}
+
+\paragraph{1. Une seule action, c'est beaucoup de bruit.} Les tests des modèles d'évaluation portent normalement sur des \emph{portefeuilles} ou sur de nombreux actifs simultanément (test de Gibbons, Ross et Shanken, régressions de Fama et MacBeth). Le risque propre à une action ne se diversifie pas : il rend l'alpha très imprécis, comme le montre l'intervalle de confiance, qui va de \AlphaALo{} à \AlphaAHi{} par an. Pour \emph{tester} un modèle, il faudrait au minimum comparer BCV à des titres comparables définis à l'avance.
+
+\paragraph{2. Sélection a posteriori et tests multiples.} Si l'on teste 20 actions dont aucune n'a de véritable alpha, on obtient en moyenne un résultat « significatif » à 5~\% par pur hasard, et la probabilité d'en obtenir au moins un est de \ProbUnFaux. Si une action est étudiée \emph{parce qu'}elle a bien performé, la $p$-value perd sa signification habituelle. Les remèdes existent (échantillon défini à l'avance, corrections de Holm ou de Benjamini-Hochberg, seuils plus exigeants), mais ils supposent d'étudier un ensemble d'actifs.
+
+\paragraph{3. Un alpha passé n'est pas une stratégie.} L'alpha est mesuré \emph{après coup}, sans coûts de transaction, sans impôts et avec des paramètres estimés sur toute la période. Rien n'indique qu'il se reproduira ; \RollLimite.
+
+\paragraph{4. Des facteurs probablement manquants.} \RDeuxLimite{} Deux facteurs absents sont particulièrement plausibles. D'abord l'anomalie dite \emph{low volatility} ou \emph{betting against beta} : historiquement, les actions à faible bêta ont eu un alpha positif dans le CAPM, \LowVolPhrase{} ; une partie de « son » alpha est peut-être simplement cette anomalie connue. Ensuite, pour une banque, la sensibilité aux \emph{taux d'intérêt} : la période couvre la phase de taux négatifs (2015-2022) et leur remontée, qui ont fortement affecté les marges bancaires.
+
+\paragraph{5. Des facteurs mal adaptés au marché suisse.} Les facteurs de Fama et French utilisés décrivent l'ensemble du marché européen, dominé par de grandes entreprises de la zone euro et du Royaume-Uni. Leur conversion en francs ajoute un effet de change. La variante « SPI + facteurs européens » mélange deux univers et n'est présentée qu'à titre de comparaison.
+
+\paragraph{6. Une période courte et particulière.} Environ \Annees{} ans de données mensuelles, c'est peu pour estimer précisément un rendement moyen, et la période ne contient qu'un seul cycle de taux. Les données proviennent en partie de Yahoo Finance, dont les ajustements sont contrôlés automatiquement mais pas audités.
+
+\paragraph{7. Significatif ne veut pas dire important (ni l'inverse).} La significativité statistique indique seulement que l'alpha est probablement différent de zéro. Son ampleur économique reste très incertaine : les valeurs compatibles avec les données vont de \AlphaALo{} à \AlphaAHi{} par an. Enfin, l'annualisation retenue (12 × l'alpha mensuel) est une convention simple, qui ignore la capitalisation.
+
+% -----------------------------------------------------------------------------
+\section{Pour aller plus loin}
+
+\begin{itemize}[leftmargin=*]
+  \item Étendre l'analyse à un groupe défini à l'avance, par exemple toutes les banques cantonales cotées, et tester conjointement leurs alphas (test GRS), avec une correction pour tests multiples des alphas individuels.
+  \item Ajouter un facteur de taux d'intérêt et un facteur \emph{betting against beta}, idéalement construits sur le marché suisse.
+  \item Allonger l'historique (SPI Total Return avant 2013) pour gagner en précision et couvrir plusieurs régimes de taux.
+\end{itemize}
+
+Le site interactif permet de refaire toutes ces estimations en changeant la période, le modèle, la méthode d'inférence et la fenêtre glissante : \URLSite.
+
+% -----------------------------------------------------------------------------
+\appendix
+\section{Méthodologie}
+
+\paragraph{Rendements.} $R_t = P^{\text{adj}}_t / P^{\text{adj}}_{t-1} - 1$ sur le dernier cours de chaque mois, avec des cours ajustés des dividendes et des opérations sur titres. Un mois incomplet est laissé manquant, sans interpolation.
+
+\paragraph{Taux sans risque.} Indice capitalisé $I_{d_{i+1}} = I_{d_i}\,(1 + r_i\, n_i/360)$, où $r_i$ est le SARON du jour et $n_i$ le nombre de jours calendaires jusqu'au fixing suivant ; rendement du mois $m$ : $I(\text{fin } m)/I(\text{fin } m-1) - 1$.
+
+\paragraph{Facteurs en CHF.} Avec $s_t$ la variation du cours USD/CHF : marché européen $R^{\text{CHF}}_M = (1 + \text{Mkt-RF} + \text{RF}_{\text{US}})(1 + s_t) - 1$, puis rendement excédentaire $R^{\text{CHF}}_M - R_f^{\text{SARON}}$ ; facteurs long-short $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$.
+
+\paragraph{Estimation et inférence.} MCO avec constante. Classique : $\hat V = s^2 (X'X)^{-1}$, loi de Student à $n-k$ degrés de liberté. HC3 : $(X'X)^{-1} X' \operatorname{diag}\!\big(e_t^2/(1-h_t)^2\big) X (X'X)^{-1}$. Newey-West : noyau de Bartlett, $L = \lfloor 4 (n/100)^{2/9} \rfloor$ retards. Pour HC3 et Newey-West, approximation normale. Alpha annualisé = $12\,\alpha$.
+
+\paragraph{Validation.} Les calculs de ce rapport (numpy/scipy) et ceux du site (navigateur) sont vérifiés automatiquement contre la bibliothèque \texttt{statsmodels} à chaque mise à jour des données.
+
+\section{Sources des données}
+
+\begin{center}\small
+\input{generated/tab_sources.tex}
+\end{center}
+
+Données de Yahoo Finance et d'indices SIX : soumises aux conditions de leurs fournisseurs ; seuls des rendements mensuels dérivés sont utilisés. Facteurs : Kenneth R.~French Data Library. Taux SARON et cours USD/CHF : Banque nationale suisse (data.snb.ch).
+
+\vfill
+{\small\color{gris} Ce document a une visée pédagogique et de recherche. Il ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures.}
+
+\end{document}

@@ -12,6 +12,7 @@ Ce site interactif estime des modèles d'évaluation d'actifs pour **Banque Cant
 | D. Régression mobile | Fenêtres de 36, 60 ou 120 mois, avec intervalles de confiance |
 | E. Comparaison | 4 modèles × 2 marchés sur un échantillon strictement identique |
 | Exports et import | Exports CSV ; import manuel d'un CSV ; mode clair et sombre ; paramètres conservés dans l'URL |
+| Rapport | **Rapport de synthèse vulgarisé en LaTeX** (PDF et sources), avec résultats, robustesse et limites de l'exercice |
 
 Toutes les statistiques sont **recalculées dans le navigateur** à partir de fichiers statiques. Aucun coefficient n'est codé en dur, il n'y a pas de backend, et aucune clé d'API n'est utilisée.
 
@@ -23,6 +24,9 @@ pipeline/            Python : récupération, transformation, contrôles, réfé
   transform.py       fins de mois, rendements, capitalisation SARON ACT/360, conversion CHF
   build.py           -> public/data/dataset.json, data/processed/monthly.csv, build_report.md
   validate.py        -> tests/reference/statsmodels_*.json
+  olsref.py          OLS et diagnostics numpy/scipy (même conventions, testés contre statsmodels)
+  report.py          -> public/report/rapport_bcv.pdf et rapport_bcv_latex.zip
+report/rapport.tex   gabarit LaTeX du rapport (texte seul ; chiffres injectés par macros)
   tests/             tests unitaires et test de bout en bout hors ligne
 src/
   engine/            moteur statistique TypeScript (sans dépendance)
@@ -61,6 +65,24 @@ python -m unittest discover -s pipeline/tests -t .
 ```
 
 Pour régénérer les jeux de test synthétiques : `npm run fixtures`. Ces jeux servent uniquement aux tests et ne sont jamais publiés dans `public/`.
+
+## Rapport de synthèse (LaTeX)
+
+Le bouton **Rapport PDF** du site télécharge un rapport vulgarisé de huit pages environ :
+
+- l'essentiel en cinq points ;
+- la question posée et un lexique ;
+- les résultats : performance, bêta, alpha et sa décomposition, robustesse de l'inférence, modèles multifactoriels, fenêtres glissantes, diagnostics ;
+- les **limites de l'exercice** : une seule action, sélection a posteriori et tests multiples, alpha ex post, facteurs omis (low-vol, taux), facteurs européens, période courte, significativité statistique contre économique ;
+- des pistes, la méthodologie et les sources.
+
+`report/rapport.tex` ne contient que le texte. Tous les nombres, tableaux et figures sont produits par `pipeline/report.py` à partir des données, sous forme de macros (`\AlphaA`, `\BetaM`…). Les phrases qui dépendent des résultats (significativité, robustesse…) sont elles aussi générées : le texte reste exact quand les données changent. Le rapport porte sur la spécification de référence : Single Index, échantillon maximal, Newey-West.
+
+```bash
+npm run report      # nécessite XeLaTeX, latexmk, polyglossia et la police TeX Gyre Pagella
+```
+
+Le workflow installe LaTeX et régénère le rapport à chaque exécution. L'archive `rapport_bcv_latex.zip` contient le gabarit, les macros, les tableaux et les figures : on peut la recompiler avec `latexmk -xelatex rapport.tex`.
 
 ## Données
 

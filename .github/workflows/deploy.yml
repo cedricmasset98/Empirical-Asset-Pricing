@@ -47,6 +47,16 @@ jobs:
       - name: Références statsmodels
         run: python -m pipeline.validate 2>&1 | tee logs/validate.log
 
+      - name: Installation de LaTeX (XeLaTeX, français, TeX Gyre)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
+            texlive-lang-french latexmk lmodern fonts-texgyre
+
+      - name: Rapport de synthèse (LaTeX -> PDF)
+        run: python -m pipeline.report 2>&1 | tee logs/report.log
+
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
@@ -71,7 +81,7 @@ jobs:
           if python -m pipeline.changed; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add public/data data/processed tests/reference
+            git add public/data public/report data/processed tests/reference
             git commit -m "Données : mise à jour automatique [skip ci]" || exit 0
             git push
           else

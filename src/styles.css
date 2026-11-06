@@ -553,3 +553,24 @@ ul.checks li {
 [data-theme='dark'] #theme-toggle::before {
   content: '☀';
 }
+
+a.btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+[data-theme='dark'] .btn-primary {
+  color: #0e1115;
+}
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+.top .btn-primary {
+  white-space: nowrap;
+}
