@@ -44,8 +44,8 @@ def _retry(fn: Callable[[], Any], attempts: int = 3, wait: float = 5.0) -> Any:
     raise last
 
 
-def _get(url: str, **kw: Any) -> requests.Response:
-    r = requests.get(url, headers=C.HTTP_HEADERS, timeout=60, **kw)
+def _get(url: str, timeout: float = 60, **kw: Any) -> requests.Response:
+    r = requests.get(url, headers=C.HTTP_HEADERS, timeout=timeout, **kw)
     r.raise_for_status()
     return r
 
@@ -192,7 +192,9 @@ def fetch_saron() -> tuple[pd.Series | None, Info]:
         if not candidates:
             raise RuntimeError(f"Série SARON introuvable dans le cube {C.SNB_CUBE} : {json.dumps(items)[:400]}")
         dim_id, item_id, item_name = candidates[0]
-        text = _retry(lambda: _get(C.SNB_DATA_URL, params={"dimSel": f"{dim_id}({item_id})"}).text)
+        # sans fromDate, l'API ne renvoie que les observations les plus récentes
+        params = {"dimSel": f"{dim_id}({item_id})", "fromDate": C.SNB_FROM_DATE}
+        text = _retry(lambda: _get(C.SNB_DATA_URL, params=params).text)
         df = parse_snb_csv(text)
         if dim_id in df.columns:
             df = df[df[dim_id] == item_id]
@@ -241,33 +243,73 @@ def fetch_french(key: str) -> tuple[str | None, Info]:
 
 # --------------------------------------------------------------------- USD/CHF
 
+def fetch_usdchf_snb() -> tuple[pd.Series, str]:
+    """Cours USD/CHF de fin de mois publié par la BNS (cube devkum)."""
+    dims = _retry(lambda: _get(C.SNB_FX_DIMENSIONS_URL).json())
+    by_dim: dict[str, list[tuple[str, str]]] = {}
+    for d in dims.get("dimensions", []):
+        by_dim[d.get("id", "")] = _walk_items(d.get("dimensionItems", []))
+    sel = []
+    for did, items in by_dim.items():
+        eom = [i for i, n in items if "end of month" in n.lower() or "month-end" in n.lower()]
+        usd = [i for i, n in items if i.upper().startswith("USD")]
+        if eom:
+            sel.append(f"{did}({eom[0]})")
+        elif usd:
+            sel.append(f"{did}({usd[0]})")
+    if len(sel) != len(by_dim) or not sel:
+        raise RuntimeError(f"Dimensions BNS devkum non reconnues : {json.dumps(by_dim)[:400]}")
+    params = {"dimSel": ",".join(sel), "fromDate": "1980-01"}
+    df = parse_snb_csv(_retry(lambda: _get(C.SNB_FX_DATA_URL, params=params).text))
+    for part in sel:
+        did, iid = part[:-1].split("(")
+        if did in df.columns:
+            df = df[df[did] == iid]
+    # observations mensuelles AAAA-MM : datées au dernier jour du mois
+    idx = pd.PeriodIndex(df["Date"].str[:7], freq="M").to_timestamp(how="end").normalize()
+    s = pd.Series(df["Value"].values, index=idx).dropna().sort_index()
+    if s.empty:
+        raise RuntimeError("Série USD/CHF BNS vide.")
+    return s, ",".join(sel)
+
+
 def fetch_usdchf() -> tuple[pd.Series | None, Info]:
+    """USD/CHF (CHF par USD) : BNS (fin de mois) → FRED (quotidien) → Yahoo (quotidien)."""
     info: Info = {
-        "id": "fx", "name": "USD/CHF (CHF par USD), cours quotidien",
-        "provider": "FRED, Federal Reserve Bank of St. Louis — série DEXSZUS (H.10, midi New York)",
-        "url": "https://fred.stlouisfed.org/series/DEXSZUS", "license": C.LICENSES["fred"],
+        "id": "fx", "name": "USD/CHF (CHF par USD), cours de fin de mois",
+        "provider": "Banque nationale suisse, data.snb.ch (cube devkum, cours de fin de mois)",
+        "url": "https://data.snb.ch/en/topics/ziredev/cube/devkum", "license": C.LICENSES["snb"],
         "columns": ["fx_usdchf_ret"], "retrieved_at": _now(),
     }
+    manual = _manual_csv("usdchf_daily.csv", "chf_per_usd")
+    if manual is not None:
+        info.update(status="manual", provider="Import manuel data/manual/usdchf_daily.csv", coverage=_coverage(manual.index))
+        return manual, info
+    errors = []
     try:
-        manual = _manual_csv("usdchf_daily.csv", "chf_per_usd")
-        if manual is not None:
-            info.update(status="manual", provider="Import manuel data/manual/usdchf_daily.csv", coverage=_coverage(manual.index))
-            return manual, info
-        text = _retry(lambda: _get(C.FRED_USDCHF).text)
-        df = pd.read_csv(io.StringIO(text))
-        date_col = df.columns[0]
-        s = pd.Series(pd.to_numeric(df["DEXSZUS"], errors="coerce").values, index=pd.to_datetime(df[date_col])).dropna()
-        _save_raw("usdchf_daily.csv", s.rename("chf_per_usd"))
-        info.update(status="ok", coverage=_coverage(s.index))
-        return s.sort_index(), info
-    except Exception as exc:  # noqa: BLE001
-        first_error = f"{type(exc).__name__}: {exc}"
-    try:
-        h = yahoo_history(C.YAHOO_USDCHF)
-        s = h["Close"].astype(float)
-        info.update(status="ok", provider="Yahoo Finance (CHF=X) — repli après échec FRED", url="https://finance.yahoo.com/quote/CHF%3DX",
-                    license=C.LICENSES["yahoo"], coverage=_coverage(s.index), message=f"FRED indisponible ({first_error})")
+        s, sel = fetch_usdchf_snb()
+        _save_raw("usdchf_snb_monthly.csv", s.rename("chf_per_usd"))
+        info.update(status="ok", coverage=_coverage(s.index), message=f"Série BNS devkum {sel}")
         return s, info
     except Exception as exc:  # noqa: BLE001
-        info.update(status="error", message=f"FRED : {first_error} | Yahoo : {type(exc).__name__}: {exc}")
-        return None, info
+        errors.append(f"BNS : {type(exc).__name__}: {exc}")
+    try:
+        text = _retry(lambda: _get(C.FRED_USDCHF, timeout=30).text, attempts=2)
+        df = pd.read_csv(io.StringIO(text))
+        s = pd.Series(pd.to_numeric(df["DEXSZUS"], errors="coerce").values, index=pd.to_datetime(df[df.columns[0]])).dropna().sort_index()
+        _save_raw("usdchf_fred_daily.csv", s.rename("chf_per_usd"))
+        info.update(status="ok", provider="FRED, Federal Reserve Bank of St. Louis — DEXSZUS (H.10, midi New York)",
+                    url="https://fred.stlouisfed.org/series/DEXSZUS", license=C.LICENSES["fred"], coverage=_coverage(s.index),
+                    message="Repli : " + " | ".join(errors))
+        return s, info
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"FRED : {type(exc).__name__}: {exc}")
+    try:
+        s = yahoo_history(C.YAHOO_USDCHF)["Close"].astype(float)
+        info.update(status="ok", provider="Yahoo Finance (CHF=X)", url="https://finance.yahoo.com/quote/CHF%3DX",
+                    license=C.LICENSES["yahoo"], coverage=_coverage(s.index), message="Repli : " + " | ".join(errors))
+        return s, info
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"Yahoo : {type(exc).__name__}: {exc}")
+    info.update(status="error", message=" | ".join(errors))
+    return None, info

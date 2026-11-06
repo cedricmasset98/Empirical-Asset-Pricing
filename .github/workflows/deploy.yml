@@ -18,13 +18,18 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+defaults:
+  run:
+    # « shell: bash » active -o pipefail : un échec avant « | tee » fait échouer l'étape
+    shell: bash
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
@@ -42,7 +47,7 @@ jobs:
       - name: Références statsmodels
         run: python -m pipeline.validate 2>&1 | tee logs/validate.log
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -75,7 +80,7 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 

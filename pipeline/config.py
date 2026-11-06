@@ -31,6 +31,9 @@ YAHOO_SMI_PRICE = "^SSMI"
 SNB_CUBE = "snbgwdzid"
 SNB_DIMENSIONS_URL = f"https://data.snb.ch/api/cube/{SNB_CUBE}/dimensions/en"
 SNB_DATA_URL = f"https://data.snb.ch/api/cube/{SNB_CUBE}/data/csv/en"
+SNB_FROM_DATE = "1999-01-01"
+SNB_FX_DIMENSIONS_URL = "https://data.snb.ch/api/cube/devkum/dimensions/en"
+SNB_FX_DATA_URL = "https://data.snb.ch/api/cube/devkum/data/csv/en"
 
 FRENCH_BASE = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
 FRENCH_FILES = {
