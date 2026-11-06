@@ -32,6 +32,30 @@ class TestReport(unittest.TestCase):
         used = set(re.findall(r"\\([A-Z][A-Za-z]+)", (ROOT / "report" / "rapport.tex").read_text()))
         self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE"}), [])
 
+    def test_fund_and_pair_templates(self):
+        import re
+        from pipeline import report_pair
+
+        ds = json.loads((ROOT / "tests" / "fixtures" / "synthetic_dataset.json").read_text())
+        with tempfile.TemporaryDirectory() as tmp:
+            saved = report.GEN
+            try:
+                report.GEN = Path(tmp)
+                m_fund = report.macros(ds, report.compute(ds, "FUND"))
+                m_pair = report_pair.write_pair(ds, report_pair.compute_pair(ds), Path(tmp))
+            finally:
+                report.GEN = saved
+            names = {p.name for p in Path(tmp).iterdir()}
+        self.assertTrue({"fig_pair_perf.pdf", "fig_pair_nuages.pdf", "fig_pair_alphas.pdf", "tab_pair_models.tex", "tab_sources.tex"} <= names)
+        for tpl, m in (("rapport_fonds.tex", m_fund), ("rapport_comparaison.tex", m_pair)):
+            used = set(re.findall(r"\\([A-Z][A-Za-z]+)", (ROOT / "report" / tpl).read_text()))
+            self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE"}), [], tpl)
+        # l'écart d'alpha de la comparaison = différence des alphas
+        r = report_pair.compute_pair(ds)
+        F = r["fits"]
+        self.assertAlmostEqual(F[("CAPM", "SPI", "DIFF")].params[0],
+                               F[("CAPM", "SPI", "BCV")].params[0] - F[("CAPM", "SPI", "FUND")].params[0], places=12)
+
     def test_formatting(self):
         self.assertEqual(report.num(-0.0012, 2), "0,00")
         self.assertEqual(report.num(-1.5, 1), "−1,5")

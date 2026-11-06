@@ -1,0 +1,182 @@
+% =============================================================================
+% Empirical Asset Pricing — rapport de synthèse sur l'action BCV
+% Gabarit : seul le texte est écrit ici. Tous les nombres proviennent de
+% generated/macros.tex et des tableaux/figures produits par pipeline/report.py.
+% Compilation : latexmk -xelatex rapport.tex
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{french}
+\setmainfont{TeX Gyre Pagella}
+\usepackage[a4paper,margin=2.4cm,headheight=14pt]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{bleu}{HTML}{1F5FA8}
+\definecolor{orange}{HTML}{D9480F}
+\definecolor{gris}{HTML}{4B5563}
+\captionsetup{font=small,labelfont=bf,labelsep=period}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+
+\newtcolorbox{essentiel}{colback=bleu!5,colframe=bleu,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=6pt,bottom=6pt,
+  fonttitle=\bfseries,title=L'essentiel}
+\newtcolorbox{attention}[1]{colback=orange!5,colframe=orange,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries,title=#1}
+\newtcolorbox{lexique}{colback=gray!6,colframe=gray!60,boxrule=0.5pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries\color{black},title=Lexique}
+
+\input{generated/macros.tex}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gris} Empirical Asset Pricing — Action BCV vs Fonds BCV}
+\fancyhead[R]{\small\color{gris} \DateRapport}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\hypersetup{pdftitle={Action BCV vs Fonds BCV — Comparaison des alphas},pdfauthor={Empirical Asset Pricing},pdflang=fr}
+
+\begin{document}
+
+\begin{center}
+  {\small\color{gris} EMPIRICAL ASSET PRICING · RAPPORT COMPARATIF}\\[6pt]
+  {\LARGE\bfseries Action BCV vs Fonds BCV}\\[4pt]
+  {\large Comparaison des alphas}\\[8pt]
+  {\small Action Banque Cantonale Vaudoise (BCVN) et fonds BCV Swiss Equity A (CH0006018706) · rendements mensuels en CHF · \PairDebut{} – \PairFin{}}\\[2pt]
+  {\small\color{gris} Rapport généré automatiquement le \DateRapport{} à partir des données du \DateDonnees{} · version \texttt{\Commit}}
+\end{center}
+
+\vspace{4pt}
+
+\begin{essentiel}
+\begin{enumerate}[leftmargin=*,label=\textbf{\arabic*.}]
+  \item \textbf{Performances.} Sur les mêmes \PairN{} mois, 100~CHF investis dans l'action BCV sont devenus \ActCroiss{} (\ActRend{} par an), contre \FdsCroiss{} pour le fonds (\FdsRend{} par an, frais déduits) et \SpiCroiss{} pour le SPI (\SpiRend{} par an).
+  \item \textbf{Alphas face au SPI.} L'alpha de l'action est de \ActAlphaA{} par an, \ActVerdict. L'alpha du fonds, net de frais, est de \FdsAlphaA{} par an, \FdsVerdict.
+  \item \textbf{Écart.} \DiffPhrase
+  \item \textbf{Lecture.} Ces deux alphas ne mesurent pas la même activité économique. Un alpha plus élevé n'est ni un meilleur placement en soi, ni une preuve sur la qualité de la gestion du fonds.
+\end{enumerate}
+\end{essentiel}
+
+% -----------------------------------------------------------------------------
+\section{Deux alphas, deux objets différents}
+
+La BCV est présente sur ces deux supports, mais à des titres très différents. L'\textbf{action BCV} est une part de propriété de la banque : son rendement reflète l'ensemble de ses activités (crédit, gestion de fortune, gestion d'actifs, opérations de marché) et la valeur que le marché leur attribue. Le \textbf{fonds BCV Swiss Equity A} est un portefeuille d'actions suisses géré par BCV Asset Management pour le compte de ses investisseurs : son rendement, net des frais incorporés dans sa VNI, reflète les choix de gestion.
+
+L'\textbf{alpha de l'action} mesure le rendement excédentaire historique de l'action que les facteurs retenus n'expliquent pas. L'\textbf{alpha du fonds} mesure la même chose pour le fonds, après ses frais. La question qui guide ce rapport est la suivante :
+
+\begin{center}
+\emph{La banque a-t-elle généré davantage de rendement ajusté des facteurs pour ses propres actionnaires que pour les investisseurs de son fonds actions suisses ?}
+\end{center}
+
+Les revenus de gestion du fonds font partie des revenus de la banque. La comparaison permet de juxtaposer la création de valeur pour les actionnaires et le résultat obtenu par les porteurs de parts. Elle ne permet pas d'établir de lien de cause à effet entre les deux.
+
+% -----------------------------------------------------------------------------
+\section{Une comparaison à armes égales}
+
+Les deux actifs sont analysés sur exactement les mêmes \PairN{} mois (\PairDebut{} – \PairFin{}), avec le même taux sans risque (SARON), le même marché et la même méthode statistique : erreurs standards de Newey-West avec \NWLags{} retards. L'action est mesurée dividendes réinvestis. Le fonds est mesuré par sa série officielle de performance, distributions réinvesties, nette de frais, publiée par Gérifonds et contrôlée de façon indépendante par le pipeline.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_pair_perf.pdf}
+  \caption{Valeur de 100~CHF investis au début de la période, dividendes, distributions et intérêts réinvestis.}
+\end{figure}
+
+\begin{table}[h]
+  \centering\small
+  \input{generated/tab_pair_perf.tex}
+  \caption{Rendements annualisés (géométriques), volatilités annualisées et pertes maximales mesurées en fin de mois.}
+\end{table}
+
+Sur la période, la performance du fonds est \FdsVsSpi{} à celle du SPI. L'action a connu une volatilité plus forte (\ActVol{} contre \FdsVol{}) : elle concentre le risque d'une seule entreprise, alors que le fonds est diversifié.
+
+% -----------------------------------------------------------------------------
+\section{Les alphas face au marché suisse}
+
+Pour chaque actif, on estime le modèle de marché : rendement excédentaire $= \alpha + \beta \times$ rendement excédentaire du SPI $+$ résidu. La figure~\ref{fig:pair} place les deux nuages de points côte à côte, à la même échelle.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_pair_nuages.pdf}
+  \caption{Rendements excédentaires mensuels de l'action et du fonds contre ceux du SPI, mêmes mois et mêmes échelles. Les zones colorées sont les intervalles de confiance des droites.}
+  \label{fig:pair}
+\end{figure}
+
+\begin{table}[h]
+  \centering\small
+  \input{generated/tab_pair_alpha.tex}
+  \caption{Single Index Model, mêmes mois, Newey-West. La colonne « Écart » provient de la régression du rendement de l'action \emph{moins} celui du fonds sur le SPI : son alpha est exactement la différence des deux alphas, et son erreur standard tient compte de la corrélation entre les deux actifs.}
+\end{table}
+
+Les deux nuages sont très différents. Le fonds suit le marché presque point par point (bêta \FdsBeta, $R^2$ de \FdsRDeuxPct) ; l'action s'en écarte beaucoup (bêta \ActBeta, $R^2$ de \ActRDeuxPct). \RisquePhrase
+
+\FundPhrase{} Pour l'action, l'alpha est de \ActAlphaA{} par an, mais avec une forte incertitude (de \ActAlphaLo{} à \ActAlphaHi{}). \DiffPhrase
+
+% -----------------------------------------------------------------------------
+\section{Et avec d'autres facteurs ?}
+
+Les modèles de Fama et French et de Carhart ajoutent au marché des facteurs de taille, de valeur, de momentum, de rentabilité et d'investissement. Les facteurs disponibles décrivent le marché européen ; ils sont convertis en francs.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_pair_alphas.pdf}
+  \caption{Alpha annualisé et intervalle de confiance à 95~\% de l'action et du fonds selon le modèle ; mêmes mois pour toutes les estimations.}
+\end{figure}
+
+\begin{table}[h]
+  \centering\small
+  \input{generated/tab_pair_models.tex}
+  \caption{Alphas annualisés (Newey-West). Le premier modèle utilise le SPI ; les suivants le marché européen de Fama et French. Écart = alpha de la régression de la différence de rendement action $-$ fonds.}
+\end{table}
+
+\ActRobustePhrase{} (de \ActAlphaMin{} à \ActAlphaMax{} par an). Celui du fonds varie davantage (de \FdsAlphaMin{} à \FdsAlphaMax{} ; significatif dans \FdsNbSig{} cas). Cette variation tient surtout à la définition du marché : un fonds d'actions suisses mesuré contre un marché européen hérite mécaniquement de l'écart de performance entre les deux marchés. Pour le fonds, dont l'indice de référence est le SPI, le modèle de marché suisse reste la référence pertinente. L'écart entre l'action et le fonds est significatif à 5~\% dans \DifNbSig{} spécifications sur \NbSpecs.
+
+% -----------------------------------------------------------------------------
+\section{Ce que la comparaison permet d'apprendre}
+
+\ConclusionPhrase
+
+Trois nuances permettent de lire ce constat correctement, sans l'effacer :
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Risque.} L'alpha de l'action s'accompagne d'un risque propre beaucoup plus élevé (\ActSigmaA{} par an contre \FdsSigmaA{} pour le fonds). Un investisseur qui détiendrait uniquement l'action supporterait un risque non diversifié que le fonds évite.
+  \item \textbf{Incertitude.} L'alpha de l'action est estimé avec une grande imprécision, et BCV a été étudiée après coup : ce résultat ne garantit rien pour l'avenir. \FondsIncertitude
+  \item \textbf{Nature différente.} L'alpha de l'action reflète la rentabilité de toute la banque et sa valorisation par le marché ; celui du fonds, une activité de gestion dont les frais constituent précisément un revenu pour la banque.
+\end{itemize}
+
+\FinalePhrase{} Elle n'indique ni que le fonds est mal géré, ni que cette situation se prolongera.
+
+% -----------------------------------------------------------------------------
+\appendix
+\section{Méthode}
+
+\paragraph{Échantillon.} Mois pour lesquels l'action, le fonds, le SPI, le SARON et tous les facteurs européens sont disponibles (identique à l'onglet « Action BCV vs Fonds BCV » du site avec « Marché = Europe FF »). Aucune interpolation.
+
+\paragraph{Test de l'écart d'alpha.} Pour chaque modèle, on régresse $R_{\text{action},t} - R_{\text{fonds},t}$ sur les mêmes facteurs. Comme les MCO sont linéaires, la constante vaut exactement $\alpha_{\text{action}} - \alpha_{\text{fonds}}$, et son erreur standard (Newey-West) tient compte de la corrélation entre les deux actifs. Alpha annualisé = $12\,\alpha$.
+
+\paragraph{Données du fonds.} Série officielle de performance Gérifonds (distributions brutes réinvesties, nette de frais), contrôlée jour par jour à partir des VNI et des distributions publiées, et par la performance YTD officielle.
+
+\paragraph{Validation.} Les calculs sont vérifiés automatiquement contre \texttt{statsmodels}. Le site permet de refaire l'analyse avec d'autres périodes, modèles et méthodes : \URLSite.
+
+\section{Sources des données}
+
+\begin{center}\small
+\input{generated/tab_sources.tex}
+\end{center}
+
+\vfill
+{\small\color{gris} Ce document a une visée pédagogique et de recherche. Il ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures.}
+
+\end{document}

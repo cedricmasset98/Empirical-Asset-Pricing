@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import math
 import os
 import shutil
@@ -39,6 +40,18 @@ GEN = BUILD / "generated"
 OUT = C.PUBLIC_DATA.parent / "report"
 SITE_URL = "https://cedricmasset.ch/Empirical-Asset-Pricing/"
 ROLL_WINDOW = 60
+
+NOUNS = {
+    "BCV": {"de": "de BCV", "le": "BCV", "objet": "l'action BCV", "court": "BCV",
+            "serie": "Action BCV (dividendes réinvestis)", "propre": "propres à BCV"},
+    "FUND": {"de": "du fonds", "le": "le fonds", "objet": "le fonds BCV Swiss Equity A", "court": "fonds",
+             "serie": "Fonds BCV Swiss Equity A (distributions réinvesties)", "propre": "propres aux choix de gestion du fonds"},
+}
+REPORTS = {
+    "BCV": {"template": "rapport.tex", "pdf": "rapport_bcv.pdf", "zip": "rapport_bcv_latex.zip", "dir": "bcv"},
+    "FUND": {"template": "rapport_fonds.tex", "pdf": "rapport_fonds.pdf", "zip": "rapport_fonds_latex.zip", "dir": "fonds"},
+    "PAIR": {"template": "rapport_comparaison.tex", "pdf": "rapport_comparaison.pdf", "zip": "rapport_comparaison_latex.zip", "dir": "comparaison"},
+}
 
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
 MODEL_NAMES = {"CAPM": "CAPM", "FF3": "Fama-French 3", "CARHART": "Carhart 4", "FF5": "Fama-French 5"}
@@ -75,6 +88,11 @@ def peq(p: float) -> str:
     return "< 0,001" if p < 0.001 else f"= {num(p, 3)}"
 
 
+def date_fr() -> str:
+    g = datetime.now(timezone.utc)
+    return f"{g.day} {MOIS[g.month - 1]} {g.year}"
+
+
 def month_fr(key: str) -> str:
     y, m = key.split("-")
     return f"{MOIS[int(m) - 1]} {y}"
@@ -92,36 +110,36 @@ def verdict(p: float) -> str:
 
 # ------------------------------------------------------------------ calculs
 
-def sample(ds: dict, model: str, universe: str, restrict: set[int] | None = None):
-    rows = rows_for(ds, required(model, universe))
+def sample(ds: dict, model: str, universe: str, restrict: set[int] | None = None, asset: str = "BCV"):
+    rows = rows_for(ds, required(model, universe, asset))
     if restrict is not None:
         rows = [i for i in rows if i in restrict]
-    y, X, dates = design(ds, model, universe, rows)
+    y, X, dates = design(ds, model, universe, rows, asset)
     return y, X, dates, rows
 
 
-def compute(ds: dict) -> dict:
-    if not has_data(ds, required("CAPM", "SPI")):
-        raise RuntimeError("Séries BCV, SPI ou SARON indisponibles : rapport impossible.")
-    y, X, dates, rows = sample(ds, "CAPM", "SPI")
+def compute(ds: dict, asset: str = "BCV") -> dict:
+    if not has_data(ds, required("CAPM", "SPI", asset)):
+        raise RuntimeError(f"Séries {asset}, SPI ou SARON indisponibles : rapport impossible.")
+    y, X, dates, rows = sample(ds, "CAPM", "SPI", asset=asset)
     if len(y) < 24:
         raise RuntimeError(f"Seulement {len(y)} observations pour le Single Index Model.")
     fits = {c: olsref.fit(y, X, c) for c in ("classical", "HC3", "HAC")}
     main = fits["HAC"]
 
     # performance cumulée sur l'échantillon (rendements totaux)
-    bcv = np.array([ds["data"]["bcv_ret"][i] for i in rows])
+    bcv = np.array([ds["data"]["fund_ret" if asset == "FUND" else "bcv_ret"][i] for i in rows])
     spi = np.array([ds["data"]["spi_ret"][i] for i in rows])
     rf = np.array([ds["data"]["rf_saron"][i] for i in rows])
     contiguous = all(_mdiff(dates[t - 1], dates[t]) == 1 for t in range(1, len(dates)))
 
     # comparaison des 8 spécifications sur l'échantillon commun
-    specs = [(m, u) for u in UNIVERSES for m in MODELS if has_data(ds, required(m, u))]
-    cols = sorted({c for m, u in specs for c in required(m, u)})
+    specs = [(m, u) for u in UNIVERSES for m in MODELS if has_data(ds, required(m, u, asset))]
+    cols = sorted({c for m, u in specs for c in required(m, u, asset)})
     common = set(rows_for(ds, cols))
     comp = []
     for m, u in specs:
-        yc, Xc, dc, _ = sample(ds, m, u, common)
+        yc, Xc, dc, _ = sample(ds, m, u, common, asset)
         if len(yc) >= max(24, len(MODELS[m]) + 11):
             comp.append({"model": m, "universe": u, "fit": olsref.fit(yc, Xc, "HAC"), "dates": dc})
 
@@ -134,7 +152,7 @@ def compute(ds: dict) -> dict:
     e = fits["classical"].resid
     m_lb = olsref.lb_lags(len(e))
     return {
-        "y": y, "X": X, "dates": dates, "fits": fits, "main": main, "bcv": bcv, "spi": spi, "rf": rf,
+        "asset": asset, "y": y, "X": X, "dates": dates, "fits": fits, "main": main, "bcv": bcv, "spi": spi, "rf": rf,
         "contiguous": contiguous, "comp": comp, "roll": roll,
         "lb": olsref.ljung_box(e, m_lb), "lb_lags": m_lb, "bp": olsref.breusch_pagan(e, X), "jb": olsref.jarque_bera(e),
     }
@@ -149,6 +167,7 @@ def _mdiff(a: str, b: str) -> int:
 # ------------------------------------------------------------------ macros
 
 def macros(ds: dict, r: dict) -> dict[str, str]:
+    N = NOUNS[r.get("asset", "BCV")]
     f = r["main"]
     a, b = f.params
     n = f.n
@@ -174,9 +193,9 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
     data_date = ds.get("generated_at", "")[:10]
 
     beta_phrase = (
-        f"Quand le rendement excédentaire du SPI augmente d'un point de pourcentage, celui de BCV augmente en moyenne de {num(b, 2)} point"
+        f"Quand le rendement excédentaire du SPI augmente d'un point de pourcentage, celui {N['de']} augmente en moyenne de {num(b, 2)} point"
         if b >= 0 else
-        f"Quand le rendement excédentaire du SPI augmente d'un point de pourcentage, celui de BCV varie en moyenne de {num(b, 2)} point"
+        f"Quand le rendement excédentaire du SPI augmente d'un point de pourcentage, celui {N['de']} varie en moyenne de {num(b, 2)} point"
     )
     if b < 0.7:
         beta_sens = "nettement moins sensible au marché que la moyenne des actions (bêta de 1)"
@@ -186,7 +205,7 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
         beta_sens = "plus sensible au marché que la moyenne des actions"
     r2p = 100 * f.r2
     if r2p < 20:
-        r2_phrase = "Le marché n'explique donc qu'une petite partie des fluctuations mensuelles de l'action. Le reste correspond surtout à des événements propres à BCV, mais peut aussi refléter d'autres influences communes que le modèle n'inclut pas."
+        r2_phrase = f"Le marché n'explique donc qu'une petite partie des fluctuations mensuelles. Le reste correspond surtout à des événements {N['propre']}, mais peut aussi refléter d'autres influences communes que le modèle n'inclut pas."
     elif r2p < 50:
         r2_phrase = "Le marché explique une partie appréciable, mais minoritaire, des fluctuations de l'action."
     else:
@@ -208,21 +227,22 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
         robust = f"L'alpha est significatif à 5~\\% dans {nsig} des"
     r2_main = next((c["fit"].r2 for c in comp if c["model"] == "CAPM" and c["universe"] == "SPI"), f.r2)
     r2_gain = max((c["fit"].r2 for c in comp), default=f.r2) - r2_main
-    fact_r2 = ("Les facteurs supplémentaires n'améliorent presque pas l'explication des fluctuations mensuelles de BCV"
-               f" (gain de $R^2$ d'au plus {num(100 * r2_gain, 1)} point de pourcentage) : ils ne captent visiblement pas ce qui fait varier cette action d'un mois à l'autre"
+    fact_r2 = (f"Les facteurs supplémentaires n'améliorent presque pas l'explication des fluctuations mensuelles {N['de']}"
+               f" (gain de $R^2$ d'au plus {num(100 * r2_gain, 1)} point de pourcentage) : ils ne captent visiblement pas ce qui fait varier {N['le']} d'un mois à l'autre"
                if r2_gain < 0.05 else
-               f"Les facteurs supplémentaires améliorent l'explication des fluctuations de BCV (gain de $R^2$ jusqu'à {num(100 * r2_gain, 1)} points)")
+               f"Les facteurs supplémentaires améliorent l'explication des fluctuations {N['de']} (gain de $R^2$ jusqu'à {num(100 * r2_gain, 1)} points)")
     share_sig = float(np.mean(ra_sig)) if roll else 0.0
     roll_phrase = ("mais significatif à 5~\\% dans seulement " if share_sig < 0.5 else "et significatif à 5~\\% dans ")
     roll_limite = ("les fenêtres glissantes montrent d'ailleurs qu'il n'est significatif que sur une minorité de sous-périodes"
                    if share_sig < 0.5 else "même s'il est significatif dans la plupart des fenêtres glissantes, ces fenêtres se chevauchent fortement")
     lowvol = ("et BCV en fait partie" if b < 1 else "ce qui ne concerne toutefois pas directement BCV, dont le bêta dépasse 1")
-    beta_part = ("Comme le bêta est faible, l'exposition estimée au marché n'est associée qu'à une partie limitée du rendement moyen excédentaire de BCV"
-                 if b < 0.7 else "L'exposition estimée au marché est associée à une part importante du rendement moyen excédentaire de BCV")
-    r2_limite = ("Le faible $R^2$ indique que les facteurs étudiés expliquent peu les fluctuations mensuelles de BCV. Cela ne signifie pas, à lui seul, que les modèles évaluent incorrectement son rendement moyen ; mais une partie des fluctuations non expliquées peut provenir de facteurs systématiques absents des modèles."
+    beta_part = (f"Comme le bêta est faible, l'exposition estimée au marché n'est associée qu'à une partie limitée du rendement moyen excédentaire {N['de']}"
+                 if b < 0.7 else f"L'exposition estimée au marché est associée à une part importante du rendement moyen excédentaire {N['de']}")
+    r2_limite = (f"Le faible $R^2$ indique que les facteurs étudiés expliquent peu les fluctuations mensuelles {N['de']}. Cela ne signifie pas, à lui seul, que les modèles évaluent incorrectement son rendement moyen ; mais une partie des fluctuations non expliquées peut provenir de facteurs systématiques absents des modèles."
                  if f.r2 < 0.2 else "Même avec un $R^2$ appréciable, des facteurs pertinents peuvent manquer.")
 
     perf = ("a progressé davantage que" if grow_bcv > grow_spi else "a progressé moins que")
+    fund_checks = [c for c in ds.get("checks", []) if c["id"].startswith("fund-")]
     part_mkt = (b * mean_x / mean_y) if mean_y > 0 else float("nan")
     if n_comp and nsig == n_comp:
         comp_essentiel = f"L'alpha reste positif et significatif à 5~\\% dans les {n_comp} variantes de modèles testées"
@@ -231,9 +251,46 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
     else:
         comp_essentiel = f"L'alpha est significatif à 5~\\% dans {nsig} des {n_comp} variantes de modèles testées"
 
+    # lectures propres au fonds (rendements nets de frais, indice de référence = SPI)
+    if f.pvalue[0] < 0.05 and a < 0:
+        fonds_lecture = ("Sur la période, le fonds a rapporté un peu moins que ce que son exposition au marché laissait attendre. "
+                         "Ses rendements étant nets de frais, un écart négatif de cet ordre est ce que l'on attendrait d'un fonds "
+                         "dont la performance avant frais serait proche de celle de son indice.")
+    elif f.pvalue[0] < 0.05:
+        fonds_lecture = "Sur la période, le fonds a rapporté davantage que ce que son exposition au marché laissait attendre, même après frais."
+    else:
+        fonds_lecture = ("L'alpha n'est pas distinct de zéro : sur la période, le fonds a rapporté, frais déduits, "
+                         "à peu près ce que son exposition au marché laissait attendre.")
+    eu = [c["fit"].params[0] for c in comp if c["universe"] == "EUROPE"]
+    ch = [c["fit"].params[0] for c in comp if c["universe"] == "SPI"]
+    if eu and ch and abs(np.mean(eu) - np.mean(ch)) * 12 > 0.01:
+        europe_lecture = (f"Avec le marché européen comme référence, l'alpha change nettement (en moyenne {pct(12 * np.mean(eu), 1)} par an, "
+                          f"contre {pct(12 * np.mean(ch), 1)} avec le SPI). Cet écart reflète surtout le fait que le marché européen a évolué "
+                          "différemment du marché suisse : un fonds investi en actions suisses en hérite mécaniquement, indépendamment de sa gestion. Pour un fonds "
+                          "dont l'indice de référence est le SPI, la comparaison pertinente est celle faite avec le SPI.")
+    else:
+        europe_lecture = "La définition du marché (suisse ou européen) change peu l'alpha estimé."
+    if ch:
+        spread = 12 * (max(ch) - min(ch))
+        spi_fact = (f"Avec le SPI comme marché, l'ajout des facteurs Fama-French et Carhart change peu l'alpha (de {pct(12 * min(ch), 1)} à {pct(12 * max(ch), 1)} par an)"
+                    if spread < 0.01 else f"Avec le SPI comme marché, l'alpha varie de {pct(12 * min(ch), 1)} à {pct(12 * max(ch), 1)} par an selon les facteurs ajoutés")
+    else:
+        spi_fact = "Les variantes avec le SPI ne sont pas disponibles"
+    europe_court = ("Avec le marché européen, l'alpha change surtout parce que les marchés suisse et européen ont évolué différemment."
+                    if eu and ch and abs(np.mean(eu) - np.mean(ch)) * 12 > 0.01 else "Avec le marché européen, le résultat est proche.")
+    tracking = (f"Le SPI explique {num(100 * f.r2, 1)}~\\% des fluctuations mensuelles : le fonds suit de très près son indice de référence."
+                if f.r2 >= 0.9 else f"Le SPI explique {num(100 * f.r2, 0)}~\\% des fluctuations mensuelles du fonds.")
+
     first, last = r["dates"][0], r["dates"][-1]
     out = {
+        "FondsLecture": fonds_lecture,
+        "SpiFacteursPhrase": spi_fact,
+        "EuropeCourt": europe_court,
+        "EuropeLecture": europe_lecture,
+        "TrackingPhrase": tracking,
         "PerfPhrase": perf,
+        "FundChecks": "\\begin{itemize}[leftmargin=*]" + "".join(f"\\item {tex_escape(re.sub(r'(?<=\d)\.(?=\d)', ',', c['message']))}" for c in fund_checks) + "\\end{itemize}" if fund_checks else "Aucun contrôle disponible.",
+        "FundChecksOK": "tous réussis" if fund_checks and all(c["status"] == "pass" for c in fund_checks) else "à examiner",
         "CompEssentiel": comp_essentiel,
         "PartMarchePct": f"{num(100 * part_mkt, 0)}~\\%" if math.isfinite(part_mkt) else "—",
         "InferenceConclusion": inference_concl,
@@ -277,7 +334,7 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
         "BetaPhrase": beta_phrase,
         "BetaSens": beta_sens,
         "RDeux": num(f.r2, 3),
-        "RDeuxPct": f"{num(r2p, 0)}~\\%",
+        "RDeuxPct": f"{num(r2p, 1 if r2p >= 95 else 0)}~\\%",
         "RDeuxPhrase": r2_phrase,
         "SigmaA": pct(f.sigma * math.sqrt(12), 1),
         "VolBCV": pct(float(np.std(y, ddof=1)) * math.sqrt(12), 1),
@@ -372,14 +429,18 @@ def write_tables(ds: dict, r: dict) -> None:
     lines += ["\\bottomrule", "\\end{tabular}"]
     (GEN / "tab_comparaison.tex").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    # sources
+    write_sources(ds)
+
+
+def write_sources(ds: dict, gen: Path | None = None) -> None:
+    gen = gen or GEN
     st = {"ok": "OK", "error": "erreur", "manual": "import manuel"}
     src = ["\\begin{tabular}{@{}>{\\raggedright\\arraybackslash}p{0.38\\textwidth}>{\\raggedright\\arraybackslash}p{0.33\\textwidth}l@{}}", "\\toprule", "Série & Fournisseur & Couverture \\\\", "\\midrule"]
     for s in ds.get("sources", []):
         cov = " – ".join(s.get("coverage") or []) or "—"
         src.append(f"{tex_escape(s['name'])} & {tex_escape(s.get('provider', ''))} ({st.get(s['status'], s['status'])}) & {tex_escape(cov)} \\\\")
     src += ["\\bottomrule", "\\end{tabular}"]
-    (GEN / "tab_sources.tex").write_text("\n".join(src) + "\n", encoding="utf-8")
+    (gen / "tab_sources.tex").write_text("\n".join(src) + "\n", encoding="utf-8")
 
 
 # ------------------------------------------------------------------ figures
@@ -417,8 +478,10 @@ BLUE, ORANGE, GREY = "#1f5fa8", "#d9480f", "#6b7280"
 def _pct_axis(ax, axis="y"):
     from matplotlib.ticker import FuncFormatter
 
-    fmt = FuncFormatter(lambda v, _: f"{v:.0f} %".replace("-", "−"))
-    (ax.yaxis if axis == "y" else ax.xaxis).set_major_formatter(fmt)
+    a = ax.yaxis if axis == "y" else ax.xaxis
+    lo, hi = (ax.get_ylim() if axis == "y" else ax.get_xlim())
+    d = 1 if abs(hi - lo) < 6 else 0
+    a.set_major_formatter(FuncFormatter(lambda v, _: (f"{v:.{d}f} %").replace("-", "−").replace(".", ",").replace("−0 %", "0 %").replace("−0,0 %", "0,0 %")))
 
 
 def _dates(keys):
@@ -433,7 +496,8 @@ def write_figures(r: dict) -> None:
 
     # 1. croissance de 100 CHF
     fig, ax = plt.subplots(figsize=(6.2, 2.9))
-    series = ((r["bcv"], ORANGE, 1.7, "-", "Action BCV (dividendes réinvestis)"),
+    N = NOUNS[r.get("asset", "BCV")]
+    series = ((r["bcv"], ORANGE, 1.7, "-", N["serie"]),
               (r["spi"], BLUE, 1.5, "-", "SPI Total Return"),
               (r["rf"], GREY, 1.1, "--", "Placement au SARON"))
     for ret, col, lw, ls, lab in series:
@@ -467,12 +531,12 @@ def write_figures(r: dict) -> None:
                 bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#d1d5db", lw=0.6, alpha=0.95),
                 arrowprops=dict(arrowstyle="-|>", color="#374151", lw=0.8, shrinkB=4))
     xr = 100 * grid[int(len(grid) * 0.86)]
-    ax.annotate(f"pente = β = {num(f.params[1], 2)}\n(+1 % de marché → +{num(f.params[1], 2)} % BCV)", (xr, 100 * (f.params[0] + f.params[1] * xr / 100)),
+    ax.annotate(f"pente = β = {num(f.params[1], 2)}\n(+1 % de marché → +{num(f.params[1], 2)} % {N['court']})", (xr, 100 * (f.params[0] + f.params[1] * xr / 100)),
                 xytext=(0.97, 0.97), textcoords="axes fraction", fontsize=8, color="#1f2937", ha="right", va="top",
                 bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#d1d5db", lw=0.6, alpha=0.95),
                 arrowprops=dict(arrowstyle="-|>", color="#374151", lw=0.8, shrinkB=2))
     ax.set_xlabel("Rendement excédentaire du SPI (% par mois)")
-    ax.set_ylabel("Rendement excédentaire de BCV (% par mois)")
+    ax.set_ylabel(f"Rendement excédentaire {N['de']} (% par mois)")
     _pct_axis(ax, "y")
     _pct_axis(ax, "x")
     ax.legend(loc="upper left", fontsize=8)
@@ -546,42 +610,71 @@ def compile_pdf() -> Path:
     return BUILD / "rapport.pdf"
 
 
-def package(pdf: Path | None) -> None:
+def package(pdf: Path | None, spec: dict) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     if pdf is not None:
-        shutil.copy(pdf, OUT / "rapport_bcv.pdf")
+        shutil.copy(pdf, OUT / spec["pdf"])
+    name = spec["pdf"].removesuffix(".pdf")
     readme = (
-        "Rapport de synthèse — Empirical Asset Pricing (BCV)\n\n"
+        f"Rapport — Empirical Asset Pricing ({name})\n\n"
         "Compilation : latexmk -xelatex rapport.tex   (ou xelatex rapport.tex deux fois)\n"
         "Polices : TeX Gyre Pagella (paquet tex-gyre). Langue : polyglossia (français).\n\n"
         "rapport.tex contient le texte ; generated/ contient les macros chiffrées,\n"
         "les tableaux et les figures produits par pipeline/report.py à partir des données.\n"
     )
-    with zipfile.ZipFile(OUT / "rapport_bcv_latex.zip", "w", zipfile.ZIP_DEFLATED) as z:
-        z.write(BUILD / "rapport.tex", "rapport_bcv/rapport.tex")
+    with zipfile.ZipFile(OUT / spec["zip"], "w", zipfile.ZIP_DEFLATED) as z:
+        z.write(BUILD / "rapport.tex", f"{name}/rapport.tex")
         for p in sorted(GEN.iterdir()):
-            z.write(p, f"rapport_bcv/generated/{p.name}")
-        z.writestr("rapport_bcv/LISEZMOI.txt", readme)
+            z.write(p, f"{name}/generated/{p.name}")
+        z.writestr(f"{name}/LISEZMOI.txt", readme)
+
+
+def use_build(spec: dict) -> None:
+    """Dossier de compilation propre à chaque rapport."""
+    global BUILD, GEN
+    BUILD = C.ROOT / "report" / "build" / spec["dir"]
+    GEN = BUILD / "generated"
+    shutil.rmtree(BUILD, ignore_errors=True)
+    GEN.mkdir(parents=True)
+    shutil.copy(C.ROOT / "report" / spec["template"], BUILD / "rapport.tex")
+
+
+def build_one(ds: dict, key: str, compile_it: bool) -> str:
+    spec = REPORTS[key]
+    use_build(spec)
+    if key == "PAIR":
+        from .report_pair import compute_pair, write_pair
+
+        r = compute_pair(ds)
+        m = write_pair(ds, r, GEN)
+        summary = f"α action = {m['ActAlphaA']}, α fonds = {m['FdsAlphaA']}, N = {m['PairN']}"
+    else:
+        r = compute(ds, key)
+        m = macros(ds, r)
+        write_macros(m)
+        write_tables(ds, r)
+        write_figures(r)
+        summary = f"α = {m['AlphaM']}, β = {m['BetaM']}, N = {m['NObs']}"
+    pdf = compile_pdf() if compile_it else None
+    package(pdf, spec)
+    return f"{spec['pdf']} : {summary}"
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-compile", action="store_true")
+    ap.add_argument("--only", choices=list(REPORTS), action="append")
     args = ap.parse_args(argv)
     ds = json.loads((C.PUBLIC_DATA / "dataset.json").read_text())
-    shutil.rmtree(BUILD, ignore_errors=True)
-    GEN.mkdir(parents=True)
-    shutil.copy(TEMPLATE, BUILD / "rapport.tex")
-    r = compute(ds)
-    m = macros(ds, r)
-    write_macros(m)
-    write_tables(ds, r)
-    write_figures(r)
-    pdf = None if args.no_compile else compile_pdf()
-    package(pdf)
-    print(f"[rapport] {'PDF et ' if pdf else ''}sources LaTeX écrits dans {OUT.relative_to(C.ROOT)} "
-          f"(α = {m['AlphaM']}, β = {m['BetaM']}, N = {m['NObs']})")
-    return 0
+    failures = []
+    # chaque rapport est indépendant : l'échec de l'un ne bloque pas les autres
+    for key in args.only or list(REPORTS):
+        try:
+            print("[rapport]", build_one(ds, key, not args.no_compile))
+        except Exception as exc:  # noqa: BLE001
+            failures.append(key)
+            print(f"[rapport] ÉCHEC {REPORTS[key]['pdf']} : {exc}", file=sys.stderr)
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

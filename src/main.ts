@@ -142,6 +142,7 @@ function renderHeader(): void {
   const origin = ds.origin === 'manual-csv' ? 'Import manuel CSV' : 'Yahoo Finance (BCV, SPI TR) · Gérifonds (fonds) · BNS (SARON, USD/CHF) · K. French (facteurs Europe)';
   const months = ds.dates.filter((_, i) => ds.data[ASSET_COL[state.asset]]?.[i] != null);
   const span = months.length ? `${ASSET_INFO[state.asset].short} ${monthLabel(months[0])} → ${monthLabel(months[months.length - 1])}` : `aucun rendement pour ${ASSET_INFO[state.asset].label}`;
+  $<HTMLAnchorElement>('report-link').href = state.asset === 'FUND' ? './report/rapport_fonds.pdf' : './report/rapport_bcv.pdf';
   $('subtitle').innerHTML = state.asset === 'FUND'
     ? 'Fonds <b>BCV Swiss Equity A</b> <span class="mono">(BCV Asset Management)</span> · ISIN CH0006018706 · CHF'
     : 'Action <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF';
@@ -420,6 +421,15 @@ function bind(): void {
     input.value = '';
   });
   $('reset-data').addEventListener('click', () => pipelineData && setData(pipelineData, false));
+
+  // lien partagé ou navigation vers une autre ancre : relire les paramètres
+  window.addEventListener('hashchange', () => {
+    if (!data) return;
+    state = readHash(defaultState(data));
+    comparisonCache = null;
+    versusCache = null;
+    renderAll();
+  });
 
   let timer = 0;
   window.addEventListener('resize', () => {

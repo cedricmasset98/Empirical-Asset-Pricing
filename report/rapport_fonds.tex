@@ -1,0 +1,246 @@
+% =============================================================================
+% Empirical Asset Pricing — rapport de synthèse sur l'action BCV
+% Gabarit : seul le texte est écrit ici. Tous les nombres proviennent de
+% generated/macros.tex et des tableaux/figures produits par pipeline/report.py.
+% Compilation : latexmk -xelatex rapport.tex
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{french}
+\setmainfont{TeX Gyre Pagella}
+\usepackage[a4paper,margin=2.4cm,headheight=14pt]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{bleu}{HTML}{1F5FA8}
+\definecolor{orange}{HTML}{D9480F}
+\definecolor{gris}{HTML}{4B5563}
+\captionsetup{font=small,labelfont=bf,labelsep=period}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+
+\newtcolorbox{essentiel}{colback=bleu!5,colframe=bleu,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=6pt,bottom=6pt,
+  fonttitle=\bfseries,title=L'essentiel en cinq points}
+\newtcolorbox{attention}[1]{colback=orange!5,colframe=orange,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries,title=#1}
+\newtcolorbox{lexique}{colback=gray!6,colframe=gray!60,boxrule=0.5pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries\color{black},title=Lexique}
+
+\input{generated/macros.tex}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gris} Empirical Asset Pricing — BCV Swiss Equity A}
+\fancyhead[R]{\small\color{gris} \DateRapport}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\hypersetup{pdftitle={Le fonds BCV Swiss Equity A bat-il le marché ? Rapport de synthèse},pdfauthor={Empirical Asset Pricing},pdflang=fr}
+
+\begin{document}
+
+\begin{center}
+  {\small\color{gris} EMPIRICAL ASSET PRICING · RAPPORT DE SYNTHÈSE}\\[6pt]
+  {\LARGE\bfseries Le fonds BCV Swiss Equity A bat-il le marché ?}\\[4pt]
+  {\large Ce que disent — et ne disent pas — les modèles factoriels}\\[8pt]
+  {\small Fonds BCV Swiss Equity A (ISIN CH0006018706, BCV Asset Management) · rendements mensuels en CHF · \PeriodeDebut{} – \PeriodeFin{}}\\[2pt]
+  {\small\color{gris} Rapport généré automatiquement le \DateRapport{} à partir des données du \DateDonnees{} · version \texttt{\Commit}}
+\end{center}
+
+\vspace{4pt}
+
+\begin{essentiel}
+\begin{enumerate}[leftmargin=*,label=\textbf{\arabic*.}]
+  \item \textbf{Performance observée.} Sur la période étudiée (\Annees{} ans), le fonds \PerfPhrase{} le marché suisse : 100~CHF investis, distributions réinvesties et frais déduits, sont devenus \CroissanceBCV{}, contre \CroissanceSPI{} pour le SPI. Cela correspond à \RendAnnBCV{} par an contre \RendAnnSPI{}.
+  \item \textbf{Exposition au marché.} Le bêta du fonds vaut \BetaM{}. \TrackingPhrase
+  \item \textbf{Alpha.} Une fois cette exposition prise en compte, l'alpha du fonds est estimé à \AlphaA{} par an, net de frais. Il est \AlphaVerdict{} (de \AlphaALo{} à \AlphaAHi{} par an à 95~\%).
+  \item \textbf{Autres modèles.} \SpiFacteursPhrase. \EuropeCourt
+  \item \textbf{Prudence.} Ce constat décrit le passé d'un fonds. Il ne mesure pas à lui seul la qualité de sa gestion et ne permet pas de prévoir ses performances futures (section~\ref{sec:limites}).
+\end{enumerate}
+\end{essentiel}
+
+% -----------------------------------------------------------------------------
+\section{La question posée}
+
+Un fonds actions géré activement cherche à faire mieux que son indice de référence, ici le SPI. Pour y parvenir, ses gérants sélectionnent les titres et ajustent leurs pondérations. Cette gestion a un coût : les frais du fonds, prélevés dans sa fortune et donc déjà incorporés dans sa valeur nette d'inventaire (VNI).
+
+La question utile n'est donc pas seulement « le fonds a-t-il bien rapporté ? », mais \emph{« a-t-il rapporté plus que ce qu'on attendrait compte tenu de son exposition au marché, une fois ses frais payés ? »}. Le \textbf{modèle de marché} (Single Index Model, version empirique du CAPM) répond à cette question :
+\[
+  \underbrace{R_{\text{fonds},t} - R_{f,t}}_{\text{rendement excédentaire du fonds}}
+  \;=\; \alpha \;+\; \beta_M \,\underbrace{\left(R_{\text{SPI},t} - R_{f,t}\right)}_{\text{rendement excédentaire du marché}} \;+\; \varepsilon_t .
+\]
+Le \textbf{bêta} mesure la sensibilité du fonds aux mouvements du marché. L'\textbf{alpha} est la part de son rendement moyen que cette sensibilité n'explique pas. Comme les rendements sont nets de frais, un fonds qui ferait exactement comme son indice avant frais aurait un alpha légèrement négatif, de l'ordre de ses frais.
+
+\begin{lexique}\small
+\textbf{VNI} : valeur nette d'inventaire d'une part, après frais. \textbf{Distribution} : montant versé chaque année aux porteurs de parts ; ici réinvesti à la date de détachement. \textbf{Rendement excédentaire} : rendement diminué de celui d'un placement sans risque, le SARON. \textbf{Statistique $t$ ou $z$} : estimation divisée par son erreur standard ; au-delà d'environ 2 en valeur absolue, on qualifie l'estimation de significativement différente de zéro au seuil de 5~\%. \textbf{$p$-value} : mesure à quel point le résultat observé serait surprenant si la vraie valeur était nulle, sous les hypothèses du test. Une $p$-value de 0,02 \emph{ne signifie pas} qu'il y a 98~\% de chances que l'alpha soit non nul. \textbf{Intervalle de confiance (IC) à 95~\%} : fourchette de valeurs compatibles avec les données. \textbf{$R^2$} : part des fluctuations mensuelles du fonds expliquée par le modèle.
+\end{lexique}
+
+% -----------------------------------------------------------------------------
+\section{Données}
+
+L'étude porte sur \NObs{} rendements mensuels, de \PeriodeDebut{} à \PeriodeFin{}\Contigu. Les rendements du fonds proviennent de la série officielle de Gérifonds, la direction de fonds de la BCV : « évolution de la performance, dividendes réinvestis ». Ils sont nets des frais incorporés dans la VNI. Les distributions y sont réinvesties pour leur montant brut, avant fiscalité personnelle de l'investisseur. Le pipeline a vérifié cette série de façon indépendante (contrôles \FundChecksOK) :
+{\small \FundChecks}
+
+Le marché suisse est représenté par le SPI \emph{Total Return}, dividendes réinvestis. Le taux sans risque est le SARON, capitalisé jour après jour (\RendAnnRf{} par an en moyenne sur la période). L'historique du fonds remonte à 1997, mais l'analyse commence quand l'historique du SPI devient disponible, comme pour l'action BCV.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_croissance.pdf}
+  \caption{Performance cumulée : valeur de 100~CHF investis au début de la période, distributions et intérêts réinvestis, frais du fonds déduits. Rendements annualisés : \RendAnnBCV{} (fonds), \RendAnnSPI{} (SPI) et \RendAnnRf{} (SARON).}
+\end{figure}
+
+% -----------------------------------------------------------------------------
+\section{Résultats}
+
+\subsection{Le modèle de marché}
+
+La figure~\ref{fig:nuage} représente chaque mois par un point : en abscisse le rendement excédentaire du SPI, en ordonnée celui du fonds. La droite estimée par moindres carrés ordinaires (MCO) passe au plus près de l'ensemble des points. Sa pente est le bêta ; sa hauteur lorsque le marché fait exactement 0~\% est l'alpha mensuel.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.94\textwidth]{generated/fig_nuage.pdf}
+  \caption{Rendements excédentaires mensuels du fonds et du SPI. La zone colorée est l'intervalle de confiance de la \emph{droite} (relation moyenne), et non des rendements mensuels futurs.}
+  \label{fig:nuage}
+\end{figure}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Bêta = \BetaM{}} (IC 95~\% : \BetaIC). \BetaPhrase. Le fonds est \BetaSens.
+  \item \textbf{$R^2$ = \RDeux{}}. \TrackingPhrase{} La volatilité non expliquée par le marché n'est que de \SigmaA{} par an : c'est l'écart que la gestion active crée, mois après mois, par rapport au marché.
+  \item \textbf{Alpha = \AlphaM{} par mois}, soit \textbf{\AlphaA{} par an}. Il est \AlphaSens{} et \AlphaVerdict{} ($z$ = \AlphaZ, \mbox{$p$~\AlphaPEq}).
+\end{itemize}
+
+\paragraph{Comment lire cet alpha ?} Le rendement excédentaire moyen du fonds se décompose exactement en :
+\[
+  \underbrace{\text{\MoyBCVADeux}}_{\text{rendement excédentaire moyen du fonds}}
+  \;=\; \underbrace{\text{\AlphaADeux}}_{\alpha \text{ annualisé}}
+  \;+\; \underbrace{\text{\PartMarcheADeux}}_{\beta_M \,\times\, \text{prime moyenne du marché (\MoyMktA)}} .
+\]
+\FondsLecture{} La régression mesure cet écart, sans en identifier la cause : sélection de titres, frais, liquidités détenues ou écarts de pondération par rapport à l'indice y contribuent tous.
+
+Grâce au $R^2$ très élevé, l'alpha d'un fonds diversifié est estimé beaucoup plus précisément que celui d'une action isolée : son intervalle de confiance est étroit. Une différence d'alpha modeste peut donc y être statistiquement significative sans être forcément importante économiquement.
+
+\subsection{Quelle est la précision de ces estimations ?}
+
+L'erreur standard mesure l'imprécision de l'estimation. La statistique $z$ compare l'alpha à cette imprécision : elle vaut ici \AlphaZ{}, avec une \mbox{$p$-value \AlphaPEq}. Les MCO classiques supposent une imprécision constante et indépendante d'un mois à l'autre. On recalcule donc l'incertitude avec deux méthodes robustes : HC3, qui tolère une variance changeante, et Newey-West, qui tolère en plus une corrélation entre mois proches. Les trois approches estiment \emph{exactement les mêmes coefficients} ; elles évaluent seulement différemment leur incertitude.
+
+\begin{table}[h]
+  \centering\small
+  \input{generated/tab_inference.tex}
+  \caption{Modèle de marché du fonds selon la méthode d'inférence. Les méthodes robustes utilisent une approximation par la loi normale.}
+\end{table}
+
+La statistique de l'alpha vaut \AlphaTClassique{} avec les MCO classiques, \AlphaZHC{} avec HC3 et \AlphaZ{} avec Newey-West (\NWLags{} retards) : \InferenceConclusion.
+
+\subsection{Et avec d'autres facteurs ?}
+
+Les modèles de Fama et French (3 et 5 facteurs) et de Carhart (4 facteurs) ajoutent au marché des régularités documentées dans les rendements :
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Facteur & Explication intuitive \\
+\midrule
+Marché (MKT) & Sensibilité aux mouvements généraux du marché des actions \\
+Taille (SMB) & Différence de rendement entre petites et grandes entreprises \\
+Valeur (HML) & Différence de rendement entre actions à ratio valeur comptable / valeur de marché élevé et faible \\
+Momentum (MOM) & Tendance des actions récemment gagnantes et perdantes à avoir des rendements différents \\
+Rentabilité (RMW) & Différence de rendement entre entreprises fortement et faiblement rentables \\
+Investissement (CMA) & Différence de rendement entre entreprises investissant prudemment et agressivement \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Pour un fonds, ces facteurs permettent de vérifier si un éventuel alpha provient simplement d'un \emph{style} : surpondération des petites entreprises, des actions « valeur », des gagnantes récentes, etc. Leur interprétation économique reste débattue : primes de risque, erreurs de valorisation persistantes ou autres mécanismes. Les facteurs disponibles sont européens et convertis en francs ; toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode).
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_alphas.pdf}
+  \caption{Alpha annualisé et intervalle de confiance à 95~\% selon le modèle et la définition du marché.}
+\end{figure}
+
+\begin{table}[h]
+  \centering\small
+  \input{generated/tab_comparaison.tex}
+  \caption{Comparaison des modèles (erreurs standards de Newey-West). \textsuperscript{h} Variante hybride : marché suisse et facteurs européens.}
+\end{table}
+
+\EuropeLecture{} \FacteursRDeuxPhrase. Les variantes reposent sur les mêmes rendements du fonds : ce ne sont pas des confirmations indépendantes.
+
+\subsection{Le résultat est-il stable dans le temps ?}
+
+On ré-estime le modèle de marché sur des fenêtres glissantes de \RollFenetre{} mois (\RollN{} estimations). Chaque point représente une estimation sur \RollAnnees{} ; deux fenêtres successives partagent \RollChevauchement{} de leurs observations. Le bêta varie de \RollBetaMin{} (\RollBetaMinDate) à \RollBetaMax{} (\RollBetaMaxDate). L'alpha est positif dans \RollAlphaPosPct{} des fenêtres, et significatif à 5~\% dans \RollAlphaSigPct{} d'entre elles.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{generated/fig_rolling.pdf}
+  \caption{Bêta et alpha du fonds estimés sur fenêtres glissantes de \RollFenetre{} mois ; la date est celle de la fin de chaque fenêtre.}
+\end{figure}
+
+\subsection{Le modèle est-il bien spécifié ?}
+
+Trois tests examinent les résidus du modèle de marché :
+\begin{itemize}[leftmargin=*]
+  \item le test de Ljung-Box à \LBLags{} retards \LBVerdict{} (\mbox{$Q$ = \LBQ}, \mbox{$p$~\LBpEq}) ;
+  \item le test de Breusch-Pagan \BPVerdict{} (\mbox{$LM$ = \BPLM}, \mbox{$p$~\BPpEq}) ;
+  \item le test de Jarque-Bera \JBVerdict{} (\mbox{$JB$ = \JB}, \mbox{$p$~\JBpEq} ; asymétrie \Asym, kurtosis \Kurt{}).
+\end{itemize}
+Les erreurs standards robustes restent utilisées par prudence.
+
+% -----------------------------------------------------------------------------
+\section{Comment interpréter ces résultats}
+\label{sec:limites}
+
+Les modèles factoriels sont des instruments d'analyse. Pour un fonds, ils séparent ce qui relève de l'exposition au marché et aux styles de ce qui n'en relève pas. Ils ne suffisent pas à juger la qualité d'une gestion. Les nuances principales sont les suivantes.
+
+\paragraph{1. Un alpha net de frais.} Les rendements utilisés sont ceux que les porteurs de parts ont effectivement obtenus. L'alpha intègre donc les frais du fonds, qui rémunèrent un service (gestion, administration, garde). Un alpha légèrement négatif ne signifie pas que la sélection de titres a détruit de la valeur : il peut simplement refléter ces frais.
+
+\paragraph{2. Le choix de l'indice de référence compte.} Avec le SPI, l'indice officiel du fonds, la comparaison est cohérente. Avec le marché européen, l'alpha mesure surtout la différence entre marchés suisse et européen. Les facteurs de style disponibles sont européens, et non construits sur les seules actions suisses.
+
+\paragraph{3. Précision ne veut pas dire importance.} Comme le fonds suit de très près le marché, un écart de quelques dixièmes de pour cent par an peut être statistiquement significatif. Sa portée économique reste à apprécier au regard des frais et des alternatives disponibles, par exemple un fonds indiciel.
+
+\paragraph{4. Un fonds, une période.} L'analyse porte sur un seul fonds et sur environ \Annees{} ans. Les équipes de gestion, la politique d'investissement et les frais peuvent avoir évolué. Un alpha passé ne prédit pas un alpha futur.
+
+\paragraph{5. Fiscalité et investisseur réel.} Les distributions sont réinvesties pour leur montant brut. Le rendement d'un investisseur particulier dépend de sa fiscalité, des commissions d'émission et de rachat, et du moment de ses achats.
+
+En somme, l'analyse indique comment le fonds s'est comporté par rapport à son marché, frais déduits, sur la période étudiée. Elle n'explique pas à elle seule pourquoi, ni ce qu'il en sera à l'avenir.
+
+% -----------------------------------------------------------------------------
+\section{Pour aller plus loin}
+
+Le site interactif permet de refaire ces estimations, et de comparer directement le fonds à l'action BCV dans l'onglet « Action BCV vs Fonds BCV » : \URLSite. Un rapport comparatif dédié est également disponible.
+
+% -----------------------------------------------------------------------------
+\appendix
+\section{Méthodologie}
+
+\paragraph{Rendements du fonds.} Indice officiel de performance Gérifonds (dividendes réinvestis) pris en fin de mois ; $R_t = I_t / I_{t-1} - 1$. Contrôle : $R^{TR}_t = (\mathrm{VNI}_t + D_t)/\mathrm{VNI}_{t-1} - 1$ chaque jour, avec $D_t$ la distribution brute à la date de détachement. Un mois incomplet est laissé manquant, sans interpolation.
+
+\paragraph{Taux sans risque.} Indice capitalisé $I_{d_{i+1}} = I_{d_i}\,(1 + r_i\, n_i/360)$ du SARON ; rendement du mois $m$ : $I(\text{fin } m)/I(\text{fin } m-1) - 1$.
+
+\paragraph{Facteurs en CHF.} Marché européen $R^{\text{CHF}}_M = (1 + \text{Mkt-RF} + \text{RF}_{\text{US}})(1 + s_t) - 1$, facteurs long-short $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$, $s_t$ variation du cours USD/CHF.
+
+\paragraph{Estimation et inférence.} MCO avec constante ; erreurs standards classiques (Student), HC3 et Newey-West (noyau de Bartlett, $L = \lfloor 4 (n/100)^{2/9} \rfloor$). Alpha annualisé = $12\,\alpha$. Calculs vérifiés automatiquement contre \texttt{statsmodels}.
+
+\section{Sources des données}
+
+\begin{center}\small
+\input{generated/tab_sources.tex}
+\end{center}
+
+\vfill
+{\small\color{gris} Ce document a une visée pédagogique et de recherche. Il ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures.}
+
+\end{document}

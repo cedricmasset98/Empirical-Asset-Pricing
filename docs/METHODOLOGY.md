@@ -22,6 +22,16 @@ Les rendements ne sont calculés qu'entre mois consécutifs. Un mois manquant re
   - absence de variation quotidienne supérieure à 35 % du cours ajusté, ce qui détecterait un split non ajusté ;
   - écart moyen positif entre rendement total et rendement de prix, preuve de l'ajustement des dividendes.
 
+## 2 bis. Fonds BCV Swiss Equity A
+
+- **Source.** Série officielle de Gérifonds, la direction de fonds de la BCV : graphique « Évolution de la performance (dividendes réinvestis) » de la page publique du fonds (`gerifonds.ch/fr/iframe/CH0006018706`). Elle est quotidienne depuis le 31.12.1997, en base 100, avec distributions brutes réinvesties à la date ex et nette des frais incorporés dans la VNI. Le pipeline ne reconstruit pas lui-même le Total Return : il utilise la série officielle et la **vérifie**.
+- **Contrôles**, publiés dans le manifeste et dans l'onglet « Données » :
+  1. Chaque rendement quotidien est recalculé par $(\mathrm{VNI}_t + D_t)/\mathrm{VNI}_{t-1} - 1$ ($D_t$ = distribution brute publiée). Résultat : 100 % des 7 323 jours retrouvés, avec une tolérance de 5·10⁻⁵. Les VNI affichées en infobulle sont décalées d'un jour depuis septembre 2021 ; le contrôle corrige ce décalage, sans incidence sur la série de performance, dont les dates ont été vérifiées.
+  2. Chacune des distributions de la table publiée est retrouvée **une et une seule fois**, au montant brut. Un oubli ou un double comptage fait échouer le contrôle.
+  3. La performance YTD recalculée doit être égale à la performance YTD publiée sur la page.
+- **Rendement mensuel.** Dernier point de l'indice dans chaque mois, puis $R_t = I_t/I_{t-1} - 1$. Les rendements sont nets de frais et avant fiscalité personnelle : impôt anticipé récupérable pour un investisseur suisse, commissions d'émission et de rachat non incluses.
+- **Comparaison avec l'action.** Les deux actifs sont estimés sur les mêmes mois. Cet échantillon est l'intersection des disponibilités de l'action, du fonds, du SPI, du SARON et de tous les facteurs de l'univers choisi. L'écart d'alpha est estimé par la régression de $R_{\text{action}} - R_{\text{fonds}}$ sur les mêmes facteurs. Sa constante vaut exactement $\alpha_{\text{action}} - \alpha_{\text{fonds}}$, et son erreur standard (classique, HC3 ou Newey-West) tient compte de la corrélation entre les deux actifs. Cette régression est validée contre statsmodels comme les autres.
+
 ## 3. Marché suisse : SPI Total Return
 
 - Source : Yahoo Finance `^SSHI`, c'est-à-dire le SPI (symbole SIX `SXGE`). SIX calcule le SPI comme indice de performance, dividendes réinvestis.

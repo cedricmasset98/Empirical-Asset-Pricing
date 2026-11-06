@@ -1,18 +1,20 @@
 # Empirical Asset Pricing — Factor Regression Explorer
 
-Ce site interactif estime des modèles d'évaluation d'actifs pour **Banque Cantonale Vaudoise** (BCVN · SIX, ISIN CH0531751755, Yahoo `BCVN.SW`). Les rendements sont mensuels en CHF, le marché de référence est le **SPI Total Return** et le taux sans risque est le **SARON** capitalisé.
+Ce site interactif estime des modèles d'évaluation d'actifs pour l'action **Banque Cantonale Vaudoise** (BCVN · SIX, ISIN CH0531751755, Yahoo `BCVN.SW`) et pour le fonds **BCV Swiss Equity A** (ISIN CH0006018706, gestion active, BCV Asset Management), puis compare leurs alphas. Les rendements sont mensuels en CHF, le marché de référence est le **SPI Total Return** et le taux sans risque est le **SARON** capitalisé.
 
 | Section | Contenu |
 |---|---|
+| Sélecteur d'actif | Action BCV ou fonds BCV Swiss Equity A : toutes les analyses suivent l'actif choisi, avec le même moteur |
 | A. Single Index | Nuage de points interactif, droite OLS, intervalle de confiance, équation et statistiques |
 | Modèles | CAPM / Single Index, **Fama-French 3**, **Carhart 4**, **Fama-French 5** ; facteurs européens convertis en CHF |
 | Inférence | OLS classique (Student), **HC3**, **Newey-West HAC** (retards automatiques ou choisis) |
 | B. Observé vs prédit | Séries temporelles et graphique à 45° |
 | C. Diagnostics | Résidus, histogramme, Q-Q plot, ACF ; tests Ljung-Box, Breusch-Pagan et Jarque-Bera |
 | D. Régression mobile | Fenêtres de 36, 60 ou 120 mois, avec intervalles de confiance |
-| E. Comparaison | 4 modèles × 2 marchés sur un échantillon strictement identique |
+| E. Comparaison des modèles | 4 modèles × 2 marchés sur un échantillon strictement identique |
+| F. Action BCV vs Fonds BCV | Performances (100 CHF, rendement, volatilité, perte maximale), alphas comparés et écart testé, Single Index côte à côte à la même échelle, modèles multifactoriels, lecture pédagogique |
 | Exports et import | Exports CSV ; import manuel d'un CSV ; mode clair et sombre ; paramètres conservés dans l'URL |
-| Rapport | **Rapport de synthèse vulgarisé en LaTeX** (PDF et sources), avec résultats, robustesse et limites de l'exercice |
+| Rapports | **Trois rapports vulgarisés en LaTeX** (PDF et sources) : action BCV, fonds BCV Swiss Equity A, comparaison des alphas |
 
 Toutes les statistiques sont **recalculées dans le navigateur** à partir de fichiers statiques. Aucun coefficient n'est codé en dur, il n'y a pas de backend, et aucune clé d'API n'est utilisée.
 
@@ -20,13 +22,15 @@ Toutes les statistiques sont **recalculées dans le navigateur** à partir de fi
 
 ```
 pipeline/            Python : récupération, transformation, contrôles, références statsmodels
-  sources.py         Yahoo Finance (BCV, SPI), BNS (SARON, USD/CHF), K. French (Europe)
+  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds), BNS (SARON, USD/CHF), K. French (Europe)
+  fund.py            lecture de la série officielle du fonds et contrôles (VNI + distributions, YTD)
   transform.py       fins de mois, rendements, capitalisation SARON ACT/360, conversion CHF
   build.py           -> public/data/dataset.json, data/processed/monthly.csv, build_report.md
   validate.py        -> tests/reference/statsmodels_*.json
   olsref.py          OLS et diagnostics numpy/scipy (même conventions, testés contre statsmodels)
-  report.py          -> public/report/rapport_bcv.pdf et rapport_bcv_latex.zip
-report/rapport.tex   gabarit LaTeX du rapport (texte seul ; chiffres injectés par macros)
+  report.py          -> public/report/rapport_{bcv,fonds,comparaison}.pdf et sources .zip
+  report_pair.py     rapport comparatif action / fonds
+report/*.tex         gabarits LaTeX (texte seul ; chiffres injectés par macros)
   tests/             tests unitaires et test de bout en bout hors ligne
 src/
   engine/            moteur statistique TypeScript (sans dépendance)
@@ -66,9 +70,9 @@ python -m unittest discover -s pipeline/tests -t .
 
 Pour régénérer les jeux de test synthétiques : `npm run fixtures`. Ces jeux servent uniquement aux tests et ne sont jamais publiés dans `public/`.
 
-## Rapport de synthèse (LaTeX)
+## Rapports de synthèse (LaTeX)
 
-Le bouton **Rapport PDF** du site télécharge un rapport vulgarisé de huit pages environ :
+Le bouton **Rapport PDF** ouvre le rapport de l'actif choisi. L'onglet F donne accès au rapport comparatif « Action BCV vs Fonds BCV — Comparaison des alphas ». Le rapport sur l'action contient :
 
 - l'essentiel en cinq points ;
 - la question posée et un lexique ;
@@ -92,6 +96,7 @@ Le workflow installe LaTeX et régénère le rapport à chaque exécution. L'arc
 | SPI TR | Yahoo Finance `^SSHI` (SPI, SXGE) | Indice de performance ; jamais remplacé par un indice de prix. Historique Yahoo disponible depuis mars 2013 seulement : pour remonter plus loin, importer l'historique SIX dans `data/manual/spi_tr_daily.csv` |
 | SARON | BNS data.snb.ch, cube `snbgwdzid` | Fixing quotidien depuis août 2009, capitalisé ACT/360 |
 | Facteurs Europe | Kenneth R. French Data Library | 3F, 5F, Momentum ; USD, RF US |
+| Fonds BCV Swiss Equity A | Gérifonds, page publique du fonds : graphique « Évolution de la performance (dividendes réinvestis) », quotidien depuis 1997 | Série officielle, distributions brutes réinvesties, nette de frais. Contrôles automatiques : rendements quotidiens recalculés à partir des VNI et des distributions publiées, chaque distribution retrouvée une seule fois, performance YTD = publiée |
 | USD/CHF | BNS, cube `devkum` (cours de fin de mois) ; replis : FRED `DEXSZUS`, Yahoo `CHF=X` | Fin de mois |
 
 Si une source échoue, elle est marquée « ERREUR » et ses colonnes restent vides. L'interface affiche alors une erreur explicite pour les modèles concernés, sans aucun résultat de substitution. Pour contourner une source inaccessible, vous pouvez déposer des fichiers dans `data/manual/` (voir son README) ou importer un CSV mensuel directement dans le navigateur.
@@ -120,6 +125,7 @@ Vite est configuré avec `base: './'` et les données sont chargées par un chem
 - **SIX** (SPI, SARON) : les données d'indices sont la propriété de SIX Index AG, et leur diffusion publique peut nécessiter une licence.
 - **BNS** et **FRED** (repli pour USD/CHF) : données publiques ; la source doit être citée.
 - **Kenneth R. French** : usage libre avec citation.
+- **Gérifonds** (filiale de la BCV) : page publique du fonds ; seuls des rendements mensuels dérivés sont publiés. Il n'existe pas d'API documentée : la page est lue une fois par exécution et tout changement de structure produit une erreur explicite (repli : `data/manual/fund_tr_daily.csv`).
 
 Si la publication des rendements SPI ou SARON n'est pas autorisée dans votre contexte, deux options :
 

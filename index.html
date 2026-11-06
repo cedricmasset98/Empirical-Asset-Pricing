@@ -22,7 +22,7 @@
         <p class="subtitle" id="subtitle">Action <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF</p>
       </div>
       <div class="meta" id="data-meta" aria-live="polite">Chargement des données…</div>
-      <a class="btn btn-primary" id="report-link" href="./report/rapport_bcv.pdf" target="_blank" rel="noopener" title="Ouvrir le rapport de synthèse vulgarisé (PDF, LaTeX) dans un nouvel onglet">Rapport PDF ↗</a>
+      <a class="btn btn-primary" id="report-link" href="./report/rapport_bcv.pdf" target="_blank" rel="noopener" title="Ouvrir le rapport de synthèse vulgarisé de l'actif choisi (PDF, LaTeX) dans un nouvel onglet">Rapport PDF ↗</a>
       <button id="theme-toggle" class="icon-btn" type="button" aria-label="Basculer le mode clair / sombre" title="Mode clair / sombre"></button>
     </header>
 
@@ -155,7 +155,10 @@
       <section class="panel tab-panel" id="tab-versus" role="tabpanel" hidden>
         <div class="panel-head">
           <h2>Action BCV vs Fonds BCV</h2>
-          <div class="actions"><button type="button" id="export-versus" class="btn">Comparaison action / fonds (CSV)</button></div>
+          <div class="actions">
+            <a class="btn btn-primary" href="./report/rapport_comparaison.pdf" target="_blank" rel="noopener">Rapport comparatif (PDF) ↗</a>
+            <button type="button" id="export-versus" class="btn">Comparaison action / fonds (CSV)</button>
+          </div>
         </div>
         <p class="lead"><strong>La banque a-t-elle généré davantage de rendement ajusté des facteurs pour ses propres actionnaires que pour les investisseurs de son fonds actions suisses&nbsp;?</strong></p>
         <div class="method">
@@ -193,11 +196,17 @@
         <h2>Sources des données</h2>
         <div id="sources" class="table-wrap"></div>
 
-        <h2>Rapport de synthèse</h2>
-        <p>Rapport vulgarisé rédigé en LaTeX : résultats principaux, robustesse, stabilité dans le temps et <strong>limites de l’exercice</strong>. Il est régénéré automatiquement à chaque mise à jour des données, pour la spécification de référence : Single Index Model (BCV contre SPI TR), échantillon maximal, erreurs standards de Newey-West. Il ne reflète donc pas les paramètres choisis ci-dessus ni des données importées manuellement.</p>
+        <h2>Rapports de synthèse (PDF, LaTeX)</h2>
+        <p>Rapports vulgarisés : résultats principaux, robustesse, stabilité dans le temps et <strong>limites de l’exercice</strong>. Ils sont régénérés automatiquement à chaque mise à jour des données, pour des spécifications de référence (échantillon maximal, erreurs standards de Newey-West). Ils ne reflètent donc pas les paramètres choisis ci-dessus ni des données importées manuellement.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="./report/rapport_bcv.pdf" target="_blank" rel="noopener">Ouvrir le rapport (PDF) ↗</a>
-          <a class="btn" href="./report/rapport_bcv_latex.zip" download>Sources LaTeX (.zip)</a>
+          <a class="btn btn-primary" href="./report/rapport_bcv.pdf" target="_blank" rel="noopener">Action BCV ↗</a>
+          <a class="btn btn-primary" href="./report/rapport_fonds.pdf" target="_blank" rel="noopener">Fonds BCV Swiss Equity A ↗</a>
+          <a class="btn btn-primary" href="./report/rapport_comparaison.pdf" target="_blank" rel="noopener">Action BCV vs Fonds BCV ↗</a>
+        </div>
+        <div class="actions">
+          <a class="btn" href="./report/rapport_bcv_latex.zip" download>Sources LaTeX — action (.zip)</a>
+          <a class="btn" href="./report/rapport_fonds_latex.zip" download>Sources LaTeX — fonds (.zip)</a>
+          <a class="btn" href="./report/rapport_comparaison_latex.zip" download>Sources LaTeX — comparaison (.zip)</a>
         </div>
 
         <h2>Import manuel (CSV)</h2>
