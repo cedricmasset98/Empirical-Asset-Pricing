@@ -1,12 +1,12 @@
 # Rapport de construction des données
 
-Généré le 2026-11-06T08:05:28Z
+Généré le 2026-11-06T08:17:27Z
 
 ## Sources
 
 | Source | Statut | Couverture | Message |
 |---|---|---|---|
-| BCV (BCVN.SW) — cours ajustés dividendes et opérations sur titres | ok | 2002-12-06 → 2026-11-05 |  |
+| BCV (BCVN.SW) — cours ajustés dividendes et opérations sur titres | ok | 2002-12-06 → 2026-11-06 |  |
 | SPI — Swiss Performance Index (SXGE), indice de performance (TR), CHF | ok | 2013-03-05 → 2026-11-05 |  |
 | SARON — fixing quotidien (taux overnight annualisé, %) | ok | 2009-08-24 → 2026-10-30 | Série BNS D0(SARON) « SARON fixing at the close of the trading day » |
 | USD/CHF (CHF par USD), cours de fin de mois | ok | 1980-01-31 → 2026-10-31 | Série BNS devkum D0(M1),D1(USD1) |
