@@ -90,11 +90,18 @@ jobs:
         timeout-minutes: 10
         run: python -m pipeline.report 2>&1 | tee logs/report.log
 
+      - name: Présentation vulgarisée du fonds (Beamer -> PDF)
+        id: presentation
+        if: steps.latex.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 10
+        run: python -m pipeline.presentation 2>&1 | tee logs/presentation.log
+
       - name: Alerte si le rapport n'a pas été régénéré
-        if: steps.latex.outcome != 'success' || steps.report.outcome != 'success'
+        if: steps.latex.outcome != 'success' || steps.report.outcome != 'success' || steps.presentation.outcome != 'success'
         run: |
           git checkout -- public/report 2>/dev/null || true
-          echo "::warning title=Rapport::Rapport non régénéré (LaTeX : ${{ steps.latex.outcome }}, rapport : ${{ steps.report.outcome }}). La version archivée dans le dépôt est publiée."
+          echo "::warning title=Rapport::Rapports non régénérés (LaTeX : ${{ steps.latex.outcome }}, rapport : ${{ steps.report.outcome }}, présentation : ${{ steps.presentation.outcome }}). Les versions archivées dans le dépôt sont publiées."
 
       - uses: actions/setup-node@v5
         with:

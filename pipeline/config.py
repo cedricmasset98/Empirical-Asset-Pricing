@@ -55,6 +55,12 @@ FUND = {
     "currency": "CHF",
     "benchmark": "SPI",
     "inception": "1997-04-22",
+    # Frais totaux (TER) publiés : utilisés pour reconstituer un rendement « avant
+    # frais » (rendement net + TER/12), comme Fama et French (2010). Seul le TER
+    # récent est connu : il est appliqué à toute la période (approximation).
+    "ter": 0.0111,
+    "ter_date": "2026-03-31",
+    "ter_source": "Fiche mensuelle du fonds (données au 31.07.2026), TER au 31.03.2026",
 }
 GERIFONDS_FUND_URL = "https://www.gerifonds.ch/fr/iframe/CH0006018706?period=6"
 
