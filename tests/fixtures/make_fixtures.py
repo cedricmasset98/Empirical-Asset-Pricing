@@ -54,8 +54,11 @@ def make_dataset() -> dict:
     for t in range(N):
         u[t] = (0.25 * u[t - 1] if t else 0.0) + z[t] * (1 + 4 * abs(mkt_spi[t] - rf[t]))
     bcv = rf + 0.002 + 0.55 * (mkt_spi - rf) + 0.15 * smb3 + 0.3 * hml3 - 0.05 * wml + u
+    # fonds actions suisse : bêta proche de 1, faible risque résiduel, alpha légèrement négatif
+    fund = rf - 0.0008 + 0.95 * (mkt_spi - rf) + 0.05 * smb3 + RNG.normal(0, 0.008, N)
     cols = {
         "bcv_ret": bcv,
+        "fund_ret": fund,
         "spi_ret": mkt_spi,
         "rf_saron": rf,
         "mkt_eu_chf": mkt_eu,
@@ -75,6 +78,9 @@ def make_dataset() -> dict:
             data[k][i] = None
     data["wml_chf"][100] = None
     data["wml_chf"][101] = None
+    # fonds lancé plus tard : 6 premiers mois indisponibles
+    for i in range(6):
+        data["fund_ret"][i] = None
     return {
         "schema": "eap-dataset/v1",
         "frequency": "monthly",
@@ -159,12 +165,12 @@ def ols_numpy(y: np.ndarray, X: np.ndarray, hac_lags: int) -> dict:
     return out
 
 
-def build_xy(ds: dict, factors: list[str], market: str) -> tuple[np.ndarray, np.ndarray, list[str]]:
-    cols = ["bcv_ret", "rf_saron", market] + factors
+def build_xy(ds: dict, factors: list[str], market: str, dep: str = "bcv_ret") -> tuple[np.ndarray, np.ndarray, list[str]]:
+    cols = [dep, "rf_saron", market] + factors
     rows = [i for i in range(len(ds["dates"])) if all(ds["data"][c][i] is not None for c in cols)]
     g = lambda c: np.array([ds["data"][c][i] for i in rows], dtype=float)  # noqa: E731
     rf = g("rf_saron")
-    y = g("bcv_ret") - rf
+    y = g(dep) - rf
     X = np.column_stack([np.ones(len(rows)), g(market) - rf] + [g(f) for f in factors])
     return y, X, [ds["dates"][i] for i in rows]
 
@@ -186,6 +192,9 @@ def main() -> None:
         lags = int(np.floor(4 * (n / 100) ** (2 / 9)))
         ref[key] = ols_numpy(y, X, lags)
         ref[key]["first_date"], ref[key]["last_date"] = dates[0], dates[-1]
+    y, X, dates = build_xy(ds, ["smb3_chf", "hml3_chf"], "spi_ret", dep="fund_ret")
+    ref["FUND_FF3_SPI"] = ols_numpy(y, X, int(np.floor(4 * (len(y) / 100) ** (2 / 9))))
+    ref["FUND_FF3_SPI"]["first_date"], ref["FUND_FF3_SPI"]["last_date"] = dates[0], dates[-1]
     (HERE / "numpy_reference.json").write_text(json.dumps(ref, indent=1))
 
     dist = {

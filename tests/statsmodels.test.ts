@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path';
 
 import { ols, type CovType } from '../src/engine/ols.ts';
 import { acf, breuschPagan, defaultLjungBoxLags, jarqueBera, ljungBox } from '../src/engine/diagnostics.ts';
-import { buildSample, commonDates, assertColumns, requiredColumns, MODEL_IDS, UNIVERSES, type ModelId, type Universe } from '../src/engine/models.ts';
+import { buildSample, commonDates, assertColumns, requiredColumns, MODEL_IDS, UNIVERSES, type AssetId, type ModelId, type Universe } from '../src/engine/models.ts';
 import type { Dataset } from '../src/data/types.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -27,12 +27,12 @@ function closeVec(a: number[], b: number[], rel: number, abs: number, msg: strin
   a.forEach((v, i) => close(v, b[i], rel, abs, `${msg}[${i}]`));
 }
 
-function availableSpecs(ds: Dataset) {
-  const out: { model: ModelId; universe: Universe }[] = [];
+function availableSpecs(ds: Dataset, asset: AssetId) {
+  const out: { model: ModelId; universe: Universe; asset: AssetId }[] = [];
   for (const model of MODEL_IDS) for (const universe of UNIVERSES) {
     try {
-      assertColumns(ds, requiredColumns(model, universe));
-      out.push({ model, universe });
+      assertColumns(ds, requiredColumns(model, universe, asset));
+      out.push({ model, universe, asset });
     } catch {
       /* indisponible */
     }
@@ -63,14 +63,23 @@ for (const name of ['statsmodels_synthetic.json', 'statsmodels_dataset.json']) {
     test(`référence ${name} à jour`, () => assert.fail('Référence statsmodels obsolète : relancer python -m pipeline.validate'));
     continue;
   }
-  const common = commonDates(ds, availableSpecs(ds), FULL);
+  const common: Record<string, Set<string>> = {};
+  for (const a of ['BCV', 'FUND'] as AssetId[]) {
+    const sp = availableSpecs(ds, a);
+    if (sp.length) common[a] = commonDates(ds, sp, FULL);
+  }
+  const both = availableSpecs(ds, 'BCV').filter((x) => availableSpecs(ds, 'FUND').some((y) => y.model === x.model && y.universe === x.universe));
+  const pair = commonDates(ds, [...both, ...both.map((x) => ({ ...x, asset: 'FUND' as AssetId }))], FULL);
+  const restrict = (c: { asset?: AssetId; sample: string }) =>
+    c.sample === 'common' ? common[c.asset ?? 'BCV'] : c.sample === 'pair' ? pair : undefined;
 
   const noCase = ref.cases.length === 0 ? 'aucune spécification estimable dans ce jeu (sources en erreur ?)' : false;
   test(`${ref.label} : ${ref.cases.length} régressions identiques à statsmodels ${ref.statsmodels_version}`, { skip: noCase }, () => {
-    assert.equal(common.size, ref.common_n, 'taille de l’échantillon commun');
+    for (const [a, n] of Object.entries(ref.common_n as Record<string, number>)) assert.equal(common[a].size, n, `échantillon commun ${a}`);
+    if (ref.pair_n) assert.equal(pair.size, ref.pair_n, 'échantillon de la paire action/fonds');
     for (const c of ref.cases) {
-      const tag = `${c.model}/${c.universe}/${c.sample}/${c.cov}`;
-      const s = buildSample(ds, c.model, c.universe, FULL, c.sample === 'common' ? common : undefined);
+      const tag = `${c.asset ?? 'BCV'}/${c.model}/${c.universe}/${c.sample}/${c.cov}`;
+      const s = buildSample(ds, c.model, c.universe, FULL, restrict(c), c.asset ?? 'BCV');
       assert.equal(s.y.length, c.n, `${tag} n`);
       assert.equal(s.dates[0], c.first_date, `${tag} début`);
       assert.equal(s.dates.at(-1), c.last_date, `${tag} fin`);
@@ -92,8 +101,8 @@ for (const name of ['statsmodels_synthetic.json', 'statsmodels_dataset.json']) {
 
   test(`${ref.label} : diagnostics identiques à statsmodels`, () => {
     for (const d of ref.diagnostics) {
-      const tag = `${d.model}/${d.universe}`;
-      const s = buildSample(ds, d.model, d.universe, FULL);
+      const tag = `${d.asset ?? 'BCV'}/${d.model}/${d.universe}`;
+      const s = buildSample(ds, d.model, d.universe, FULL, undefined, d.asset ?? 'BCV');
       const r = ols(s.y, s.x, s.names, { cov: 'classical' });
       assert.equal(defaultLjungBoxLags(s.y.length), d.lb_lags);
       closeVec(acf(r.resid, 12), d.acf, 1e-8, 1e-12, `${tag} ACF`);
@@ -113,14 +122,14 @@ for (const name of ['statsmodels_synthetic.json', 'statsmodels_dataset.json']) {
 
   test(`${ref.label} : régressions mobiles identiques à statsmodels`, () => {
     for (const roll of ref.rolling) {
-      const s = buildSample(ds, roll.model, roll.universe, FULL);
+      const s = buildSample(ds, roll.model, roll.universe, FULL, undefined, roll.asset ?? 'BCV');
       for (const pt of roll.points) {
         const end = s.dates.indexOf(pt.end_date) + 1;
         assert.ok(end >= roll.window);
         for (const [covName, f] of Object.entries(pt.fits) as [string, { params: number[]; ci_low: number[]; ci_high: number[] }][]) {
           const [cov] = COV[covName];
           const r = ols(s.y.slice(end - roll.window, end), s.x.slice(end - roll.window, end), s.names, { cov });
-          const tag = `rolling ${roll.model}/${roll.universe}/${pt.end_date}/${covName}`;
+          const tag = `rolling ${roll.asset ?? 'BCV'}/${roll.model}/${roll.universe}/${pt.end_date}/${covName}`;
           closeVec(r.beta, f.params, 1e-9, 1e-14, tag);
           closeVec(r.ciLow, f.ci_low, 1e-8, 1e-14, `${tag} IC bas`);
           closeVec(r.ciHigh, f.ci_high, 1e-8, 1e-14, `${tag} IC haut`);

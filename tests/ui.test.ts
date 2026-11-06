@@ -11,7 +11,7 @@ import type { Dataset } from '../src/data/types.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ds = JSON.parse(readFileSync(join(here, 'fixtures', 'synthetic_dataset.json'), 'utf8')) as Dataset;
-const st: Settings = { range: { start: ds.dates[0], end: ds.dates.at(-1)! }, model: 'CAPM', universe: 'SPI', cov: 'HAC', hacLags: null, window: 60 };
+const st: Settings = { asset: 'BCV', range: { start: ds.dates[0], end: ds.dates.at(-1)! }, model: 'CAPM', universe: 'SPI', cov: 'HAC', hacLags: null, window: 60 };
 
 test('modèle hybride identifié comme tel', () => {
   const f = fitModel(ds, 'FF3', 'SPI', st);
@@ -78,4 +78,32 @@ test('import CSV : aller-retour et refus des pourcentages', () => {
 test('validation du schéma', () => {
   assert.throws(() => validateDataset({ ...ds, dates: ['2020-02', '2020-01'], data: {} }), /croissantes/);
   assert.throws(() => validateDataset({ ...ds, schema: 'x' }), /Schéma/);
+});
+
+test('action vs fonds : échantillon identique et écart d’alpha cohérent', async () => {
+  const { compareAssets, singleIndexPair } = await import('../src/ui/analysis.ts');
+  const cmp = compareAssets(ds, { ...st, universe: 'EUROPE' });
+  assert.ok(cmp.ok, cmp.error);
+  assert.equal(cmp.perf.length, 4);
+  assert.ok(cmp.perf.every((p) => p.path.length === cmp.dates.length + 1));
+  for (const m of cmp.models) {
+    if (!m.bcv.ok || !m.fund.ok || !m.diff.ok) throw new Error('ajustement manquant');
+    assert.equal(m.bcv.result.n, cmp.dates.length);
+    assert.equal(m.fund.result.n, cmp.dates.length);
+    assert.deepEqual(m.bcv.sample.dates, m.fund.sample.dates);
+    assert.ok(Math.abs(m.diff.result.beta[0] - (m.bcv.result.beta[0] - m.fund.result.beta[0])) < 1e-12);
+  }
+  const pair = singleIndexPair(ds, st, cmp);
+  if (!pair.bcv.ok || !pair.fund.ok) throw new Error('Single Index indisponible');
+  assert.deepEqual(pair.bcv.sample.dates, cmp.dates);
+  // fonds synthétique : bêta proche de 0,95, risque résiduel bien plus faible que l'action
+  assert.ok(pair.fund.result.beta[1] > 0.85 && pair.fund.result.sigma < pair.bcv.result.sigma / 2);
+});
+
+test('action vs fonds : erreur explicite si le fonds est absent', async () => {
+  const { compareAssets } = await import('../src/ui/analysis.ts');
+  const noFund: Dataset = { ...ds, data: { ...ds.data, fund_ret: ds.dates.map(() => null) } };
+  const cmp = compareAssets(noFund, st);
+  assert.equal(cmp.ok, false);
+  assert.match(cmp.error!, /fund_ret/);
 });

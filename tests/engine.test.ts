@@ -12,7 +12,7 @@ import { chi2Sf, fSf, normCdf, normPpf, tCritTwoSided, tTwoSidedP } from '../src
 import { ols, neweyWestAutoLags, InsufficientDataError, type CovType } from '../src/engine/ols.ts';
 import { SingularMatrixError } from '../src/engine/linalg.ts';
 import { acf, breuschPagan, jarqueBera, ljungBox } from '../src/engine/diagnostics.ts';
-import { buildSample, commonDates, type ModelId, type Universe } from '../src/engine/models.ts';
+import { buildSample, commonDates, type AssetId, type ModelId, type Universe } from '../src/engine/models.ts';
 import { rollingOLS } from '../src/engine/rolling.ts';
 import type { Dataset } from '../src/data/types.ts';
 
@@ -74,17 +74,18 @@ const ds = load('fixtures/synthetic_dataset.json') as Dataset;
 const numpyRef = load('fixtures/numpy_reference.json');
 const FULL = { start: '0000-01', end: '9999-12' };
 
-const SPECS: Record<string, [ModelId, Universe]> = {
+const SPECS: Record<string, [ModelId, Universe, AssetId?]> = {
   CAPM_SPI: ['CAPM', 'SPI'],
   FF3_SPI: ['FF3', 'SPI'],
   CARHART_EUROPE: ['CARHART', 'EUROPE'],
   FF5_EUROPE: ['FF5', 'EUROPE'],
+  FUND_FF3_SPI: ['FF3', 'SPI', 'FUND'],
 };
 
-for (const [key, [model, universe]] of Object.entries(SPECS)) {
+for (const [key, [model, universe, asset]] of Object.entries(SPECS)) {
   test(`${key} : coefficients, erreurs standards, tests = numpy/scipy`, () => {
     const ref = numpyRef[key];
-    const s = buildSample(ds, model, universe, FULL);
+    const s = buildSample(ds, model, universe, FULL, undefined, asset);
     assert.equal(s.y.length, ref.n);
     assert.equal(s.dates[0], ref.first_date);
     assert.equal(s.dates.at(-1), ref.last_date);
@@ -117,7 +118,7 @@ for (const [key, [model, universe]] of Object.entries(SPECS)) {
 
   test(`${key} : diagnostics des résidus = numpy/scipy`, () => {
     const ref = numpyRef[key].diagnostics;
-    const s = buildSample(ds, model, universe, FULL);
+    const s = buildSample(ds, model, universe, FULL, undefined, asset);
     const r = ols(s.y, s.x, s.names, { cov: 'classical' });
     acf(r.resid, 12).forEach((v, i) => close(v, ref.acf[i], 1e-9, 1e-13, `acf${i + 1}`));
     const lb = ljungBox(r.resid, 12);
@@ -136,8 +137,30 @@ for (const [key, [model, universe]] of Object.entries(SPECS)) {
 
 // ---------------------------------------------------------------- échantillons
 
+test('différence action − fonds : α_DIFF = α_BCV − α_fonds sur les mêmes dates', () => {
+  const specs = [{ model: 'CARHART' as ModelId, universe: 'EUROPE' as Universe, asset: 'BCV' as AssetId }, { model: 'CARHART' as ModelId, universe: 'EUROPE' as Universe, asset: 'FUND' as AssetId }];
+  const pair = commonDates(ds, specs, FULL);
+  const fit = (a: AssetId) => {
+    const s = buildSample(ds, 'CARHART', 'EUROPE', FULL, pair, a);
+    return ols(s.y, s.x, s.names, { cov: 'HAC' });
+  };
+  const b = fit('BCV');
+  const f = fit('FUND');
+  const d = fit('DIFF');
+  assert.equal(b.n, f.n);
+  assert.equal(d.n, b.n);
+  d.beta.forEach((v, i) => close(v, b.beta[i] - f.beta[i], 1e-10, 1e-14, `coef ${i}`));
+});
+
+test('fonds : mois manquants exclus et colonne du fonds utilisée', () => {
+  const s = buildSample(ds, 'CAPM', 'SPI', FULL, undefined, 'FUND');
+  assert.equal(s.dates[0], ds.dates[6]);
+  const rf = ds.data.rf_saron![10]!;
+  close(s.y[4], ds.data.fund_ret![10]! - rf, 0, 1e-15);
+});
+
 test('échantillon commun : mêmes dates pour tous les modèles', () => {
-  const specs = Object.values(SPECS).map(([model, universe]) => ({ model, universe }));
+  const specs = Object.values(SPECS).filter((x) => !x[2]).map(([model, universe]) => ({ model, universe }));
   const common = commonDates(ds, specs, FULL);
   assert.equal(common.size, 240 - 18 - 2);
   const ns = specs.map((s) => buildSample(ds, s.model, s.universe, FULL, common).y.length);

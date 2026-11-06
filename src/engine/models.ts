@@ -7,6 +7,26 @@ import type { Dataset, SeriesKey } from '../data/types.ts';
 import type { Matrix, Vector } from './linalg.ts';
 
 export type ModelId = 'CAPM' | 'FF3' | 'CARHART' | 'FF5';
+
+/**
+ * Actif étudié. 'DIFF' est le portefeuille long action BCV / court fonds : sa
+ * régression donne exactement α_BCV − α_fonds (mêmes dates, mêmes régresseurs),
+ * avec une erreur standard qui tient compte de la corrélation des deux actifs.
+ */
+export type AssetId = 'BCV' | 'FUND' | 'DIFF';
+export const ASSET_IDS: AssetId[] = ['BCV', 'FUND'];
+
+export const ASSET_INFO: Record<AssetId, { label: string; short: string; detail: string }> = {
+  BCV: { label: 'Action BCV', short: 'Action BCV', detail: 'BCVN.SW · ISIN CH0531751755' },
+  FUND: { label: 'Fonds BCV Swiss Equity A', short: 'Fonds BCV', detail: 'ISIN CH0006018706 · gestion active · BCV Asset Management' },
+  DIFF: { label: 'Action BCV − fonds BCV', short: 'Différence', detail: 'Portefeuille long action, court fonds' },
+};
+
+function assetColumns(asset: AssetId): SeriesKey[] {
+  if (asset === 'BCV') return ['bcv_ret'];
+  if (asset === 'FUND') return ['fund_ret'];
+  return ['bcv_ret', 'fund_ret'];
+}
 export type Universe = 'SPI' | 'EUROPE';
 
 export const MODEL_IDS: ModelId[] = ['CAPM', 'FF3', 'CARHART', 'FF5'];
@@ -69,8 +89,8 @@ export function marketColumn(universe: Universe): SeriesKey {
 }
 
 /** Colonnes nécessaires pour estimer un modèle dans un univers. */
-export function requiredColumns(model: ModelId, universe: Universe): SeriesKey[] {
-  const cols: SeriesKey[] = ['bcv_ret', 'rf_saron', marketColumn(universe)];
+export function requiredColumns(model: ModelId, universe: Universe, asset: AssetId = 'BCV'): SeriesKey[] {
+  const cols: SeriesKey[] = [...assetColumns(asset), 'rf_saron', marketColumn(universe)];
   for (const f of MODEL_FACTORS[model]) if (f !== 'MKT') cols.push(factorColumn(model, f));
   return cols;
 }
@@ -101,6 +121,7 @@ export interface DateRange {
 }
 
 export interface Sample {
+  asset: AssetId;
   model: ModelId;
   universe: Universe;
   dates: string[];
@@ -164,8 +185,15 @@ export function assertColumns(ds: Dataset, columns: SeriesKey[]): void {
  * Construit l'échantillon du modèle. Si `restrictTo` est fourni, seules ces
  * dates (intersection commune entre modèles) sont utilisées.
  */
-export function buildSample(ds: Dataset, model: ModelId, universe: Universe, range: DateRange, restrictTo?: Set<string>): Sample {
-  const columns = requiredColumns(model, universe);
+export function buildSample(
+  ds: Dataset,
+  model: ModelId,
+  universe: Universe,
+  range: DateRange,
+  restrictTo?: Set<string>,
+  asset: AssetId = 'BCV',
+): Sample {
+  const columns = requiredColumns(model, universe, asset);
   assertColumns(ds, columns);
   let { idx, inRange } = availableIndices(ds, columns, range);
   if (restrictTo) idx = idx.filter((i) => restrictTo.has(ds.dates[i]));
@@ -177,7 +205,10 @@ export function buildSample(ds: Dataset, model: ModelId, universe: Universe, ran
   const dates: string[] = [];
   for (const i of idx) {
     const rf = get('rf_saron', i);
-    y.push(get('bcv_ret', i) - rf);
+    // rendement excédentaire ; pour la différence, (R_BCV − Rf) − (R_fonds − Rf) = R_BCV − R_fonds
+    if (asset === 'BCV') y.push(get('bcv_ret', i) - rf);
+    else if (asset === 'FUND') y.push(get('fund_ret', i) - rf);
+    else y.push(get('bcv_ret', i) - get('fund_ret', i));
     const row = [1];
     for (const f of factors) {
       if (f === 'MKT') row.push(get(mcol, i) - rf);
@@ -192,6 +223,7 @@ export function buildSample(ds: Dataset, model: ModelId, universe: Universe, ran
     if (d > 1) gaps.push({ after: dates[t - 1], before: dates[t], missing: d - 1 });
   }
   return {
+    asset,
     model,
     universe,
     dates,
@@ -206,9 +238,13 @@ export function buildSample(ds: Dataset, model: ModelId, universe: Universe, ran
 }
 
 /** Dates communes à tous les modèles et univers demandés (comparaison sur échantillon identique). */
-export function commonDates(ds: Dataset, specs: { model: ModelId; universe: Universe }[], range: DateRange): Set<string> {
+export function commonDates(
+  ds: Dataset,
+  specs: { model: ModelId; universe: Universe; asset?: AssetId }[],
+  range: DateRange,
+): Set<string> {
   const cols = new Set<SeriesKey>();
-  for (const s of specs) for (const c of requiredColumns(s.model, s.universe)) cols.add(c);
+  for (const s of specs) for (const c of requiredColumns(s.model, s.universe, s.asset ?? 'BCV')) cols.add(c);
   const { idx } = availableIndices(ds, [...cols], range);
   return new Set(idx.map((i) => ds.dates[i]));
 }

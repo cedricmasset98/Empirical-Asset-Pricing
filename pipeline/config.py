@@ -35,6 +35,24 @@ SNB_FROM_DATE = "1999-01-01"
 SNB_FX_DIMENSIONS_URL = "https://data.snb.ch/api/cube/devkum/dimensions/en"
 SNB_FX_DATA_URL = "https://data.snb.ch/api/cube/devkum/data/csv/en"
 
+# Fonds BCV Swiss Equity A (CH0006018706), géré par BCV Asset Management, administré
+# par Gérifonds. La page publique de la classe contient la série officielle de
+# performance « dividendes réinvestis » (base 100, quotidienne depuis 1997), les VNI
+# et la table des distributions. Aucune API documentée n'existe : une seule page est
+# lue, et tout changement de structure produit une erreur explicite (pas de valeur
+# de substitution). Repli : data/manual/fund_tr_daily.csv (date,tr_index).
+FUND = {
+    "name": "BCV Swiss Equity A",
+    "isin": "CH0006018706",
+    "valor": "601870",
+    "bloomberg": "GERBCAS SW",
+    "manager": "BCV Asset Management",
+    "currency": "CHF",
+    "benchmark": "SPI",
+    "inception": "1997-04-22",
+}
+GERIFONDS_FUND_URL = "https://www.gerifonds.ch/fr/iframe/CH0006018706?period=6"
+
 FRENCH_BASE = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
 FRENCH_FILES = {
     "ff3": ["Europe_3_Factors_CSV.zip"],
@@ -57,4 +75,5 @@ LICENSES = {
     "snb": "Portail de données BNS (data.snb.ch) — données publiques, citer la source.",
     "french": "Kenneth R. French Data Library — usage libre avec citation.",
     "fred": "FRED, Federal Reserve Bank of St. Louis (H.10) — citer la source.",
+    "gerifonds": "Gérifonds SA (filiale de la BCV), page publique du fonds — seuls des rendements mensuels dérivés sont publiés ; vérifier les conditions d'utilisation avant diffusion publique.",
 }

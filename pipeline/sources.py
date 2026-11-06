@@ -313,3 +313,37 @@ def fetch_usdchf() -> tuple[pd.Series | None, Info]:
         errors.append(f"Yahoo : {type(exc).__name__}: {exc}")
     info.update(status="error", message=" | ".join(errors))
     return None, info
+
+
+# --------------------------------------------------------------------- Fonds BCV Swiss Equity A
+
+def fetch_fund():
+    """Série officielle Gérifonds « dividendes réinvestis » du fonds BCV Swiss Equity A.
+
+    Retourne (FundPage | None, info). Repli : data/manual/fund_tr_daily.csv
+    (date,tr_index), indice de performance distributions brutes réinvesties.
+    """
+    from .fund import FundPage, parse_page
+
+    info: Info = {
+        "id": "fund", "name": "BCV Swiss Equity A (CH0006018706) — performance officielle, distributions réinvesties",
+        "provider": "Gérifonds SA, page publique du fonds (graphique « Évolution de la performance (dividendes réinvestis) »)",
+        "url": "https://www.gerifonds.ch/fr/iframe/CH0006018706", "license": C.LICENSES["gerifonds"],
+        "columns": ["fund_ret"], "retrieved_at": _now(),
+    }
+    try:
+        manual = _manual_csv("fund_tr_daily.csv", "tr_index")
+        if manual is not None:
+            info.update(status="manual", provider="Import manuel data/manual/fund_tr_daily.csv", coverage=_coverage(manual.index))
+            return FundPage(manual, pd.Series(dtype=float), pd.Series(dtype=float)), info
+        text = _retry(lambda: _get(C.GERIFONDS_FUND_URL, timeout=120).text)
+        page = parse_page(text)
+        if len(page.tr) < 250:
+            raise RuntimeError(f"Historique Gérifonds trop court ({len(page.tr)} points) : structure de page modifiée ?")
+        _save_raw("fund_gerifonds_daily.csv", pd.DataFrame({"tr_index": page.tr, "nav_tooltip": page.nav}))
+        info.update(status="ok", coverage=_coverage(page.tr.index),
+                    message=f"{len(page.tr)} valeurs quotidiennes ; {len(page.distributions)} distributions publiées.")
+        return page, info
+    except Exception as exc:  # noqa: BLE001
+        info.update(status="error", message=f"{type(exc).__name__}: {exc}")
+        return None, info

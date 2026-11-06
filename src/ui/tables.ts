@@ -2,7 +2,8 @@
 
 import type { FitOk, Comparison, Diagnostics } from './analysis.ts';
 import type { Dataset } from '../data/types.ts';
-import { FACTOR_COEF, MODEL_IDS, MODEL_SHORT, type FactorId } from '../engine/models.ts';
+import { ASSET_INFO, FACTOR_COEF, MODEL_IDS, MODEL_SHORT, type FactorId } from '../engine/models.ts';
+import type { AssetComparison, Fit } from './analysis.ts';
 import { escapeHtml as h, num, pct, pval, stars } from './format.ts';
 import { coefLabel } from './charts.ts';
 
@@ -18,6 +19,7 @@ export function tip(text: string): string {
 
 export function statCards(fit: FitOk): string {
   const r = fit.result;
+  const who = fit.asset === 'FUND' ? 'du fonds' : 'de BCV';
   const z = r.distribution === 't' ? 't' : 'z';
   const mktIdx = r.names.indexOf('MKT');
   const card = (label: string, value: string, sub: string, help: string, cls = '') =>
@@ -31,11 +33,11 @@ export function statCards(fit: FitOk): string {
     card(`${z}-stat (α)`, num(r.stat[0], 2), `p-value bilatérale ${pval(r.pvalue[0])} ${stars(r.pvalue[0])}`,
       r.distribution === 't' ? `Statistique de Student à ${r.dfResid} degrés de liberté.` : 'Statistique z (inférence asymptotique normale, erreurs standards robustes).', sig),
     card('β marché', mktIdx >= 0 ? num(r.beta[mktIdx], 3) : '—', mktIdx >= 0 ? `se ${num(r.se[mktIdx], 3)} · IC [${num(r.ciLow[mktIdx], 3)} ; ${num(r.ciHigh[mktIdx], 3)}]` : '',
-      'Sensibilité du rendement excédentaire de BCV au rendement excédentaire du marché.'),
-    card('R² / R² ajusté', `${num(r.r2, 3)}`, `ajusté ${num(r.r2adj, 3)}`, 'Part de la variance des rendements excédentaires de BCV expliquée par le modèle.'),
+      `Sensibilité du rendement excédentaire ${who} au rendement excédentaire du marché.`),
+    card('R² / R² ajusté', `${num(r.r2, 3)}`, `ajusté ${num(r.r2adj, 3)}`, `Part de la variance des rendements excédentaires ${who} expliquée par le modèle.`),
     card('Observations', String(r.n), `${fit.sample.dates[0]} → ${fit.sample.dates.at(-1)}`, 'Nombre de mois complets utilisés (toutes séries disponibles).'),
     card('σ résidus', pct(r.sigma, 2), `par mois · ${pct(r.sigma * Math.sqrt(12), 1)} annualisé (×√12)`,
-      'Écart-type des résidus s = √(SSR/(n−k)) : risque idiosyncratique mensuel.'),
+      'Écart-type des résidus s = √(SSR/(n−k)) : variabilité mensuelle non expliquée par les facteurs.'),
   ].join('');
 }
 
@@ -56,7 +58,7 @@ export function regressionTable(fit: FitOk): string {
   const method = `${COV_LABELS[r.cov]}${r.cov === 'HAC' ? ` · ${r.hacLags} retards (noyau de Bartlett)` : ''}`;
   return `
   <table class="reg">
-    <caption>${h(fit.label)} — variable dépendante : R<sub>BCV</sub> − R<sub>f</sub> (SARON), mensuel</caption>
+    <caption>${h(ASSET_INFO[fit.asset].label)} · ${h(fit.label)} — variable dépendante : R<sub>${fit.asset === 'FUND' ? 'fonds' : 'BCV'}</sub> − R<sub>f</sub> (SARON), mensuel</caption>
     <thead><tr><th scope="col">Variable</th><th scope="col">Coefficient</th><th scope="col">Std. Error</th><th scope="col">${z}</th><th scope="col">p-value</th><th scope="col">IC ${lvl} %</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>
@@ -119,4 +121,52 @@ export function sourcesTable(ds: Dataset): string {
   return `<table class="reg sources"><thead><tr><th>Série</th><th>Statut</th><th>Couverture</th><th>Détails et licence</th></tr></thead><tbody>${rows}</tbody></table>
   ${checks ? `<h3>Contrôles automatiques du pipeline</h3><ul class="checks">${checks}</ul>` : ''}
   ${(ds.notes ?? []).map((n) => `<p class="muted small">${h(n)}</p>`).join('')}`;
+}
+
+// ------------------------------------------------------------------ action vs fonds
+
+export function perfTable(cmp: AssetComparison): string {
+  const rows = cmp.perf
+    .map(
+      (p) =>
+        `<tr><th scope="row">${h(p.label)}</th><td>${num(p.path[p.path.length - 1], 0)} CHF</td><td>${pct(p.annReturn, 2)}</td><td>${p.key === 'rf' ? '—' : pct(p.annVol, 1)}</td><td>${p.key === 'rf' ? '—' : pct(p.maxDrawdown, 1)}</td></tr>`,
+    )
+    .join('');
+  return `<table class="reg"><thead><tr><th>Série (rendement total)</th><th>Valeur finale de 100 CHF</th><th>Rendement annualisé</th><th>Volatilité annualisée</th><th>Perte maximale (fin de mois)</th></tr></thead><tbody>${rows}</tbody></table>
+  <p class="table-note">Mêmes ${cmp.dates.length} mois pour toutes les séries (${cmp.dates[0]} → ${cmp.dates[cmp.dates.length - 1]}). Rendement annualisé géométrique ; volatilité = écart-type mensuel × √12 ; perte maximale mesurée sur les valeurs de fin de mois (les pertes intra-mensuelles peuvent être plus fortes).</p>`;
+}
+
+function cell(f: Fit, fn: (r: FitOk['result']) => string): string {
+  return f.ok ? fn(f.result) : `<span class="err">${h(f.error)}</span>`;
+}
+
+export function alphaPairTable(m: AssetComparison['models'][number]): string {
+  const { bcv, fund, diff } = m;
+  const z = bcv.ok && bcv.result.distribution === 't' ? 't' : 'z';
+  const row = (label: string, fn: (r: FitOk['result']) => string, d?: string) =>
+    `<tr><th scope="row">${label}</th><td>${cell(bcv, fn)}</td><td>${cell(fund, fn)}</td><td>${d ?? ''}</td></tr>`;
+  const dRow = diff.ok
+    ? `${pct(12 * diff.result.beta[0], 2)}<br><span class="muted small">${z} = ${num(diff.result.stat[0], 2)} · p = ${pval(diff.result.pvalue[0])}</span>`
+    : '';
+  return `<table class="reg pair"><thead><tr><th>Indicateur — ${h(MODEL_SHORT[m.model])}</th><th>Action BCV</th><th>Fonds BCV</th><th>Écart (action − fonds) ${tip("Régression du rendement de l'action moins celui du fonds sur les mêmes facteurs : son alpha est exactement α_action − α_fonds, et son erreur standard tient compte de la corrélation entre les deux actifs.")}</th></tr></thead><tbody>
+    ${row('α annualisé (12 × mensuel)', (r) => `${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup>`, dRow)}
+    ${row('IC 95 % de l’α annualisé', (r) => `[${pct(12 * r.ciLow[0], 1)} ; ${pct(12 * r.ciHigh[0], 1)}]`, diff.ok ? `[${pct(12 * diff.result.ciLow[0], 1)} ; ${pct(12 * diff.result.ciHigh[0], 1)}]` : '')}
+    ${row(`${z}-stat de l’α`, (r) => num(r.stat[0], 2))}
+    ${row('p-value de l’α', (r) => pval(r.pvalue[0]))}
+    ${row('β de marché', (r) => `${num(r.beta[1], 3)} <span class="muted small">[${num(r.ciLow[1], 2)} ; ${num(r.ciHigh[1], 2)}]</span>`, diff.ok ? num(diff.result.beta[1], 3) : '')}
+    ${row('R²', (r) => num(r.r2, 3))}
+    ${row('Volatilité résiduelle annualisée', (r) => pct(r.sigma * Math.sqrt(12), 1))}
+    ${row('N (mois)', (r) => String(r.n))}
+  </tbody></table>`;
+}
+
+export function multiFactorPairTable(cmp: AssetComparison): string {
+  const rows = cmp.models
+    .map(({ model, bcv, fund, diff }) => {
+      const a = (f: Fit) => (f.ok ? `${pct(12 * f.result.beta[0], 2)}<sup>${stars(f.result.pvalue[0])}</sup> <span class="muted small">p = ${pval(f.result.pvalue[0])}</span>` : `<span class="err">${h(f.error)}</span>`);
+      return `<tr><th scope="row">${h(MODEL_SHORT[model])}</th><td>${a(bcv)}</td><td>${a(fund)}</td><td>${a(diff)}</td><td>${bcv.ok ? num(bcv.result.r2, 3) : '—'} / ${fund.ok ? num(fund.result.r2, 3) : '—'}</td></tr>`;
+    })
+    .join('');
+  return `<table class="reg"><thead><tr><th>Modèle</th><th>α action BCV</th><th>α fonds BCV</th><th>Écart (action − fonds)</th><th>R² action / fonds</th></tr></thead><tbody>${rows}</tbody></table>
+  <p class="table-note">α annualisé (12 × mensuel). *** p &lt; 0,01 · ** p &lt; 0,05 · * p &lt; 0,1. Toutes les estimations utilisent exactement les mêmes mois.</p>`;
 }

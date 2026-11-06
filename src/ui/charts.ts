@@ -5,7 +5,8 @@ import type { FitOk, Diagnostics, Comparison } from './analysis.ts';
 import type { RollingResult } from '../engine/rolling.ts';
 import { meanPredictionInterval } from '../engine/ols.ts';
 import { normPdf } from '../engine/distributions.ts';
-import { FACTOR_LABELS, MODEL_IDS, MODEL_SHORT, UNIVERSE_LABELS, type FactorId } from '../engine/models.ts';
+import { ASSET_INFO, FACTOR_LABELS, MODEL_IDS, MODEL_SHORT, UNIVERSE_LABELS, type FactorId } from '../engine/models.ts';
+import type { AssetComparison } from './analysis.ts';
 import { num, pval } from './format.ts';
 
 export interface Theme {
@@ -70,7 +71,13 @@ function withAlpha(hex: string, a: number): string {
 
 // ------------------------------------------------------------------ A. Scatter
 
-export function plotScatter(el: HTMLElement, fit: FitOk, t: Theme, opts: { band: boolean; colorByYear: boolean; marketLabel: string }): void {
+export function plotScatter(
+  el: HTMLElement,
+  fit: FitOk,
+  t: Theme,
+  opts: { band: boolean; colorByYear: boolean; marketLabel: string; ranges?: { x: [number, number]; y: [number, number] }; compact?: boolean },
+): void {
+  const who = ASSET_INFO[fit.asset].short;
   const r = fit.result;
   const xs = fit.sample.x.map((row) => row[1]);
   const ys = fit.sample.y;
@@ -102,7 +109,7 @@ export function plotScatter(el: HTMLElement, fit: FitOk, t: Theme, opts: { band:
       ? { size: 7, color: years, colorscale: 'Viridis', showscale: true, colorbar: { title: { text: 'Année' }, thickness: 12, tickfont: { color: t.muted } }, opacity: 0.85, line: { width: 0.5, color: t.halo } }
       : { size: 7, color: t.points, opacity: 0.7, line: { width: 0.5, color: t.halo } },
     hovertemplate:
-      '<b>%{customdata[0]}</b><br>Rendement excédentaire BCV : %{customdata[1]:.2f} %<br>' +
+      `<b>%{customdata[0]}</b><br>Rendement excédentaire ${who} : %{customdata[1]:.2f} %<br>` +
       `Rendement excédentaire ${opts.marketLabel} : %{customdata[2]:.2f} %<br>` +
       'Rendement prédit : %{customdata[3]:.2f} %<br>Résidu : %{customdata[4]:.2f} %<extra></extra>',
   });
@@ -116,22 +123,23 @@ export function plotScatter(el: HTMLElement, fit: FitOk, t: Theme, opts: { band:
   );
   const a = r.beta[0];
   const b = r.beta[1];
-  const eq = `R̂ᵉ<sub>BCV</sub> = ${num(P(a), 3)} % ${b >= 0 ? '+' : '−'} ${num(Math.abs(b), 3)} · Rᵉ<sub>M</sub>`;
+  const eq = `R̂ᵉ<sub>${fit.asset === 'FUND' ? 'fonds' : 'BCV'}</sub> = ${num(P(a), 3)} % ${b >= 0 ? '+' : '−'} ${num(Math.abs(b), 3)} · Rᵉ<sub>M</sub>`;
   const statLabel = r.distribution === 't' ? 't' : 'z';
   const box = `${eq}<br>α = ${num(P(a), 3)} %/mois · ${statLabel}(α) = ${num(r.stat[0], 2)} · p(α) = ${pval(r.pvalue[0])}<br>β = ${num(b, 3)} · R² = ${num(r.r2, 3)} · N = ${r.n}`;
   Plotly.react(
     el,
     traces,
     layout(t, {
-      xaxis: { title: { text: `Rendement excédentaire ${opts.marketLabel} (%, mensuel)` }, ticksuffix: ' %' },
-      yaxis: { title: { text: 'Rendement excédentaire BCV (%, mensuel)' }, ticksuffix: ' %' },
-      annotations: [
+      title: opts.compact ? { text: ASSET_INFO[fit.asset].label, font: { size: 14 } } : undefined,
+      xaxis: { title: { text: `Rendement excédentaire ${opts.marketLabel} (%, mensuel)` }, ticksuffix: ' %', range: opts.ranges?.x },
+      yaxis: { title: { text: `Rendement excédentaire ${who} (%, mensuel)` }, ticksuffix: ' %', range: opts.ranges?.y },
+      annotations: opts.compact ? [] : [
         {
           xref: 'paper', yref: 'paper', x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', align: 'left', showarrow: false,
           text: box, font: { size: 12, color: t.fg }, bgcolor: t.panel, bordercolor: t.grid, borderwidth: 1, borderpad: 6, opacity: 0.95,
         },
       ],
-      margin: { l: 70, r: opts.colorByYear ? 10 : 20, t: 20, b: 60 },
+      margin: { l: 70, r: opts.colorByYear ? 10 : 20, t: opts.compact ? 40 : 20, b: 60 },
     }),
     CONFIG,
   );
@@ -144,7 +152,7 @@ export function plotFitted(el: HTMLElement, fit: FitOk, t: Theme): void {
   Plotly.react(
     el,
     [
-      { x: d, y: fit.sample.y.map(P), mode: 'lines', name: 'Observé (BCV − Rf)', line: { color: t.points, width: 1.5 }, hovertemplate: '%{x|%Y-%m} : %{y:.2f} %<extra>Observé</extra>' },
+      { x: d, y: fit.sample.y.map(P), mode: 'lines', name: `Observé (${ASSET_INFO[fit.asset].short} − Rf)`, line: { color: t.points, width: 1.5 }, hovertemplate: '%{x|%Y-%m} : %{y:.2f} %<extra>Observé</extra>' },
       { x: d, y: fit.result.fitted.map(P), mode: 'lines', name: 'Prédit par le modèle', line: { color: t.line, width: 2 }, hovertemplate: '%{x|%Y-%m} : %{y:.2f} %<extra>Prédit</extra>' },
     ],
     layout(t, { yaxis: { title: { text: 'Rendement excédentaire (%, mensuel)' }, ticksuffix: ' %' }, xaxis: { type: 'date' } }),
@@ -317,4 +325,91 @@ export function resizeAll(root: HTMLElement): void {
   root.querySelectorAll<HTMLElement>('.js-plotly-plot').forEach((el) => {
     if (el.offsetParent !== null) Plotly.Plots.resize(el);
   });
+}
+
+// ------------------------------------------------------------------ F. Action vs fonds
+
+export function plotPerformance(el: HTMLElement, cmp: AssetComparison, t: Theme): void {
+  const first = cmp.dates[0];
+  const [y, m] = first.split('-').map(Number);
+  const start = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+  const x = [start, ...cmp.dates];
+  const style: Record<string, { color: string; dash?: string; width: number }> = {
+    bcv: { color: t.line, width: 2.4 },
+    fund: { color: t.series[2], width: 2.4 },
+    spi: { color: t.series[0], width: 1.8 },
+    rf: { color: t.muted, dash: 'dash', width: 1.4 },
+  };
+  Plotly.react(
+    el,
+    cmp.perf.map((p) => ({
+      x,
+      y: p.path,
+      mode: 'lines',
+      name: p.label,
+      line: style[p.key],
+      hovertemplate: `%{x|%Y-%m} : %{y:.1f} CHF<extra>${p.label}</extra>`,
+    })),
+    layout(t, {
+      xaxis: { type: 'date' },
+      yaxis: { title: { text: 'Valeur de 100 CHF investis (CHF)' } },
+      legend: { orientation: 'h', y: -0.15, font: { color: t.fg } },
+    }),
+    CONFIG,
+  );
+}
+
+export function plotAlphaPair(el: HTMLElement, cmp: AssetComparison, t: Theme): void {
+  const traces = (['bcv', 'fund'] as const).map((k, i) => {
+    const fits = cmp.models.map((m) => m[k]);
+    const ok = fits.map((f) => (f.ok ? f : null));
+    const color = i === 0 ? t.line : t.series[2];
+    return {
+      x: cmp.models.map((m) => MODEL_SHORT[m.model]),
+      y: ok.map((f) => (f ? 1200 * f.result.beta[0] : null)),
+      error_y: {
+        type: 'data',
+        symmetric: false,
+        array: ok.map((f) => (f ? 1200 * (f.result.ciHigh[0] - f.result.beta[0]) : null)),
+        arrayminus: ok.map((f) => (f ? 1200 * (f.result.beta[0] - f.result.ciLow[0]) : null)),
+        color,
+        thickness: 1.6,
+        width: 6,
+      },
+      customdata: ok.map((f) => (f ? [f.result.stat[0], f.result.pvalue[0], f.result.n] : [null, null, null])),
+      mode: 'markers',
+      type: 'scatter',
+      offsetgroup: k,
+      marker: { size: 11, color, symbol: i === 0 ? 'circle' : 'diamond' },
+      name: i === 0 ? 'Action BCV' : 'Fonds BCV Swiss Equity A',
+      hovertemplate: 'α = %{y:.2f} % par an<br>stat = %{customdata[0]:.2f} · p = %{customdata[1]:.4f} · N = %{customdata[2]}<extra>%{fullData.name}</extra>',
+    };
+  });
+  Plotly.react(
+    el,
+    traces,
+    layout(t, {
+      scattermode: 'group',
+      yaxis: { title: { text: 'α annualisé (12 × mensuel) et IC 95 %' }, ticksuffix: ' %', zeroline: true, zerolinewidth: 2.5, zerolinecolor: t.fg },
+      xaxis: { title: { text: 'Modèle' } },
+      shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0, y1: 0, line: { color: t.fg, width: 2 } }],
+      annotations: [{ xref: 'paper', x: 1, y: 0, yanchor: 'bottom', xanchor: 'right', text: 'α = 0', showarrow: false, font: { size: 11, color: t.fg } }],
+      legend: { orientation: 'h', y: -0.22, font: { color: t.fg } },
+      margin: { l: 70, r: 20, t: 20, b: 80 },
+    }),
+    CONFIG,
+  );
+}
+
+/** Plages communes (en %) pour comparer deux nuages de points à la même échelle. */
+export function commonRanges(fits: FitOk[]): { x: [number, number]; y: [number, number] } {
+  const xs = fits.flatMap((f) => f.sample.x.map((r) => 100 * r[1]));
+  const ys = fits.flatMap((f) => f.sample.y.map((v) => 100 * v));
+  const pad = (a: number[]) => {
+    const lo = Math.min(...a);
+    const hi = Math.max(...a);
+    const p = 0.05 * (hi - lo);
+    return [lo - p, hi + p] as [number, number];
+  };
+  return { x: pad(xs), y: pad(ys) };
 }

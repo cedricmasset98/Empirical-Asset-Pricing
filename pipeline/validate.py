@@ -27,7 +27,7 @@ from statsmodels.tsa.stattools import acf
 
 from . import config as C
 
-from .validate_common import MODELS, UNIVERSES, design, has_data, required, rows_for  # noqa: E402
+from .validate_common import ASSETS, MODELS, UNIVERSES, design, has_data, required, rows_for  # noqa: E402
 
 
 def nw_lags(n: int) -> int:
@@ -81,34 +81,59 @@ def diagnostics(y: np.ndarray, X: np.ndarray) -> dict:
 
 
 def reference(ds: dict, label: str, source_path: str) -> dict:
+    """Échantillons : « own » (toutes les dates disponibles pour la spécification),
+    « common » (dates communes aux spécifications disponibles du même actif),
+    « pair » (dates communes à toutes les spécifications des deux actifs : base de
+    la comparaison action / fonds, y compris le portefeuille différence DIFF)."""
     specs = [(m, u) for m in MODELS for u in UNIVERSES]
-    available = [(m, u) for m, u in specs if has_data(ds, required(m, u))]
-    skipped = [{"model": m, "universe": u, "reason": "séries indisponibles"} for m, u in specs if (m, u) not in available]
-    all_cols = sorted({c for m, u in available for c in required(m, u)})
-    common = rows_for(ds, all_cols)
-    cases, diags, rolling = [], [], []
-    for m, u in available:
-        for sample, rows in (("own", rows_for(ds, required(m, u))), ("common", common)):
-            if len(rows) < max(24, len(MODELS[m]) + 11):
-                skipped.append({"model": m, "universe": u, "sample": sample, "reason": f"n = {len(rows)} insuffisant"})
+    cases, diags, rolling, skipped = [], [], [], []
+    min_n = lambda m: max(24, len(MODELS[m]) + 11)  # noqa: E731
+
+    def add_cases(asset, m, u, rows, sample):
+        if len(rows) < min_n(m):
+            skipped.append({"asset": asset, "model": m, "universe": u, "sample": sample, "reason": f"n = {len(rows)} insuffisant"})
+            return None
+        y, X, dates = design(ds, m, u, rows, asset)
+        for cov, r in fit_all(y, X, nw_lags(len(y))).items():
+            cases.append({"asset": asset, "model": m, "universe": u, "sample": sample, "cov": cov, "n": len(y),
+                          "first_date": dates[0], "last_date": dates[-1], **r})
+        return y, X, dates
+
+    commons = {}
+    for asset in ("BCV", "FUND"):
+        available = [(m, u) for m, u in specs if has_data(ds, required(m, u, asset))]
+        skipped += [{"asset": asset, "model": m, "universe": u, "reason": "séries indisponibles"} for m, u in specs if (m, u) not in available]
+        if not available:
+            continue
+        common = rows_for(ds, sorted({c for m, u in available for c in required(m, u, asset)}))
+        commons[asset] = (available, common)
+        for m, u in available:
+            res = add_cases(asset, m, u, rows_for(ds, required(m, u, asset)), "own")
+            add_cases(asset, m, u, common, "common")
+            if res is None:
                 continue
-            y, X, dates = design(ds, m, u, rows)
-            for cov, r in fit_all(y, X, nw_lags(len(y))).items():
-                cases.append({"model": m, "universe": u, "sample": sample, "cov": cov, "n": len(y),
-                              "first_date": dates[0], "last_date": dates[-1], **r})
-            if sample == "own":
-                diags.append({"model": m, "universe": u, **diagnostics(y, X)})
-                w = 60
-                if len(y) >= w + 2:
-                    pts = []
-                    for end in sorted({w, (len(y) + w) // 2, len(y)}):
-                        fits = fit_all(y[end - w:end], X[end - w:end], nw_lags(w))
-                        pts.append({"end_date": dates[end - 1], "fits": {c: {k: fits[c][k] for k in ("params", "ci_low", "ci_high")} for c in ("classical", "HC3", "HAC")}})
-                    rolling.append({"model": m, "universe": u, "window": w, "points": pts})
+            y, X, dates = res
+            diags.append({"asset": asset, "model": m, "universe": u, **diagnostics(y, X)})
+            w = 60
+            if len(y) >= w + 2:
+                pts = []
+                for end in sorted({w, (len(y) + w) // 2, len(y)}):
+                    fits = fit_all(y[end - w:end], X[end - w:end], nw_lags(w))
+                    pts.append({"end_date": dates[end - 1], "fits": {c: {k: fits[c][k] for k in ("params", "ci_low", "ci_high")} for c in ("classical", "HC3", "HAC")}})
+                rolling.append({"asset": asset, "model": m, "universe": u, "window": w, "points": pts})
+    pair_n = 0
+    if "BCV" in commons and "FUND" in commons:
+        both = [s for s in commons["BCV"][0] if s in commons["FUND"][0]]
+        pair = rows_for(ds, sorted({c for m, u in both for a in ("BCV", "FUND") for c in required(m, u, a)}))
+        pair_n = len(pair)
+        for m, u in both:
+            for asset in ("BCV", "FUND", "DIFF"):
+                add_cases(asset, m, u, pair, "pair")
     return {
         "label": label, "dataset_path": source_path, "dataset_generated_at": ds.get("generated_at"),
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "statsmodels_version": statsmodels.__version__, "common_n": len(common),
+        "statsmodels_version": statsmodels.__version__,
+        "common_n": {a: len(c[1]) for a, c in commons.items()}, "pair_n": pair_n,
         "cases": cases, "diagnostics": diags, "rolling": rolling, "skipped": skipped,
     }
 
@@ -126,7 +151,7 @@ def main() -> int:
         ds = json.loads(path.read_text())
         ref = reference(ds, label, str(path.relative_to(C.ROOT)))
         (C.REFERENCE_DIR / out).write_text(json.dumps(ref, indent=1))
-        print(f"[validate] {out} : {len(ref['cases'])} régressions, {len(ref['diagnostics'])} diagnostics, échantillon commun n = {ref['common_n']}")
+        print(f"[validate] {out} : {len(ref['cases'])} régressions, {len(ref['diagnostics'])} diagnostics, échantillons communs {ref['common_n']}, paire action/fonds n = {ref['pair_n']}")
         for s in ref["skipped"]:
             print(f"   ignoré : {s}")
     return 0

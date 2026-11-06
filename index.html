@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Empirical Asset Pricing — Banque Cantonale Vaudoise (BCVN)</title>
+    <title>Empirical Asset Pricing — Action BCV et fonds BCV Swiss Equity A</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%231d4f91%22/%3E%3Cpath d=%22M6 24 L26 9%22 stroke=%22%23ff8a3d%22 stroke-width=%223%22/%3E%3Ccircle cx=%2210%22 cy=%2218%22 r=%222%22 fill=%22white%22/%3E%3Ccircle cx=%2217%22 cy=%2217%22 r=%222%22 fill=%22white%22/%3E%3Ccircle cx=%2222%22 cy=%2210%22 r=%222%22 fill=%22white%22/%3E%3C/svg%3E" />
-    <meta name="description" content="Estimation du Single Index Model et des modèles Fama-French / Carhart pour l'action BCV (BCVN), en CHF avec le SARON." />
+    <meta name="description" content="Single Index Model et modèles Fama-French / Carhart pour l'action BCV (BCVN) et le fonds BCV Swiss Equity A, en CHF avec le SARON." />
     <script>
       (function () {
         var t = null;
@@ -19,7 +19,7 @@
     <header class="top">
       <div class="brand">
         <h1>Empirical Asset Pricing</h1>
-        <p class="subtitle">Banque Cantonale Vaudoise <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF</p>
+        <p class="subtitle" id="subtitle">Action <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF</p>
       </div>
       <div class="meta" id="data-meta" aria-live="polite">Chargement des données…</div>
       <a class="btn btn-primary" id="report-link" href="./report/rapport_bcv.pdf" target="_blank" rel="noopener" title="Ouvrir le rapport de synthèse vulgarisé (PDF, LaTeX) dans un nouvel onglet">Rapport PDF ↗</a>
@@ -27,6 +27,12 @@
     </header>
 
     <form class="controls" id="controls" aria-label="Paramètres de l'estimation" onsubmit="return false">
+      <label>Actif
+        <select id="asset">
+          <option value="BCV">Action BCV — BCVN.SW</option>
+          <option value="FUND">Fonds BCV Swiss Equity A — CH0006018706</option>
+        </select>
+      </label>
       <label>Début
         <input type="month" id="start" required />
       </label>
@@ -98,13 +104,14 @@
         <button role="tab" type="button" data-tab="fitted" aria-selected="false">B. Observé vs prédit</button>
         <button role="tab" type="button" data-tab="diagnostics" aria-selected="false">C. Diagnostics</button>
         <button role="tab" type="button" data-tab="rolling" aria-selected="false">D. Régression mobile</button>
-        <button role="tab" type="button" data-tab="comparison" aria-selected="false">E. Comparaison</button>
+        <button role="tab" type="button" data-tab="comparison" aria-selected="false">E. Comparaison des modèles</button>
+        <button role="tab" type="button" data-tab="versus" aria-selected="false">F. Action BCV vs Fonds BCV</button>
         <button role="tab" type="button" data-tab="data" aria-selected="false">Données &amp; méthodologie</button>
       </nav>
 
       <section class="panel tab-panel" id="tab-scatter" role="tabpanel">
-        <h2>Single Index Model : BCV contre le SPI Total Return</h2>
-        <p class="lead">R<sub>BCV,t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, rendements mensuels en CHF, R<sub>f</sub> = SARON capitalisé.</p>
+        <h2 id="scatter-title">Single Index Model : action BCV contre le SPI Total Return</h2>
+        <p class="lead" id="scatter-lead"></p>
         <div id="scatter-note"></div>
         <div id="scatter-stats" class="strip"></div>
         <div id="chart-scatter" class="chart chart-lg"></div>
@@ -145,6 +152,43 @@
         <div id="comparison-table" class="table-wrap"></div>
       </section>
 
+      <section class="panel tab-panel" id="tab-versus" role="tabpanel" hidden>
+        <div class="panel-head">
+          <h2>Action BCV vs Fonds BCV</h2>
+          <div class="actions"><button type="button" id="export-versus" class="btn">Comparaison action / fonds (CSV)</button></div>
+        </div>
+        <p class="lead"><strong>La banque a-t-elle généré davantage de rendement ajusté des facteurs pour ses propres actionnaires que pour les investisseurs de son fonds actions suisses&nbsp;?</strong></p>
+        <div class="method">
+          <p>Les deux alphas ne mesurent pas la même chose. L’<b>alpha de l’action BCV</b> est la part du rendement excédentaire historique de l’action que les facteurs retenus n’expliquent pas : il reflète l’ensemble des activités de la banque (crédit, gestion de fortune, gestion d’actifs…) et la façon dont le marché les a valorisées. L’<b>alpha du fonds BCV Swiss Equity A</b> est la part du rendement excédentaire du fonds, <em>net des frais incorporés dans sa VNI</em> et distributions réinvesties, que ces mêmes facteurs n’expliquent pas : il reflète le travail de sélection d’actions de BCV Asset Management pour le compte des porteurs de parts. Les revenus de gestion du fonds font partie des revenus de la banque ; la comparaison ne permet toutefois pas d’établir de lien de cause à effet entre les deux.</p>
+        </div>
+        <div id="vs-sample"></div>
+
+        <h3>A. Performances, dividendes et distributions réinvestis</h3>
+        <div id="chart-vs-perf" class="chart"></div>
+        <div id="vs-perf-table" class="table-wrap"></div>
+
+        <h3 id="vs-alpha-title">B. Alphas comparés</h3>
+        <div id="vs-alpha-table" class="table-wrap"></div>
+        <div id="chart-vs-alpha" class="chart"></div>
+        <p class="table-note">Les deux actifs sont estimés sur les mêmes mois, avec le même marché et la même méthode d’inférence. L’écart d’alpha est estimé et testé directement par la régression du rendement de l’action moins celui du fonds sur les mêmes facteurs.</p>
+
+        <h3>C. Single Index Models côte à côte (même échelle)</h3>
+        <div class="grid-2">
+          <div id="chart-vs-sim-bcv" class="chart"></div>
+          <div id="chart-vs-sim-fund" class="chart"></div>
+        </div>
+
+        <h3>D. L’alpha résiste-t-il aux autres facteurs&nbsp;?</h3>
+        <div id="vs-mf-table" class="table-wrap"></div>
+
+        <h3>Lecture des résultats</h3>
+        <div id="vs-reading" class="method"></div>
+        <div class="method">
+          <p><b>Ce que la comparaison permet de dire.</b> Sur une période identique, elle mesure si l’action et le fonds ont dégagé des rendements supérieurs ou inférieurs à ce que leurs expositions aux mêmes facteurs laissaient attendre, et si l’écart entre les deux est statistiquement distinct de zéro.</p>
+          <p><b>Ce qu’elle ne permet pas de dire.</b> Un alpha plus élevé n’est pas synonyme de meilleur placement : l’action concentre le risque d’une seule entreprise, alors que le fonds est diversifié, ce qui se voit dans leurs volatilités résiduelles. Un alpha de fonds proche de zéro ou négatif ne prouve pas une mauvaise gestion : il intègre des frais, qui rémunèrent un service, et reste estimé avec incertitude. Enfin, l’action BCV a été choisie a posteriori ; son alpha passé ne préjuge pas de l’avenir.</p>
+        </div>
+      </section>
+
       <section class="panel tab-panel" id="tab-data" role="tabpanel" hidden>
         <h2>Sources des données</h2>
         <div id="sources" class="table-wrap"></div>
@@ -167,6 +211,7 @@
         <h2>Méthodologie</h2>
         <div class="method">
           <h3>Rendements</h3>
+          <p>Fonds BCV Swiss Equity A : indice officiel de performance de Gérifonds « dividendes réinvestis » (distributions brutes réinvesties à la date ex, net des frais incorporés dans la VNI), pris en fin de mois. Le pipeline le recalcule à partir des VNI et de la table des distributions : chaque distribution doit être retrouvée une et une seule fois, et la performance YTD doit égaler celle publiée.</p>
           <p>BCV : R<sub>t</sub> = P<sup>adj</sup><sub>t</sub>/P<sup>adj</sup><sub>t−1</sub> − 1 sur le dernier cours de chaque mois, P<sup>adj</sup> étant ajusté des dividendes et opérations sur titres (dont le split 10:1 de mai 2020, contrôlé par le pipeline). Marché suisse : SPI, indice de performance (dividendes réinvestis), jamais remplacé par un indice de prix. Un mois incomplet ou manquant rend les rendements adjacents manquants : aucun rendement multi-mois n’est présenté comme mensuel.</p>
           <h3>Taux sans risque</h3>
           <p>Le SARON est un taux overnight annualisé. Le rendement réalisé du mois m est I(fin m)/I(fin m−1) − 1 avec l’indice capitalisé I<sub>i+1</sub> = I<sub>i</sub>(1 + r<sub>i</sub>·n<sub>i</sub>/360), n<sub>i</sub> = jours calendaires jusqu’au fixing suivant (ACT/360). Le SARON annualisé n’est jamais soustrait directement à un rendement mensuel.</p>

@@ -33,6 +33,7 @@ from .transform import (
 
 COLUMN_INFO = {
     "bcv_ret": ("Rendement total BCV", "BCVN.SW, cours ajusté (dividendes, splits), fin de mois à fin de mois"),
+    "fund_ret": ("Rendement total BCV Swiss Equity A", "Indice de performance officiel Gérifonds, distributions brutes réinvesties, net des frais du fonds"),
     "spi_ret": ("Rendement SPI TR", "Swiss Performance Index (indice de performance, CHF)"),
     "rf_saron": ("Taux sans risque SARON réalisé", "Capitalisation quotidienne ACT/360 du SARON sur le mois"),
     "mkt_eu_chf": ("Marché européen FF, rendement total en CHF", "(1 + Mkt−RF + RF_US)(1 + s) − 1"),
@@ -98,6 +99,33 @@ def bcv_checks(h: pd.DataFrame, checks: list[dict], last_complete: pd.Period) ->
               f"Ajustement des dividendes : {n_div} détachements ; rendement total − rendement de prix = {diff:+.2%} par an en moyenne.")
 
 
+def fund_checks(page, checks: list[dict]) -> None:
+    from .fund import reconcile, ytd_check
+
+    rec = reconcile(page)
+    ok_share = rec.matched_share >= 0.995
+    check(checks, "fund-reconciliation", "pass" if ok_share else "fail",
+          f"Fonds : {rec.matched_share:.2%} des {rec.n_days} rendements quotidiens de la série officielle retrouvés à partir des VNI "
+          f"et des distributions brutes (tolérance {5e-5:.0e})"
+          + (f" ; VNI des infobulles décalées d'un jour à partir de {rec.lag_switch} environ, décalage corrigé dans le contrôle." if rec.lag_switch else "."))
+    if rec.dist_bad:
+        check(checks, "fund-distributions", "fail", "Fonds : distributions non retrouvées ou comptées incorrectement : "
+              + ", ".join(f"{d} (publié {g}, implicite {i})" for d, g, i in rec.dist_bad))
+    else:
+        check(checks, "fund-distributions", "pass",
+              f"Fonds : les {len(rec.dist_ok)} distributions publiées sont incluses une et une seule fois, au montant brut "
+              f"(dernière : {rec.dist_ok[-1][0]}, {rec.dist_ok[-1][1]:.2f} CHF)." if rec.dist_ok else "Fonds : aucune distribution à contrôler.")
+    if rec.unexplained:
+        check(checks, "fund-jumps", "warn", "Fonds : écarts VNI / performance non expliqués par une distribution publiée : " + ", ".join(rec.unexplained))
+    y = ytd_check(page)
+    if y is None:
+        check(checks, "fund-ytd", "warn", "Fonds : performance YTD officielle non lue ; contrôle non effectué.")
+    else:
+        calc, off = y
+        check(checks, "fund-ytd", "pass" if abs(calc - off) < 1e-4 else "fail",
+              f"Fonds : performance YTD recalculée {calc:.2%} contre {off:.2%} publiée par Gérifonds au {page.ytd_date.date()}.")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-date", default=None, help="date de référence (AAAA-MM-JJ) ; défaut : aujourd'hui UTC")
@@ -118,6 +146,16 @@ def main(argv: list[str] | None = None) -> int:
         stale_note("BCV", lv.stale, checks)
         if info["status"] == "ok":
             bcv_checks(bcv, checks, last_complete)
+
+    # --- Fonds BCV Swiss Equity A
+    fund_page, info = S.fetch_fund()
+    sources.append(info)
+    if fund_page is not None:
+        lv = month_end_levels(fund_page.tr, gap, last_complete)
+        cols["fund_ret"] = simple_returns(lv.values)
+        stale_note("Fonds", lv.stale, checks)
+        if info["status"] == "ok":
+            fund_checks(fund_page, checks)
 
     # --- SPI TR
     spi, info = S.fetch_spi_tr()
@@ -219,7 +257,7 @@ def main(argv: list[str] | None = None) -> int:
     # --- assemblage
     # l'index couvre les séries d'analyse ; les séries auxiliaires (change, USD)
     # remontant plus loin ne l'étendent pas
-    analysis = [c for c in cols if c in ("bcv_ret", "spi_ret", "rf_saron") or c.endswith("_chf")]
+    analysis = [c for c in cols if c in ("bcv_ret", "fund_ret", "spi_ret", "rf_saron") or c.endswith("_chf")]
     all_idx = sorted(set().union(*[set(cols[c].dropna().index) for c in analysis])) if analysis else []
     all_idx = [p for p in all_idx if p <= last_complete]
     if all_idx:
