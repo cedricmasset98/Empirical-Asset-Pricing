@@ -26,6 +26,7 @@ defaults:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
@@ -47,15 +48,32 @@ jobs:
       - name: Références statsmodels
         run: python -m pipeline.validate 2>&1 | tee logs/validate.log
 
+      # Le rapport ne doit jamais bloquer la publication du site : en cas de panne
+      # (miroirs apt, LaTeX), le PDF archivé dans le dépôt est conservé et une
+      # alerte apparaît dans le résumé de l'exécution.
       - name: Installation de LaTeX (XeLaTeX, français, TeX Gyre)
+        id: latex
+        continue-on-error: true
+        timeout-minutes: 12
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends \
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          sudo apt-get $APT update -q
+          sudo apt-get $APT install -y -q --no-install-recommends \
             texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
             texlive-lang-french latexmk lmodern fonts-texgyre
 
       - name: Rapport de synthèse (LaTeX -> PDF)
+        id: report
+        if: steps.latex.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 10
         run: python -m pipeline.report 2>&1 | tee logs/report.log
+
+      - name: Alerte si le rapport n'a pas été régénéré
+        if: steps.latex.outcome != 'success' || steps.report.outcome != 'success'
+        run: |
+          git checkout -- public/report 2>/dev/null || true
+          echo "::warning title=Rapport::Rapport non régénéré (LaTeX : ${{ steps.latex.outcome }}, rapport : ${{ steps.report.outcome }}). La version archivée dans le dépôt est publiée."
 
       - uses: actions/setup-node@v5
         with:
