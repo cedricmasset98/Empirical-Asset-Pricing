@@ -1,0 +1,53 @@
+{
+ "label": "dataset",
+ "dataset_path": "public/data/dataset.json",
+ "dataset_generated_at": "2026-11-06T04:18:27Z",
+ "generated_at": "2026-11-06T04:18:28Z",
+ "statsmodels_version": "0.15.0",
+ "common_n": 436,
+ "cases": [],
+ "diagnostics": [],
+ "rolling": [],
+ "skipped": [
+  {
+   "model": "CAPM",
+   "universe": "SPI",
+   "reason": "s\u00e9ries indisponibles"
+  },
+  {
+   "model": "CAPM",
+   "universe": "EUROPE",
+   "reason": "s\u00e9ries indisponibles"
+  },
+  {
+   "model": "FF3",
+   "universe": "SPI",
+   "reason": "s\u00e9ries indisponibles"
+  },
+  {
+   "model": "FF3",
+   "universe": "EUROPE",
+   "reason": "s\u00e9ries indisponibles"
+  },
+  {
+   "model": "CARHART",
+   "universe": "SPI",
+   "reason": "s\u00e9ries indisponibles"
+  },
+  {
+   "model": "CARHART",
+   "universe": "EUROPE",
+   "reason": "s\u00e9ries indisponibles"
+  },
+  {
+   "model": "FF5",
+   "universe": "SPI",
+   "reason": "s\u00e9ries indisponibles"
+  },
+  {
+   "model": "FF5",
+   "universe": "EUROPE",
+   "reason": "s\u00e9ries indisponibles"
+  }
+ ]
+}
