@@ -1,10 +1,10 @@
 # Méthodologie
 
-Ce document décrit les conventions retenues. Elles sont appliquées par le pipeline Python (`pipeline/`) et par le moteur statistique exécuté dans le navigateur (`src/engine/`).
+Ce document décrit les conventions retenues. Elles sont appliquées par le pipeline Python (`pipeline/`) et par le moteur statistique exécuté dans le navigateur (`src/engine/`, `src/ui/analysis.ts`). La rubrique « Data & method » du site en donne un résumé.
 
 ## 1. Données et fréquence
 
-Version 1 : **fréquence mensuelle uniquement**. Les fréquences journalière et hebdomadaire apparaissent dans l'interface comme « non disponibles » : elles demandent un traitement propre des jours fériés suisses, des taux sans risque journaliers et des facteurs French journaliers en USD.
+Version 1 : **fréquence mensuelle uniquement**. Les fréquences journalière et hebdomadaire apparaissent dans l'interface comme « non disponibles » : elles demandent un traitement propre des jours fériés suisses, des taux sans risque journaliers et de facteurs journaliers.
 
 Chaque mois est identifié par `AAAA-MM`. La valeur d'une série pour un mois est sa **dernière observation du mois calendaire**. Un mois est écarté, donc laissé manquant, dans deux cas :
 
@@ -13,24 +13,42 @@ Chaque mois est identifié par `AAAA-MM`. La valeur d'une série pour un mois es
 
 Les rendements ne sont calculés qu'entre mois consécutifs. Un mois manquant rend les deux rendements adjacents manquants. Le pipeline n'interpole jamais.
 
-## 2. Action BCV
+## 2. Actifs étudiés
+
+Trois actifs sont proposés : l'action BCV (`bcv_ret`), le fonds BCV Swiss Equity A (`fund_ret`) et le fonds Raiffeisen Futura - Swiss Stock A (`raif_ret`). Ils sont traités par le même moteur : seule la variable dépendante change.
+
+### 2.1 Action BCV
 
 - Source : Yahoo Finance (`BCVN.SW`) via `yfinance`, colonne `Adj Close`, ajustée des dividendes et des splits.
 - Rendement : R_t = P^adj_t / P^adj_{t−1} − 1.
-- Contrôles automatiques, publiés dans `data/processed/build_report.md` et dans l'onglet « Données » :
+- Contrôles automatiques, publiés dans `data/processed/build_report.md` et dans la rubrique « Data & method » :
   - présence du **split 10:1 de mai 2020** dans les opérations sur titres ;
   - absence de variation quotidienne supérieure à 35 % du cours ajusté, ce qui détecterait un split non ajusté ;
   - écart moyen positif entre rendement total et rendement de prix, preuve de l'ajustement des dividendes.
 
-## 2 bis. Fonds BCV Swiss Equity A
+### 2.2 Fonds BCV Swiss Equity A (CH0006018706)
 
-- **Source.** Série officielle de Gérifonds, la direction de fonds de la BCV : graphique « Évolution de la performance (dividendes réinvestis) » de la page publique du fonds (`gerifonds.ch/fr/iframe/CH0006018706`). Elle est quotidienne depuis le 31.12.1997, en base 100, avec distributions brutes réinvesties à la date ex et nette des frais incorporés dans la VNI. Le pipeline ne reconstruit pas lui-même le Total Return : il utilise la série officielle et la **vérifie**.
-- **Contrôles**, publiés dans le manifeste et dans l'onglet « Données » :
-  1. Chaque rendement quotidien est recalculé par $(\mathrm{VNI}_t + D_t)/\mathrm{VNI}_{t-1} - 1$ ($D_t$ = distribution brute publiée). Résultat : 100 % des 7 323 jours retrouvés, avec une tolérance de 5·10⁻⁵. Les VNI affichées en infobulle sont décalées d'un jour depuis septembre 2021 ; le contrôle corrige ce décalage, sans incidence sur la série de performance, dont les dates ont été vérifiées.
+- **Source.** Série officielle de Gérifonds, la direction de fonds de la BCV : graphique « Évolution de la performance (dividendes réinvestis) » de la page publique du fonds (`gerifonds.ch/fr/iframe/CH0006018706`). Elle est quotidienne depuis le 31.12.1997, en base 100, avec distributions brutes réinvesties à la date ex et nette des frais incorporés dans la VNI. Le pipeline ne reconstruit pas lui-même le rendement total : il utilise la série officielle et la **vérifie**.
+- **Contrôles** :
+  1. Chaque rendement quotidien est recalculé par $(\mathrm{VNI}_t + D_t)/\mathrm{VNI}_{t-1} - 1$ ($D_t$ = distribution brute publiée), avec une tolérance de 5·10⁻⁵ ; au moins 99,5 % des jours doivent être retrouvés. Les VNI affichées en infobulle sont décalées d'un jour depuis septembre 2021 ; le contrôle corrige ce décalage, sans incidence sur la série de performance.
   2. Chacune des distributions de la table publiée est retrouvée **une et une seule fois**, au montant brut. Un oubli ou un double comptage fait échouer le contrôle.
   3. La performance YTD recalculée doit être égale à la performance YTD publiée sur la page.
-- **Rendement mensuel.** Dernier point de l'indice dans chaque mois, puis $R_t = I_t/I_{t-1} - 1$. Les rendements sont nets de frais et avant fiscalité personnelle : impôt anticipé récupérable pour un investisseur suisse, commissions d'émission et de rachat non incluses.
-- **Comparaison avec l'action.** Les deux actifs sont estimés sur les mêmes mois. Cet échantillon est l'intersection des disponibilités de l'action, du fonds, du SPI, du SARON et de tous les facteurs de l'univers choisi. L'écart d'alpha est estimé par la régression de $R_{\text{action}} - R_{\text{fonds}}$ sur les mêmes facteurs. Sa constante vaut exactement $\alpha_{\text{action}} - \alpha_{\text{fonds}}$, et son erreur standard (classique, HC3 ou Newey-West) tient compte de la corrélation entre les deux actifs. Cette régression est validée contre statsmodels comme les autres.
+  4. Le TER lu sur la page est comparé à celui de `pipeline/config.py`.
+
+### 2.3 Fonds Raiffeisen Futura - Swiss Stock A (CH0011980981)
+
+- **Source.** Swiss Fund Data (SIX Financial Information / AMAS), export quotidien de la fiche du fonds, colonne « Total Return Chart Price » : distributions réinvesties à la date ex, nette de frais, quotidienne depuis novembre 2009. L'accès passe par la page d'avertissement « investisseur privé », acceptée automatiquement par le pipeline.
+- **Contrôles** :
+  1. « Chart Price » = VNI publiée ;
+  2. hors distributions, rendement total = rendement de la VNI (au moins 99,5 % des jours) ;
+  3. chaque saut est une distribution implicite plausible, $D = \mathrm{VNI}_{t-1}(1 + R^{TR}_t) - \mathrm{VNI}_t$ : montant positif et inférieur à 5 % de la VNI, au plus deux par an ;
+  4. TER publié sur la fiche = TER de la configuration.
+
+  Les rendements annuels ont été vérifiés contre la fiche mensuelle officielle (2023 : 6,6 % ; 2024 : 5,9 % ; 2025 : 11,0 %).
+
+### 2.4 Rendements des fonds
+
+Dernier point de la série dans chaque mois, puis $R_t = I_t/I_{t-1} - 1$. Les rendements sont nets des frais incorporés dans la VNI et avant fiscalité personnelle : impôt anticipé récupérable pour un investisseur suisse, commissions d'émission et de rachat non incluses. L'alpha estimé sur ces rendements est donc un **alpha net** (section 7).
 
 ## 3. Marché suisse : SPI Total Return
 
@@ -51,20 +69,51 @@ Les rendements ne sont calculés qu'entre mois consécutifs. Un mois manquant re
 - Rendement sans risque réalisé du mois m : R_f,m = I(dernier fixing de m) / I(dernier fixing de m−1) − 1. La convention de date est la même que pour les cours de clôture.
 - **Le SARON annualisé n'est jamais soustrait directement à un rendement mensuel.**
 - Les taux négatifs (2015-2022) donnent des rendements sans risque négatifs, conservés tels quels.
+- Dans tous les univers, le rendement excédentaire de l'actif et celui du marché sont calculés avec le SARON.
 
-## 5. Facteurs Fama-French européens et conversion en CHF
+## 5. Facteurs
 
-### Séries utilisées
+### 5.1 Univers de facteurs
 
-Les séries viennent de la Kenneth French Data Library :
+L'interface propose deux univers, pour les quatre modèles (CAPM / Single Index, Fama-French 3, Carhart 4, Fama-French 5) :
 
-- *European Fama-French 3 Factors* ;
-- *European Fama-French 5 Factors* ;
-- *European Momentum Factor (WML)*.
+| Univers | Marché (MKT) | Facteurs long-short | Statut |
+|---|---|---|---|
+| **Suisse** (`SWISS`, par défaut) | SPI TR − SARON | SMB, HML, RMW, CMA, MOM suisses de Global Factor Data (JKP), en CHF | Univers de référence, homogène pour un actif suisse |
+| **Europe** (`EUROPE`) | Marché européen Fama-French en CHF − SARON | SMB, HML, RMW, CMA, WML européens de K. French, en CHF | Comparaison : ce n'est pas le marché naturel d'un actif suisse |
 
-Elles sont publiées en USD et en pourcentage, et la colonne RF est le T-bill américain à 1 mois.
+Dans l'univers suisse, le CAPM est le **Single Index Model** contre le SPI TR.
 
-### Conversion
+Modèles : FF3 = MKT, SMB, HML ; Carhart = FF3 + MOM ; FF5 = FF3 + RMW + CMA.
+
+**Ancienne variante hybride.** Avant l'ajout des facteurs suisses, les modèles multifactoriels pouvaient combiner le marché SPI et les facteurs européens (univers `SPI` du moteur). Cette variante, non homogène, **n'est plus proposée dans l'interface**. Le moteur la conserve pour deux usages : la validation contre statsmodels, qui couvre les trois univers, et les rapports PDF, qui n'ont pas encore été mis à jour (section 11). Les anciens liens `market=SPI` sont redirigés vers l'univers suisse.
+
+### 5.2 Facteurs suisses : Global Factor Data (JKP)
+
+- **Source.** Jensen, Kelly et Pedersen (2023, *Journal of Finance*), archives publiques de jkpfactors.com : fichiers `[che]_[caractéristique]_[monthly]_[vw_cap].zip`, rendements mensuels en USD, déjà orientés (jambe longue = prime attendue).
+- **Correspondance** avec les facteurs Fama-French :
+
+  | Facteur | Caractéristique JKP | Portefeuille long − court |
+  |---|---|---|
+  | SMB | `market_equity` | petites − grandes capitalisations |
+  | HML | `be_me` | valeur − croissance (fonds propres comptables / capitalisation) |
+  | RMW | `ope_be` | rentables − peu rentables (résultat d'exploitation / fonds propres) |
+  | CMA | `at_gr1` | conservatrices − agressives (croissance annuelle des actifs) |
+  | MOM | `ret_12_1` | gagnantes − perdantes (rendement de t−12 à t−1) |
+
+- **Construction.** Portefeuilles long-short sur les terciles de chaque caractéristique, pondérés par la capitalisation plafonnée (`vw_cap`). Ce ne sont pas les tris doubles 2×3 de Fama et French : les **mêmes SMB et HML** servent pour FF3, Carhart et FF5.
+- **Filtre.** Les mois où un facteur repose sur moins de 30 titres (`JKP_MIN_STOCKS`) sont écartés.
+- **Conversion en CHF.** F^CHF = F^USD (1 + s), comme les facteurs européens (section 5.4).
+- **Contrôles.** Rendements mensuels inférieurs à 50 % en valeur absolue ; pays et caractéristique de chaque fichier vérifiés ; corrélation avec les facteurs européens publiée (attendue modérée : entre 0,3 et 0,8 environ sur les données actuelles).
+- **Couverture.** La publication est **annuelle** : l'univers suisse s'arrête au dernier mois publié (décembre 2025 pour la version actuelle), plus tôt que le SPI, le SARON et les actifs.
+
+### 5.3 Facteurs européens : Kenneth French Data Library
+
+- *European Fama-French 3 Factors*, *European Fama-French 5 Factors* et *European Momentum Factor (WML)*.
+- Publiés en USD et en pourcentage ; la colonne RF est le T-bill américain à 1 mois.
+- FF3 et Carhart utilisent les SMB/HML du fichier 3 facteurs. FF5 utilise ceux du fichier 5 facteurs, construits différemment.
+
+### 5.4 Conversion en CHF
 
 Soit X_t le cours USD/CHF (CHF par USD) en fin de mois, et s_t = X_t/X_{t−1} − 1. La source principale est la BNS (cube `devkum`, cours de fin de mois) ; en cas d'échec, le pipeline se replie sur FRED `DEXSZUS` puis sur Yahoo `CHF=X`. La source utilisée figure dans le manifeste.
 
@@ -72,29 +121,18 @@ Soit X_t le cours USD/CHF (CHF par USD) en fin de mois, et s_t = X_t/X_{t−1} �
   - R_M^USD = (Mkt−RF) + RF_US ;
   - R_M^CHF = (1 + R_M^USD)(1 + s) − 1 ;
   - MKT_CHF = R_M^CHF − R_f^SARON.
-- **Facteurs long-short** (SMB, HML, RMW, CMA, WML). Chaque jambe se convertit par 1 + R^CHF = (1 + R^USD)(1 + s), d'où :
+- **Facteurs long-short** (suisses et européens). Chaque jambe se convertit par 1 + R^CHF = (1 + R^USD)(1 + s), d'où :
 
   F^CHF = (R_L^USD − R_S^USD)(1 + s) = F^USD (1 + s).
 
   Ce résultat est exact. Un portefeuille autofinancé ne contient pas de taux sans risque. Il ne garde qu'un terme croisé de change de second ordre.
-- Le RF américain ne sert qu'à reconstituer le rendement total du marché en USD. Il n'entre jamais dans un rendement excédentaire en CHF.
-- Les modèles FF3 et Carhart utilisent les SMB/HML du fichier 3 facteurs. FF5 utilise ceux du fichier 5 facteurs, construits différemment.
+- Le RF américain ne sert qu'à reconstituer le rendement total du marché européen en USD. Il n'entre jamais dans un rendement excédentaire en CHF.
 
-### Limites
-
-- Le cours de fin de mois de la BNS (ou le cours de midi à New York pour FRED) n'est pas relevé exactement à l'heure de clôture utilisée pour les rendements French. Ce décalage de quelques heures est négligeable en mensuel, mais il existe.
-- La conversion suppose que l'investisseur CHF ne couvre pas son risque de change.
-
-### Univers de facteurs
-
-| Marché choisi | CAPM | FF3 / Carhart / FF5 |
-|---|---|---|
-| SPI TR | Single Index Model suisse, cohérent | **Variante hybride** : marché suisse, facteurs européens. Signalée dans l'interface. |
-| Europe FF (CHF) | CAPM européen | Univers Fama-French européen cohérent |
+Limites : le cours de fin de mois de la BNS (ou le cours de midi à New York pour FRED) n'est pas relevé exactement à l'heure de clôture des rendements des facteurs, décalage négligeable en mensuel ; la conversion suppose que l'investisseur CHF ne couvre pas son risque de change. Pour les facteurs suisses, convertir en USD puis revenir en CHF n'est pas neutre au second ordre, mais l'effet est du même ordre que ce terme croisé.
 
 ## 6. Estimation
 
-On estime y = Xb + e par OLS avec constante, où y = R_BCV − R_f. Les estimations utilisent toutes les observations de la plage pour lesquelles chaque série requise est disponible. Le moteur signale les ruptures de continuité. Il exige au moins max(24, k + 10) observations.
+On estime y = Xb + e par OLS avec constante, où y = R_actif − R_f et X contient la constante et les facteurs du modèle. Les estimations utilisent toutes les observations de la plage choisie pour lesquelles chaque série requise est disponible. Le moteur signale les ruptures de continuité. Il exige au moins max(24, k + 10) observations.
 
 | Méthode | Covariance | Tests individuels | Test global |
 |---|---|---|---|
@@ -108,7 +146,16 @@ On estime y = Xb + e par OLS avec constante, où y = R_BCV − R_f. Les estimati
 - Alpha annualisé = 12 × alpha mensuel (annualisation arithmétique). Les t-stats sont inchangés.
 - La droite et sa bande de confiance sur le nuage de points représentent l'intervalle de la **moyenne conditionnelle** x₀′b ± c·√(x₀′Vx₀), calculé avec la covariance de la méthode choisie.
 
-## 7. Diagnostics
+## 7. Alpha net et alpha brut des fonds
+
+- Les rendements des fonds étant nets des frais incorporés dans la VNI, la constante estimée est un **alpha net**.
+- L'**alpha brut** (avant frais de gestion) ajoute le TER publié : α_brut = α_net + TER/12 par mois.
+- Ajouter TER/12 à chaque rendement mensuel décale la constante de TER/12 sans changer les pentes, les résidus ni les erreurs standards. L'intervalle de confiance est décalé d'autant, et le test de l'alpha brut est celui de H0 : α_net = −TER/12, avec la même loi (Student ou normale) que l'estimation.
+- TER utilisés : celui lu par le pipeline (page Gérifonds pour le fonds BCV, fiche Swiss Fund Data pour le fonds Raiffeisen), avec sa date et sa source, publiés dans `fund_info` et `raif_info` du jeu de données. Sans TER lu, aucun alpha brut n'est affiché.
+- Approximations : TER actuel supposé constant sur toute la période ; les frais de transaction, qui ne font pas partie du TER, restent déduits.
+- L'action BCV n'a pas d'alpha brut.
+
+## 8. Diagnostics
 
 | Test | Statistique | Loi |
 |---|---|---|
@@ -121,19 +168,20 @@ Graphiques complémentaires :
 - ACF avec bandes ±1,96/√n ;
 - Q-Q plot des résidus standardisés e/s, avec les positions (i − 0,5)/n.
 
-## 8. Régressions mobiles et comparaison
+## 9. Régressions mobiles et comparaisons
 
-- Les fenêtres glissantes comptent 36, 60 ou 120 observations consécutives et avancent d'un mois. La date affichée est la fin de fenêtre. La méthode d'inférence est celle choisie ; en HAC, les retards suivent la règle automatique sur la taille de la fenêtre.
-- La comparaison estime les 8 spécifications (4 modèles × 2 marchés) sur **l'intersection exacte** de leurs dates disponibles dans la plage sélectionnée.
+- **Régressions mobiles.** Les fenêtres glissantes comptent 36, 60 ou 120 observations consécutives et avancent d'un mois. La date affichée est la fin de fenêtre. La méthode d'inférence est celle choisie ; en HAC, les retards suivent la règle automatique sur la taille de la fenêtre.
+- **Comparaison des modèles** (rubrique « Analyze »). Les 8 spécifications (4 modèles × univers suisse et européen) sont estimées sur **l'intersection exacte** de leurs dates disponibles dans la plage choisie. Comme l'univers suisse s'arrête au dernier mois publié par JKP, cet échantillon commun s'arrête aussi à cette date.
+- **Comparaison de deux actifs** (rubrique « Compare »). Deux actifs au choix, A et B, sont estimés sur les **mêmes mois** : l'intersection des disponibilités des deux actifs, du SPI, du SARON et de tous les facteurs des quatre modèles de l'univers choisi. L'écart d'alpha est estimé par la régression de R_A − R_B sur les mêmes facteurs. Sa constante vaut exactement α_A − α_B, et son erreur standard (classique, HC3 ou Newey-West) tient compte de la corrélation entre les deux actifs. Le Single Index des deux actifs est affiché sur le même échantillon. Pour les fonds, les alphas nets et bruts sont présentés ; l'écart d'alpha brut entre deux fonds est l'écart net augmenté de (TER_A − TER_B)/12.
 
-## 9. Validation numérique
+## 10. Validation numérique
 
 | Comparaison | Script de référence | Fichier de test |
 |---|---|---|
 | Moteur TypeScript contre numpy/scipy, sur un jeu synthétique avec erreurs hétéroscédastiques AR(1) | `tests/fixtures/make_fixtures.py` | `tests/engine.test.ts` |
 | Moteur TypeScript contre statsmodels, sur le jeu synthétique **et** les données réelles | `python -m pipeline.validate`, à chaque exécution du workflow | `tests/statsmodels.test.ts` |
 
-Les comparaisons à statsmodels portent sur :
+La validation couvre les trois actifs et les trois univers du moteur (suisse, européen et l'ancienne variante hybride). Les comparaisons à statsmodels portent sur :
 
 - les coefficients, erreurs standards, statistiques et p-values ;
 - les intervalles de confiance, R² et tests globaux ;
@@ -142,9 +190,11 @@ Les comparaisons à statsmodels portent sur :
 
 Tolérance relative : 10⁻⁸ à 10⁻⁹.
 
-## 10. Limites connues
+## 11. Limites connues
 
 - Les ajustements de Yahoo Finance peuvent contenir des erreurs. Les contrôles automatiques en détectent une partie seulement. En cas de doute, utilisez l'import manuel.
-- Le SPI TR remonte à 1988 grâce à l'historique raccordé. La contrainte devient le SARON quotidien du portail BNS, disponible depuis août 2009 : les modèles avec taux sans risque commencent en septembre 2009.
-- Les rendements French sont révisés occasionnellement par l'auteur : les résultats peuvent changer légèrement d'une mise à jour à l'autre.
-- Le facteur momentum européen démarre plus tard que les fichiers 3 et 5 facteurs. L'échantillon commun de la comparaison commence donc à cette date au plus tôt.
+- Le SPI TR remonte à 1988 grâce à l'historique raccordé. La contrainte devient le SARON quotidien du portail BNS, disponible depuis août 2009 : les modèles avec taux sans risque commencent en septembre 2009. Le fonds Raiffeisen commence en décembre 2009.
+- Les facteurs suisses JKP sont publiés une fois par an : les derniers mois manquent jusqu'à la mise à jour suivante. Ils ne reproduisent pas exactement la construction Fama-French (terciles par caractéristique, pas de tri double).
+- Les rendements French et JKP sont révisés occasionnellement par leurs auteurs : les résultats peuvent changer légèrement d'une mise à jour à l'autre.
+- Le facteur momentum européen démarre plus tard que les fichiers 3 et 5 facteurs. Dans l'univers européen, l'échantillon commun commence donc à cette date au plus tôt.
+- **Rapports PDF.** Les rapports (`report/`) n'utilisent pas encore l'univers suisse : leurs modèles multifactoriels reposent sur le marché SPI avec facteurs européens (ancienne variante hybride, signalée « h » dans leurs tableaux) et sur l'univers européen. Ils seront alignés sur le site lors de leur prochaine révision.

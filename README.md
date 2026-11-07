@@ -1,20 +1,20 @@
 # Empirical Asset Pricing — Factor Regression Explorer
 
-Ce site interactif estime des modèles d'évaluation d'actifs pour l'action **Banque Cantonale Vaudoise** (BCVN · SIX, ISIN CH0531751755, Yahoo `BCVN.SW`) et pour le fonds **BCV Swiss Equity A** (ISIN CH0006018706, gestion active, BCV Asset Management), puis compare leurs alphas. Les rendements sont mensuels en CHF, le marché de référence est le **SPI Total Return** et le taux sans risque est le **SARON** capitalisé.
+Ce site interactif (en anglais) estime des modèles d'évaluation d'actifs pour l'action **Banque Cantonale Vaudoise** (BCVN · SIX, ISIN CH0531751755, Yahoo `BCVN.SW`), le fonds **BCV Swiss Equity A** (ISIN CH0006018706, BCV Asset Management) et le fonds **Raiffeisen Futura - Swiss Stock A** (ISIN CH0011980981), puis compare leurs alphas. Les rendements sont mensuels en CHF, le marché de référence est le **SPI Total Return** et le taux sans risque est le **SARON** capitalisé.
 
-| Section | Contenu |
+| Rubrique | Contenu |
 |---|---|
-| Sélecteur d'actif | Action BCV ou fonds BCV Swiss Equity A : toutes les analyses suivent l'actif choisi, avec le même moteur |
-| A. Single Index | Nuage de points interactif, droite OLS, intervalle de confiance, équation et statistiques |
-| Modèles | CAPM / Single Index, **Fama-French 3**, **Carhart 4**, **Fama-French 5** ; facteurs européens convertis en CHF |
+| Analyze | Un actif au choix : résultats (nuage de points, droite OLS, équation, statistiques, alpha net et brut des fonds), ajustement observé / prédit, diagnostics, régressions mobiles (36, 60 ou 120 mois), comparaison des modèles |
+| Compare | Deux actifs au choix sur un échantillon strictement identique : performances (100 CHF, rendement, volatilité, perte maximale), alphas comparés et écart testé par la régression de R_A − R_B, Single Index côte à côte |
+| Reports | Rapports PDF vulgarisés en LaTeX (en français), avec leurs sources |
+| Data & method | Sources et contrôles, import et export CSV, résumé de la méthodologie |
+
+| Élément | Choix |
+|---|---|
+| Modèles | CAPM / Single Index, **Fama-French 3**, **Carhart 4**, **Fama-French 5** |
+| Univers de facteurs | **Suisse** (par défaut) : SPI TR et facteurs suisses Global Factor Data (JKP) en CHF ; **Europe** (comparaison) : facteurs Fama-French européens convertis en CHF |
 | Inférence | OLS classique (Student), **HC3**, **Newey-West HAC** (retards automatiques ou choisis) |
-| B. Observé vs prédit | Séries temporelles et graphique à 45° |
-| C. Diagnostics | Résidus, histogramme, Q-Q plot, ACF ; tests Ljung-Box, Breusch-Pagan et Jarque-Bera |
-| D. Régression mobile | Fenêtres de 36, 60 ou 120 mois, avec intervalles de confiance |
-| E. Comparaison des modèles | 4 modèles × 2 marchés sur un échantillon strictement identique |
-| F. Action BCV vs Fonds BCV | Performances (100 CHF, rendement, volatilité, perte maximale), alphas comparés et écart testé, Single Index côte à côte à la même échelle, modèles multifactoriels, lecture pédagogique |
-| Exports et import | Exports CSV ; import manuel d'un CSV ; mode clair et sombre ; paramètres conservés dans l'URL |
-| Rapports | **Rapports vulgarisés en LaTeX** (PDF et sources) : action BCV, fonds BCV Swiss Equity A, comparaison des alphas, processus de gestion actions suisses de la BCV |
+| Interface | Mode clair et sombre ; paramètres conservés dans l'URL ; exports CSV |
 
 Toutes les statistiques sont **recalculées dans le navigateur** à partir de fichiers statiques. Aucun coefficient n'est codé en dur, il n'y a pas de backend, et aucune clé d'API n'est utilisée.
 
@@ -22,7 +22,7 @@ Toutes les statistiques sont **recalculées dans le navigateur** à partir de fi
 
 ```
 pipeline/            Python : récupération, transformation, contrôles, références statsmodels
-  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds BCV), Swiss Fund Data (fonds Raiffeisen), BNS (SARON, USD/CHF), K. French (Europe)
+  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds BCV), Swiss Fund Data (fonds Raiffeisen), BNS (SARON, USD/CHF), K. French (Europe), Global Factor Data (Suisse)
   fund.py            lecture de la série officielle du fonds et contrôles (VNI + distributions, YTD)
   transform.py       fins de mois, rendements, capitalisation SARON ACT/360, conversion CHF
   build.py           -> public/data/dataset.json, data/processed/monthly.csv, build_report.md
@@ -80,6 +80,8 @@ Le site est organisé en quatre rubriques : **Analyser** (un actif : résultats,
 - la question posée et un lexique ;
 - les résultats : performance, bêta, alpha et sa décomposition, robustesse de l'inférence, modèles multifactoriels, fenêtres glissantes, diagnostics ;
 - les **limites de l'exercice** : une seule action, sélection a posteriori et tests multiples, alpha ex post, facteurs omis (low-vol, taux), facteurs européens, période courte, significativité statistique contre économique ;
+
+Les rapports n'utilisent pas encore l'univers suisse : leurs modèles multifactoriels reposent sur le SPI avec facteurs européens (ancienne variante hybride) et sur l'univers européen.
 - des pistes, la méthodologie et les sources.
 
 `report/rapport.tex` ne contient que le texte. Tous les nombres, tableaux et figures sont produits par `pipeline/report.py` à partir des données, sous forme de macros (`\AlphaA`, `\BetaM`…). Les phrases qui dépendent des résultats (significativité, robustesse…) sont elles aussi générées : le texte reste exact quand les données changent. Le rapport porte sur la spécification de référence : Single Index, échantillon maximal, Newey-West.
@@ -105,7 +107,7 @@ Le workflow installe LaTeX et régénère le rapport à chaque exécution. L'arc
 
 Si une source échoue, elle est marquée « ERREUR » et ses colonnes restent vides. L'interface affiche alors une erreur explicite pour les modèles concernés, sans aucun résultat de substitution. Pour contourner une source inaccessible, vous pouvez déposer des fichiers dans `data/manual/` (voir son README) ou importer un CSV mensuel directement dans le navigateur.
 
-La méthodologie complète est décrite dans [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). Elle couvre les conventions SARON, la conversion des facteurs en CHF, l'inférence, les diagnostics et les limites.
+La méthodologie complète est décrite dans [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). Elle couvre les actifs et leurs contrôles, le SARON, les univers de facteurs (suisse JKP et européen) et leur conversion en CHF, l'inférence, l'alpha net et brut des fonds, les diagnostics, les comparaisons et les limites.
 
 ## Publication sur GitHub Pages
 
