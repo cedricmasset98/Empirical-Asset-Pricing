@@ -148,7 +148,16 @@ def main(argv: list[str] | None = None) -> int:
             bcv_checks(bcv, checks, last_complete)
 
     # --- Fonds BCV Swiss Equity A
+    fund_info: dict = {}
     fund_page, info = S.fetch_fund()
+    if fund_page is not None and fund_page.ter is not None:
+        fund_info = {"ter": fund_page.ter, "ter_date": str(fund_page.ter_date.date()), "ter_source": "Gérifonds, page publique du fonds"}
+        known = C.FUND.get("ter")
+        if known is not None and abs(known - fund_page.ter) > 1e-9:
+            check(checks, "fund-ter", "warn", f"Fonds : TER publié {fund_page.ter:.2%} ({fund_info['ter_date']}) différent de celui de la configuration "
+                  f"({known:.2%}) utilisé par la présentation : mettre à jour pipeline/config.py.")
+        else:
+            check(checks, "fund-ter", "pass", f"Fonds : TER publié {fund_page.ter:.2%} au {fund_info['ter_date']}.")
     sources.append(info)
     if fund_page is not None:
         lv = month_end_levels(fund_page.tr, gap, last_complete)
@@ -294,6 +303,7 @@ def main(argv: list[str] | None = None) -> int:
         "data": {k: [clean(v) for v in frame[k].tolist()] for k in frame.columns},
         "sources": sources,
         "checks": checks,
+        "fund_info": fund_info,
         "notes": [
             f"Dernier mois complet retenu : {last_complete} (date d'exécution {today.date()}).",
             "Valeurs manquantes conservées telles quelles (null) : aucune interpolation.",

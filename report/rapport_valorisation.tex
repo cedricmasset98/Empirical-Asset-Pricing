@@ -1,0 +1,241 @@
+% =============================================================================
+% Empirical Asset Pricing — rapport de synthèse sur l'action BCV
+% Gabarit : seul le texte est écrit ici. Tous les nombres proviennent de
+% generated/macros.tex et des tableaux/figures produits par pipeline/report.py.
+% Compilation : latexmk -xelatex rapport.tex
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{french}
+\setmainfont{TeX Gyre Pagella}
+\usepackage[a4paper,margin=2.4cm,headheight=14pt]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{bleu}{HTML}{1F5FA8}
+\definecolor{orange}{HTML}{D9480F}
+\definecolor{gris}{HTML}{4B5563}
+\captionsetup{font=small,labelfont=bf,labelsep=period}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+
+\newtcolorbox{essentiel}{colback=bleu!5,colframe=bleu,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=6pt,bottom=6pt,
+  fonttitle=\bfseries,title=L'essentiel}
+\newtcolorbox{attention}[1]{colback=orange!5,colframe=orange,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries,title=#1}
+\newtcolorbox{lexique}{colback=gray!6,colframe=gray!60,boxrule=0.5pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries\color{black},title=Lexique}
+
+\input{generated/macros.tex}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gris} Empirical Asset Pricing — Processus de sélection des actions}
+\fancyhead[R]{\small\color{gris} \DateRapport}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\hypersetup{pdftitle={Comment les gérants de la BCV choisissent-ils leurs actions ?},pdfauthor={Empirical Asset Pricing},pdflang=fr}
+
+\begin{document}
+
+\begin{center}
+  {\small\color{gris} EMPIRICAL ASSET PRICING · NOTE PÉDAGOGIQUE}\\[6pt]
+  {\LARGE\bfseries Comment les gérants de la BCV choisissent-ils leurs actions ?}\\[4pt]
+  {\large Multiples, modèle Edwards-Bell-Ohlson et ce qu'en dit la performance du fonds}\\[8pt]
+  {\small Fonds BCV Swiss Equity A (CH0006018706) · résultats empiriques \PeriodeDebut{} – \PeriodeFin{}}\\[2pt]
+  {\small\color{gris} Note générée automatiquement le \DateRapport{} à partir des données du \DateDonnees{} · version \texttt{\Commit}}
+\end{center}
+
+\vspace{4pt}
+
+\begin{essentiel}
+\begin{enumerate}[leftmargin=*,label=\textbf{\arabic*.}]
+  \item \textbf{La démarche.} Les gérants passent d'abord au crible plus de 200 actions à l'aide de multiples (P/E, P/B, EV/EBITDA, rendement du dividende). Ils estiment ensuite une valeur intrinsèque avec le modèle Edwards-Bell-Ohlson (EBO). Enfin, ils comparent cette valeur au prix de marché pour décider des surpondérations.
+  \item \textbf{L'idée clé du modèle EBO.} Une entreprise crée de la valeur lorsque ses bénéfices dépassent le rendement que ses actionnaires exigent sur leurs fonds propres.
+  \item \textbf{Un outil sensible.} La valeur obtenue dépend fortement des hypothèses, en particulier du rendement exigé. Un écart entre prix et valeur n'est pas une certitude de gain.
+  \item \textbf{Ce que montre le fonds.} Face au SPI, le fonds a un bêta de \FdsBeta{}, un $R^2$ de \FdsRDeuxPct{} et un alpha net de frais de \FdsAlphaA{} par an. Le processus produit un portefeuille très proche de son indice.
+  \item \textbf{La question ouverte.} Si l'analyse fondamentale identifie des actions mal évaluées, pourquoi le rendement ajusté du risque, après frais, n'est-il pas supérieur à celui du marché ? Plusieurs explications sont plausibles, et l'analyse empirique ne permet pas de trancher entre elles.
+\end{enumerate}
+\end{essentiel}
+
+% -----------------------------------------------------------------------------
+\section{Le problème du gérant}
+
+Un fonds actions géré activement cherche à faire mieux que son indice de référence, ici le SPI. Il ne peut y parvenir qu'en s'écartant de l'indice : il détient davantage les actions qu'il juge sous-évaluées et moins celles qu'il juge surévaluées. Tout le travail consiste donc à repérer les écarts entre le \emph{prix} d'une action, fixé par le marché, et sa \emph{valeur}, estimée par l'analyste.
+
+D'après la description de leur processus, les gestionnaires de la BCV combinent pour cela deux approches complémentaires : une comparaison de multiples, rapide et applicable à tout l'univers, puis une valorisation intrinsèque plus approfondie fondée sur le modèle Edwards-Bell-Ohlson. Les exemples chiffrés ci-dessous sont \textbf{fictifs} : ils illustrent la méthode et ne décrivent aucune entreprise réelle.
+
+% -----------------------------------------------------------------------------
+\section{Première étape : passer plus de 200 actions au crible}
+
+Un multiple rapporte le prix d'une action à une grandeur comptable. Il permet de comparer rapidement des entreprises de tailles différentes.
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Ratio & Ce qu'il mesure \\
+\midrule
+P/E (cours / bénéfice) & Combien les investisseurs paient pour 1~CHF de bénéfice annuel \\
+P/B (cours / valeur comptable) & Combien ils paient pour 1~CHF de fonds propres comptables \\
+EV/EBITDA & Valeur de l'entreprise (actions et dettes) rapportée au résultat d'exploitation avant amortissements \\
+Rendement du dividende & Dividende annuel rapporté au cours de l'action \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Les gérants procèdent ensuite à deux comparaisons. Prenons une entreprise fictive, \emph{Entreprise~A}, qui se négocie à un P/E de 17 :
+\begin{itemize}[leftmargin=*]
+  \item \textbf{comparaison historique} : si sa moyenne historique est de 22, l'action paraît bon marché par rapport à son passé ;
+  \item \textbf{comparaison sectorielle} : si des entreprises comparables se négocient à 21, elle paraît aussi bon marché par rapport à ses concurrentes.
+\end{itemize}
+
+Ces signaux ne suffisent pas à conclure à une sous-évaluation. Un multiple plus bas peut être parfaitement justifié par une croissance plus faible, une rentabilité moindre ou un risque plus élevé. Le marché peut avoir raison. C'est pourquoi les multiples servent surtout à \emph{repérer} des candidats, qui sont ensuite analysés en profondeur.
+
+% -----------------------------------------------------------------------------
+\section{Deuxième étape : estimer la valeur intrinsèque avec le modèle EBO}
+
+Le modèle Edwards-Bell-Ohlson, aussi appelé modèle du \emph{bénéfice résiduel} (\emph{residual income}), part des fonds propres comptables de l'entreprise et y ajoute la valeur des bénéfices « en excès » attendus :
+\[
+  \boxed{\;V_0 \;=\; B_0 \;+\; \sum_{t=1}^{\infty} \frac{\mathbb{E}\big[\,NI_t - r_e\,B_{t-1}\,\big]}{(1+r_e)^t}\;}
+\]
+où $V_0$ est la valeur intrinsèque par action aujourd'hui, $B_0$ la valeur comptable des fonds propres, $NI_t$ le bénéfice net de l'année $t$, $r_e$ le rendement exigé par les actionnaires et $NI_t - r_e B_{t-1}$ le \textbf{bénéfice résiduel}.
+
+\paragraph{L'intuition.} Les actionnaires ont confié $B_{t-1}$ francs à l'entreprise et en attendent un rendement $r_e$. Le bénéfice résiduel est ce que l'entreprise gagne \emph{au-delà} de ce rendement attendu. Une entreprise qui gagne exactement $r_e$ sur ses fonds propres ne crée aucune valeur supplémentaire : elle vaut sa valeur comptable. Une entreprise qui gagne davantage vaut plus que ses fonds propres. Une entreprise qui gagne moins vaut moins.
+
+\paragraph{Un exemple.} Une entreprise fictive possède \ExB{}~CHF de fonds propres par action et réalise durablement une rentabilité des fonds propres (ROE) de \ExROE{}, soit un bénéfice de \ExNI{}~CHF. Les actionnaires exigent \ExRe{}. Le bénéfice résiduel vaut $\ExNI - 0{,}10 \times \ExB = \ExRI$~CHF par an. S'il reste constant à perpétuité :
+\[
+  V_0 \;=\; \ExB \;+\; \frac{\ExRI}{0{,}10} \;=\; \boxed{\ExV~\text{CHF}} .
+\]
+
+\paragraph{Le lien avec les multiples.} Cette valeur correspond à un P/B « justifié » de \ExPB{} (= ROE / $r_e$) et à un P/E justifié de \ExPE{}. Le modèle EBO donne donc une référence chiffrée qui permet de juger si les multiples observés sont élevés ou bas \emph{compte tenu} de la rentabilité de l'entreprise.
+
+\paragraph{Une valeur très sensible aux hypothèses.} La figure~\ref{fig:sens} montre la valeur obtenue selon le rendement exigé. Avec \ExRe{}, elle est de \ExV{}~CHF ; avec 9~\%, de \ExVNeuf{}~CHF ; avec 11~\%, de \ExVOnze{}~CHF ; avec 12~\%, de \ExVDouze{}~CHF. Un point de pourcentage d'écart sur une hypothèse difficile à mesurer modifie la valeur de 10 à 15~\%. Les prévisions de bénéfices et la durée pendant laquelle l'entreprise conservera son avantage sont tout aussi incertaines.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.95\textwidth]{generated/fig_val_sensibilite.pdf}
+  \caption{Valeur intrinsèque EBO de l'entreprise fictive selon le rendement exigé (fonds propres \ExB{}~CHF, ROE \ExROE{}, bénéfice résiduel constant). La ligne pointillée est le prix de marché supposé.}
+  \label{fig:sens}
+\end{figure}
+
+% -----------------------------------------------------------------------------
+\section{Troisième étape : comparer le prix à la valeur}
+
+Supposons que l'action de l'entreprise fictive cote \ExPrix{}~CHF :
+
+\begin{center}\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Prix de marché & \ExPrix~CHF \\
+Valeur intrinsèque EBO (r = \ExRe) & \ExV~CHF \\
+Potentiel estimé & +\ExPotentiel \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Le gérant pourrait considérer l'action comme sous-évaluée, sous réserve de la fiabilité de ses hypothèses et du risque associé. Ce potentiel n'est pas une prévision de rendement annuel : il mesure l'écart entre le prix et la valeur estimée. Rien ne dit quand, ni même si, cet écart se résorbera.
+
+On peut aussi lire l'écart à l'envers. Le prix de \ExPrix{}~CHF équivaut à un rendement exigé implicite de \ExReImpl{} : le marché n'est peut-être pas « dans l'erreur », il juge simplement l'entreprise plus risquée que l'analyste. Toute la question est de savoir qui a raison.
+
+% -----------------------------------------------------------------------------
+\section{Quatrième étape : de l'analyse à la pondération}
+
+La description du processus ne précise pas comment les valorisations se traduisent en poids dans le portefeuille. Une séquence plausible est la suivante :
+
+\begin{center}
+\begin{tikzpicture}[node distance=4mm and 3mm, box/.style={draw=bleu, fill=bleu!6, rounded corners=2pt, text width=2.7cm, align=center, minimum height=1.25cm, font=\small}, arr/.style={-{Stealth[length=2.2mm]}, thick, color=gris}]
+  \node[box] (a) {\textbf{Multiples}\\[1pt]repérer les actions potentiellement attractives};
+  \node[box, right=of a] (b) {\textbf{Valorisation EBO}\\[1pt]estimer une valeur intrinsèque};
+  \node[box, right=of b] (c) {\textbf{Potentiel et risques}\\[1pt]évaluer l'intérêt de chaque titre};
+  \node[box, right=of c] (d) {\textbf{Pondération}\\[1pt]sur- et sous-pondérer par rapport au SPI};
+  \draw[arr] (a) -- (b); \draw[arr] (b) -- (c); \draw[arr] (c) -- (d);
+\end{tikzpicture}
+\end{center}
+
+La dernière étape fait généralement intervenir un contrôle du risque par rapport à l'indice, mesuré par l'\emph{écart de suivi} (\emph{tracking error}) : la volatilité de la différence de rendement entre le fonds et son indice. Le recours à une optimisation sous contrainte de tracking error est plausible, mais il n'est pas confirmé par la description du processus.
+
+% -----------------------------------------------------------------------------
+\section{Ce que dit la performance du fonds}
+
+Notre analyse empirique ne juge pas la qualité des valorisations elles-mêmes. Elle mesure le \emph{résultat final} du processus de gestion : le fonds a-t-il obtenu, sur \Annees{} ans (\PeriodeDebut{} – \PeriodeFin), un rendement supérieur à ce que son exposition au marché laissait attendre ?
+
+\begin{center}\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Rendement annualisé du fonds (distributions réinvesties, frais déduits) & \RendFonds \\
+Rendement annualisé du SPI Total Return & \RendSPI \\
+Bêta face au SPI & \FdsBeta \\
+$R^2$ & \FdsRDeuxPct \\
+Écart de suivi approché (volatilité résiduelle annualisée) & \FdsTE \\
+Alpha annualisé, net de frais (Newey-West) & \FdsAlphaA{} \;[\FdsAlphaLo{} ; \FdsAlphaHi] \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\TensionPhrase{} : le marché explique \FdsRDeuxPct{} de ses fluctuations mensuelles, et l'écart de suivi n'est que de \FdsTE{} par an. Ce n'est pas contradictoire avec une gestion active. Les gérants peuvent sélectionner des titres et ajuster leurs poids tout en restant très proches de l'indice. Mais leurs convictions ne s'expriment alors que par de petits écarts de pondération.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.95\textwidth]{generated/fig_val_relatif.pdf}
+  \caption{Performance relative du fonds par rapport au SPI Total Return (base 100) : une courbe montante signifie que le fonds fait mieux que l'indice, frais déduits.}
+\end{figure}
+
+L'alpha net de frais est de \FdsAlphaA{} par an, \FdsVerdict{} ($z$ = \FdsZ, \mbox{$p$~\FdsPEq}). \TERPhrase{} \BrutPhrase
+
+\paragraph{Pourquoi l'analyse fondamentale ne se traduit-elle pas davantage dans la performance ?} Plusieurs explications sont compatibles avec ces résultats :
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Des valorisations imprécises.} Comme le montre la figure~\ref{fig:sens}, de petites erreurs d'hypothèses suffisent à transformer une action « sous-évaluée » en action correctement évaluée.
+  \item \textbf{Des écarts lents à se résorber.} Le marché peut mettre des années à reconnaître une valeur, et le portefeuille doit en attendant supporter le risque de ces positions.
+  \item \textbf{Des contraintes de risque.} Un écart de suivi faible limite mécaniquement l'alpha possible. Même un gérant habile ne peut pas gagner beaucoup en s'écartant peu de l'indice.
+  \item \textbf{Un marché concurrentiel.} Les grandes actions suisses sont suivies par de nombreux analystes qui utilisent des méthodes semblables : les écarts faciles à exploiter sont rares.
+  \item \textbf{Les frais.} Une partie du surcroît de rendement éventuel est absorbée par les frais de gestion.
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+\section{En résumé}
+
+La démarche de la BCV est classique et solide sur le plan conceptuel : repérer des candidats avec les multiples, puis estimer leur valeur avec un modèle qui relie la création de valeur à la rentabilité des fonds propres. Ses limites sont celles de toute valorisation : la valeur obtenue dépend d'hypothèses incertaines. Un écart avec le prix est une opinion, pas une certitude.
+
+Mesuré par le modèle de marché, le résultat du processus est un portefeuille très proche du SPI, dont le rendement ajusté du risque, après frais, ne dépasse pas celui de l'indice sur la période étudiée. L'analyse empirique ne dit pas si les valorisations sont bonnes ou mauvaises. Elle montre que, dans la manière dont elles sont mises en œuvre, elles n'ont pas produit de surcroît de rendement net mesurable pour les porteurs de parts.
+
+Les autres analyses (action BCV, fonds, comparaison) sont disponibles sur le site : \URLSite.
+
+% -----------------------------------------------------------------------------
+\appendix
+\section{Compléments}
+
+\paragraph{Pourquoi le modèle EBO équivaut aux dividendes actualisés.} Si l'évolution des fonds propres respecte la relation $B_t = B_{t-1} + NI_t - D_t$ (\emph{clean surplus}), la valeur actuelle des dividendes futurs se réécrit exactement sous la forme EBO. Le modèle ne repose donc pas sur une théorie différente : il réorganise le calcul autour des fonds propres, ce qui réduit le poids de la valeur terminale, la partie la plus incertaine.
+
+\paragraph{Exemple : formules utilisées.} Bénéfice résiduel constant $RI = (\mathrm{ROE} - r_e)\,B_0$ ; valeur $V_0 = B_0 + RI/r_e$ ; P/B justifié $= \mathrm{ROE}/r_e$ ; rendement exigé implicite au prix $P$ : $r_e^{*} = \mathrm{ROE}\,B_0/P$.
+
+\paragraph{Mesures du fonds.} Single Index Model du fonds contre le SPI Total Return, rendements mensuels nets de frais et distributions réinvesties (série officielle Gérifonds), taux sans risque SARON, erreurs standards de Newey-West. Écart de suivi approché par la volatilité des résidus ($\times\sqrt{12}$). Alpha avant frais approché par alpha net + TER actuel.
+
+\paragraph{Sources.} Description du processus de gestion : documentation de la BCV, telle que résumée dans cette note. Données du fonds : Gérifonds (performance, distributions, TER). Les exemples d'entreprises sont fictifs.
+
+\section{Sources des données}
+
+\begin{center}\small
+\input{generated/tab_sources.tex}
+\end{center}
+
+\vfill
+{\small\color{gris} Ce document a une visée pédagogique. Il ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures.}
+
+\end{document}

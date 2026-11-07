@@ -34,6 +34,7 @@ def synthetic_page(lag_from: str | None = None, drop_dist: bool = False, double_
     ytd = tr[-1] / tr[y0] - 1
     rows = "" if drop_dist else "<tr><td>16.07.2024</td><td>CHF</td><td>5.1000</td><td>3.3150</td><td>5.1000</td></tr>"
     return (f"<div>Performance YTD</div><div>{100 * ytd:.2f}%</div><div>{ytd_end:%d.%m.%Y}</div>"
+            "<div>TER</div><div>1.11%</div><div>31.03.2026</div>"
             f'<div class="charts-google" data-chart="{html.escape(json.dumps(points))}"></div>'
             f"<h3>Distributions</h3><table><tr><th>Date</th><th>VNI Devise</th></tr>{rows}</table>")
 
@@ -47,6 +48,8 @@ class TestFund(unittest.TestCase):
         self.assertGreater(r.matched_share, 0.995)
         self.assertEqual(len(r.dist_ok), 1)
         self.assertEqual(r.dist_bad, [])
+        self.assertAlmostEqual(p.ter, 0.0111)
+        self.assertEqual(str(p.ter_date.date()), "2026-03-31")
         calc, off = fund.ytd_check(p)
         self.assertAlmostEqual(calc, off, places=4)
 

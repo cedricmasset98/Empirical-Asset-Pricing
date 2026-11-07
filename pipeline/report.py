@@ -51,6 +51,7 @@ REPORTS = {
     "BCV": {"template": "rapport.tex", "pdf": "rapport_bcv.pdf", "zip": "rapport_bcv_latex.zip", "dir": "bcv"},
     "FUND": {"template": "rapport_fonds.tex", "pdf": "rapport_fonds.pdf", "zip": "rapport_fonds_latex.zip", "dir": "fonds"},
     "PAIR": {"template": "rapport_comparaison.tex", "pdf": "rapport_comparaison.pdf", "zip": "rapport_comparaison_latex.zip", "dir": "comparaison"},
+    "VALUATION": {"template": "rapport_valorisation.tex", "pdf": "rapport_valorisation.pdf", "zip": "rapport_valorisation_latex.zip", "dir": "valorisation"},
 }
 
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
@@ -648,6 +649,11 @@ def build_one(ds: dict, key: str, compile_it: bool) -> str:
         r = compute_pair(ds)
         m = write_pair(ds, r, GEN)
         summary = f"α action = {m['ActAlphaA']}, α fonds = {m['FdsAlphaA']}, N = {m['PairN']}"
+    elif key == "VALUATION":
+        from .report_valuation import compute_valuation, write_valuation
+
+        m = write_valuation(ds, compute_valuation(ds), GEN)
+        summary = f"exemple EBO = {m['ExV']} CHF, α fonds = {m['FdsAlphaA']}, TER = {m['TER']}"
     else:
         r = compute(ds, key)
         m = macros(ds, r)

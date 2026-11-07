@@ -18,7 +18,7 @@ def essence(ds: dict) -> dict:
 
 
 def main() -> int:
-    for pdf in ("rapport_bcv.pdf", "rapport_fonds.pdf", "rapport_comparaison.pdf", "presentation_fonds.pdf"):
+    for pdf in ("rapport_bcv.pdf", "rapport_fonds.pdf", "rapport_comparaison.pdf", "rapport_valorisation.pdf", "presentation_fonds.pdf"):
         tracked = subprocess.run(["git", "ls-files", "--error-unmatch", f"public/report/{pdf}"], capture_output=True)
         if tracked.returncode != 0:
             return 0  # rapport jamais archivé

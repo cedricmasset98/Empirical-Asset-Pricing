@@ -38,6 +38,8 @@ class FundPage:
     distributions: pd.Series  # montant brut par date ex
     ytd: float | None = None
     ytd_date: pd.Timestamp | None = None
+    ter: float | None = None  # Total Expense Ratio publié (décimal)
+    ter_date: pd.Timestamp | None = None
 
 
 def parse_page(text: str) -> FundPage:
@@ -59,12 +61,16 @@ def parse_page(text: str) -> FundPage:
     m = re.search(r"Performance YTD\s*(-?[\d.]+)\s*%\s*(\d{2}\.\d{2}\.\d{4})", plain)
     if m:
         ytd, ytd_date = float(m.group(1)) / 100, pd.to_datetime(m.group(2), format="%d.%m.%Y")
+    ter = ter_date = None
+    m = re.search(r"\bTER\s*([\d.]+)\s*%\s*(\d{2}\.\d{2}\.\d{4})", plain)
+    if m:
+        ter, ter_date = float(m.group(1)) / 100, pd.to_datetime(m.group(2), format="%d.%m.%Y")
     dists: dict[pd.Timestamp, float] = {}
     i = plain.find("Distributions Date")
     if i >= 0:
         for d, gross in re.findall(r"(\d{2}\.\d{2}\.\d{4}) CHF (\d+\.\d+)", plain[i:]):
             dists[pd.to_datetime(d, format="%d.%m.%Y")] = float(gross)
-    return FundPage(df["tr"], df["nav"], pd.Series(dists, dtype=float).sort_index(), ytd, ytd_date)
+    return FundPage(df["tr"], df["nav"], pd.Series(dists, dtype=float).sort_index(), ytd, ytd_date, ter, ter_date)
 
 
 @dataclass

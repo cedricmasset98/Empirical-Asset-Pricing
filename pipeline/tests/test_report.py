@@ -56,6 +56,22 @@ class TestReport(unittest.TestCase):
         self.assertAlmostEqual(F[("CAPM", "SPI", "DIFF")].params[0],
                                F[("CAPM", "SPI", "BCV")].params[0] - F[("CAPM", "SPI", "FUND")].params[0], places=12)
 
+    def test_valuation_report(self):
+        import re
+        from pipeline import report_valuation as V
+
+        self.assertAlmostEqual(V.ebo_perpetual(100, 0.15, 0.10), 150.0)
+        self.assertAlmostEqual(V.ebo_perpetual(100, 0.10, 0.10), 100.0)  # ROE = r : valeur = fonds propres
+        ds = json.loads((ROOT / "tests" / "fixtures" / "synthetic_dataset.json").read_text())
+        with tempfile.TemporaryDirectory() as tmp:
+            m = V.write_valuation(ds, V.compute_valuation(ds), Path(tmp))
+            names = {p.name for p in Path(tmp).iterdir()}
+        self.assertTrue({"fig_val_sensibilite.pdf", "fig_val_relatif.pdf", "macros.tex", "tab_sources.tex"} <= names)
+        self.assertEqual(m["ExV"], "150")
+        self.assertEqual(m["ExReImpl"], "12,5~\\%")
+        used = set(re.findall(r"\\([A-Z][A-Za-z]+)", (ROOT / "report" / "rapport_valorisation.tex").read_text()))
+        self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE"}), [])
+
     def test_formatting(self):
         self.assertEqual(report.num(-0.0012, 2), "0,00")
         self.assertEqual(report.num(-1.5, 1), "−1,5")

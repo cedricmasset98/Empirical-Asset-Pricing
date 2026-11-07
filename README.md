@@ -14,7 +14,7 @@ Ce site interactif estime des modèles d'évaluation d'actifs pour l'action **Ba
 | E. Comparaison des modèles | 4 modèles × 2 marchés sur un échantillon strictement identique |
 | F. Action BCV vs Fonds BCV | Performances (100 CHF, rendement, volatilité, perte maximale), alphas comparés et écart testé, Single Index côte à côte à la même échelle, modèles multifactoriels, lecture pédagogique |
 | Exports et import | Exports CSV ; import manuel d'un CSV ; mode clair et sombre ; paramètres conservés dans l'URL |
-| Rapports | **Trois rapports vulgarisés en LaTeX** (PDF et sources) : action BCV, fonds BCV Swiss Equity A, comparaison des alphas |
+| Rapports | **Rapports vulgarisés en LaTeX** (PDF et sources) : action BCV, fonds BCV Swiss Equity A, comparaison des alphas, processus de gestion du fonds (multiples, modèle EBO) |
 
 Toutes les statistiques sont **recalculées dans le navigateur** à partir de fichiers statiques. Aucun coefficient n'est codé en dur, il n'y a pas de backend, et aucune clé d'API n'est utilisée.
 
@@ -30,6 +30,7 @@ pipeline/            Python : récupération, transformation, contrôles, réfé
   olsref.py          OLS et diagnostics numpy/scipy (même conventions, testés contre statsmodels)
   report.py          -> public/report/rapport_{bcv,fonds,comparaison}.pdf et sources .zip
   report_pair.py     rapport comparatif action / fonds
+  report_valuation.py note sur le processus de gestion (multiples, EBO) -> rapport_valorisation.pdf
   presentation.py    -> public/report/presentation_fonds.pdf (Beamer vulgarisé, fonds vs SPI, lien avec Fama-French 2010)
 report/*.tex         gabarits LaTeX (texte seul ; chiffres injectés par macros)
   tests/             tests unitaires et test de bout en bout hors ligne
@@ -73,7 +74,7 @@ Pour régénérer les jeux de test synthétiques : `npm run fixtures`. Ces jeux 
 
 ## Rapports de synthèse (LaTeX)
 
-Le bouton **Rapport PDF** ouvre le rapport de l'actif choisi. L'onglet F donne accès au rapport comparatif « Action BCV vs Fonds BCV — Comparaison des alphas ». Le rapport sur l'action contient :
+Le bouton **Rapport PDF** ouvre le rapport de l'actif choisi. L'onglet F donne accès au rapport comparatif « Action BCV vs Fonds BCV — Comparaison des alphas ». Quand le fonds est sélectionné, le bouton **Processus de gestion** ouvre une note vulgarisée sur la démarche de sélection des titres décrite par la BCV (filtrage par multiples, modèle Edwards-Bell-Ohlson, écart prix/valeur) et la confronte à la performance mesurée du fonds ; les exemples d'entreprises y sont fictifs, et l'alpha avant frais est approché par alpha net + TER publié. Le rapport sur l'action contient :
 
 - l'essentiel en cinq points ;
 - la question posée et un lexique ;
