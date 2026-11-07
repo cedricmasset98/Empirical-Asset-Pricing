@@ -5,7 +5,7 @@ import type { FitOk, Diagnostics, Comparison } from './analysis.ts';
 import type { RollingResult } from '../engine/rolling.ts';
 import { meanPredictionInterval } from '../engine/ols.ts';
 import { normPdf } from '../engine/distributions.ts';
-import { ASSET_INFO, FACTOR_LABELS, MODEL_IDS, MODEL_SHORT, UNIVERSE_LABELS, type FactorId } from '../engine/models.ts';
+import { ASSET_INFO, FACTOR_LABELS, MODEL_IDS, MODEL_SHORT, type FactorId } from '../engine/models.ts';
 import type { AssetComparison } from './analysis.ts';
 import { num, pval } from './format.ts';
 
@@ -283,10 +283,9 @@ export function plotRolling(container: HTMLElement, roll: RollingResult, t: Them
 
 export function plotComparison(el: HTMLElement, cmp: Comparison, t: Theme): void {
   const traces: unknown[] = [];
-  (['SPI', 'EUROPE', 'SWISS'] as const).forEach((u, ui) => {
+  (['SWISS', 'EUROPE'] as const).forEach((u, ui) => {
     const fits = MODEL_IDS.map((m) => cmp.fits.find((f) => f.model === m && f.universe === u)!);
-    // CAPM suisse = Single Index : non répété
-    const ok = fits.map((f) => (f && f.ok && !(u === 'SWISS' && f.model === 'CAPM') ? f : null));
+    const ok = fits.map((f) => (f && f.ok ? f : null));
     traces.push({
       x: MODEL_IDS.map((m) => MODEL_SHORT[m]),
       y: ok.map((f) => (f ? P(f.result.beta[0]) : null)),
@@ -303,7 +302,7 @@ export function plotComparison(el: HTMLElement, cmp: Comparison, t: Theme): void
       mode: 'markers',
       type: 'scatter',
       marker: { size: 11, color: t.series[ui], symbol: (['circle', 'diamond', 'square'] as const)[ui] },
-      name: u === 'SPI' ? 'Marché SPI TR (CAPM suisse ; FF3/Carhart/FF5 = hybrides)' : UNIVERSE_LABELS[u],
+      name: u === 'SWISS' ? 'Univers suisse (SPI TR, facteurs JKP ; CAPM = Single Index)' : 'Univers européen Fama-French (comparaison)',
       offsetgroup: u,
       hovertemplate: 'α = %{y:.3f} %/mois<br>stat(α) = %{customdata[0]:.2f} · p = %{customdata[1]:.4f}<br>R² = %{customdata[2]:.3f} · N = %{customdata[3]}<extra>%{fullData.name}</extra>',
     });
@@ -328,7 +327,7 @@ export function resizeAll(root: HTMLElement): void {
   });
 }
 
-// ------------------------------------------------------------------ F. Action vs fonds
+// ------------------------------------------------------------------ Comparer deux actifs
 
 export function plotPerformance(el: HTMLElement, cmp: AssetComparison, t: Theme): void {
   const first = cmp.dates[0];
@@ -336,8 +335,8 @@ export function plotPerformance(el: HTMLElement, cmp: AssetComparison, t: Theme)
   const start = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
   const x = [start, ...cmp.dates];
   const style: Record<string, { color: string; dash?: string; width: number }> = {
-    bcv: { color: t.line, width: 2.4 },
-    fund: { color: t.series[2], width: 2.4 },
+    a: { color: t.line, width: 2.4 },
+    b: { color: t.series[2], width: 2.4 },
     spi: { color: t.series[0], width: 1.8 },
     rf: { color: t.muted, dash: 'dash', width: 1.4 },
   };
@@ -361,7 +360,7 @@ export function plotPerformance(el: HTMLElement, cmp: AssetComparison, t: Theme)
 }
 
 export function plotAlphaPair(el: HTMLElement, cmp: AssetComparison, t: Theme): void {
-  const traces = (['bcv', 'fund'] as const).map((k, i) => {
+  const traces = (['a', 'b'] as const).map((k, i) => {
     const fits = cmp.models.map((m) => m[k]);
     const ok = fits.map((f) => (f.ok ? f : null));
     const color = i === 0 ? t.line : t.series[2];
@@ -382,7 +381,7 @@ export function plotAlphaPair(el: HTMLElement, cmp: AssetComparison, t: Theme): 
       type: 'scatter',
       offsetgroup: k,
       marker: { size: 11, color, symbol: i === 0 ? 'circle' : 'diamond' },
-      name: i === 0 ? 'Action BCV' : 'Fonds BCV Swiss Equity A',
+      name: ASSET_INFO[cmp.pair[i]].label,
       hovertemplate: 'α = %{y:.2f} % par an<br>stat = %{customdata[0]:.2f} · p = %{customdata[1]:.4f} · N = %{customdata[2]}<extra>%{fullData.name}</extra>',
     };
   });

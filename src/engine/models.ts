@@ -9,29 +9,38 @@ import type { Matrix, Vector } from './linalg.ts';
 export type ModelId = 'CAPM' | 'FF3' | 'CARHART' | 'FF5';
 
 /**
- * Actif étudié. 'DIFF' est le portefeuille long action BCV / court fonds : sa
- * régression donne exactement α_BCV − α_fonds (mêmes dates, mêmes régresseurs),
- * avec une erreur standard qui tient compte de la corrélation des deux actifs.
+ * Actif étudié. 'DIFF' est le portefeuille long A / court B d'une paire (par
+ * défaut action BCV / fonds BCV) : sa régression donne exactement α_A − α_B
+ * (mêmes dates, mêmes régresseurs), avec une erreur standard qui tient compte
+ * de la corrélation des deux actifs.
  */
-export type AssetId = 'BCV' | 'FUND' | 'RAIF' | 'DIFF';
-export const ASSET_IDS: AssetId[] = ['BCV', 'FUND', 'RAIF'];
+export type SingleAsset = 'BCV' | 'FUND' | 'RAIF';
+export type AssetId = SingleAsset | 'DIFF';
+export const ASSET_IDS: SingleAsset[] = ['BCV', 'FUND', 'RAIF'];
+/** Paire comparée : [A, B] ; DIFF = R_A − R_B. */
+export type Pair = [SingleAsset, SingleAsset];
+export const DEFAULT_PAIR: Pair = ['BCV', 'FUND'];
 
 /** sub : indice de R dans les formules ; fund : fonds de placement (rendements nets de frais, distributions réinvesties). */
 export const ASSET_INFO: Record<AssetId, { label: string; short: string; detail: string; sub: string; fund: boolean; column: SeriesKey }> = {
   BCV: { label: 'Action BCV', short: 'Action BCV', detail: 'BCVN.SW · ISIN CH0531751755', sub: 'BCV', fund: false, column: 'bcv_ret' },
   FUND: { label: 'Fonds BCV Swiss Equity A', short: 'Fonds BCV', detail: 'ISIN CH0006018706 · gestion active · BCV Asset Management', sub: 'fonds', fund: true, column: 'fund_ret' },
   RAIF: { label: 'Fonds Raiffeisen Futura - Swiss Stock A', short: 'Fonds Raiffeisen', detail: 'ISIN CH0011980981 · gestion active · Vontobel Asset Management pour Raiffeisen', sub: 'Raiffeisen', fund: true, column: 'raif_ret' },
-  DIFF: { label: 'Action BCV − fonds BCV', short: 'Différence', detail: 'Portefeuille long action, court fonds', sub: 'BCV − fonds', fund: false, column: 'bcv_ret' },
+  DIFF: { label: 'Différence A − B', short: 'Différence', detail: 'Portefeuille long A, court B', sub: 'A − B', fund: false, column: 'bcv_ret' },
 };
 
-function assetColumns(asset: AssetId): SeriesKey[] {
-  if (asset === 'BCV') return ['bcv_ret'];
-  if (asset === 'FUND') return ['fund_ret'];
-  if (asset === 'RAIF') return ['raif_ret'];
-  return ['bcv_ret', 'fund_ret'];
+function assetColumns(asset: AssetId, pair: Pair = DEFAULT_PAIR): SeriesKey[] {
+  if (asset === 'DIFF') return [ASSET_INFO[pair[0]].column, ASSET_INFO[pair[1]].column];
+  return [ASSET_INFO[asset].column];
 }
 /** SWISS : marché SPI TR et facteurs long-short suisses de Global Factor Data (JKP). */
 export type Universe = 'SPI' | 'EUROPE' | 'SWISS';
+/**
+ * Univers proposés dans l'interface. Le CAPM de l'univers suisse est le Single
+ * Index Model (SPI TR) ; la variante hybride « SPI + facteurs européens » reste
+ * dans le moteur et la validation, mais n'est plus proposée.
+ */
+export const UI_UNIVERSES: Universe[] = ['SWISS', 'EUROPE'];
 
 export const MODEL_IDS: ModelId[] = ['CAPM', 'FF3', 'CARHART', 'FF5'];
 export const UNIVERSES: Universe[] = ['SPI', 'EUROPE', 'SWISS'];
@@ -98,8 +107,8 @@ export function marketColumn(universe: Universe): SeriesKey {
 }
 
 /** Colonnes nécessaires pour estimer un modèle dans un univers. */
-export function requiredColumns(model: ModelId, universe: Universe, asset: AssetId = 'BCV'): SeriesKey[] {
-  const cols: SeriesKey[] = [...assetColumns(asset), 'rf_saron', marketColumn(universe)];
+export function requiredColumns(model: ModelId, universe: Universe, asset: AssetId = 'BCV', pair: Pair = DEFAULT_PAIR): SeriesKey[] {
+  const cols: SeriesKey[] = [...assetColumns(asset, pair), 'rf_saron', marketColumn(universe)];
   for (const f of MODEL_FACTORS[model]) if (f !== 'MKT') cols.push(factorColumn(model, f, universe));
   return cols;
 }
@@ -134,6 +143,8 @@ export interface DateRange {
 
 export interface Sample {
   asset: AssetId;
+  /** Paire de la différence (asset = 'DIFF'). */
+  pair?: Pair;
   model: ModelId;
   universe: Universe;
   dates: string[];
@@ -204,8 +215,9 @@ export function buildSample(
   range: DateRange,
   restrictTo?: Set<string>,
   asset: AssetId = 'BCV',
+  pair: Pair = DEFAULT_PAIR,
 ): Sample {
-  const columns = requiredColumns(model, universe, asset);
+  const columns = requiredColumns(model, universe, asset, pair);
   assertColumns(ds, columns);
   let { idx, inRange } = availableIndices(ds, columns, range);
   if (restrictTo) idx = idx.filter((i) => restrictTo.has(ds.dates[i]));
@@ -217,11 +229,9 @@ export function buildSample(
   const dates: string[] = [];
   for (const i of idx) {
     const rf = get('rf_saron', i);
-    // rendement excédentaire ; pour la différence, (R_BCV − Rf) − (R_fonds − Rf) = R_BCV − R_fonds
-    if (asset === 'BCV') y.push(get('bcv_ret', i) - rf);
-    else if (asset === 'FUND') y.push(get('fund_ret', i) - rf);
-    else if (asset === 'RAIF') y.push(get('raif_ret', i) - rf);
-    else y.push(get('bcv_ret', i) - get('fund_ret', i));
+    // rendement excédentaire ; pour la différence, (R_A − Rf) − (R_B − Rf) = R_A − R_B
+    if (asset === 'DIFF') y.push(get(ASSET_INFO[pair[0]].column, i) - get(ASSET_INFO[pair[1]].column, i));
+    else y.push(get(ASSET_INFO[asset].column, i) - rf);
     const row = [1];
     for (const f of factors) {
       if (f === 'MKT') row.push(get(mcol, i) - rf);
@@ -237,6 +247,7 @@ export function buildSample(
   }
   return {
     asset,
+    ...(asset === 'DIFF' ? { pair } : {}),
     model,
     universe,
     dates,
@@ -253,11 +264,11 @@ export function buildSample(
 /** Dates communes à tous les modèles et univers demandés (comparaison sur échantillon identique). */
 export function commonDates(
   ds: Dataset,
-  specs: { model: ModelId; universe: Universe; asset?: AssetId }[],
+  specs: { model: ModelId; universe: Universe; asset?: AssetId; pair?: Pair }[],
   range: DateRange,
 ): Set<string> {
   const cols = new Set<SeriesKey>();
-  for (const s of specs) for (const c of requiredColumns(s.model, s.universe, s.asset ?? 'BCV')) cols.add(c);
+  for (const s of specs) for (const c of requiredColumns(s.model, s.universe, s.asset ?? 'BCV', s.pair)) cols.add(c);
   const { idx } = availableIndices(ds, [...cols], range);
   return new Set(idx.map((i) => ds.dates[i]));
 }

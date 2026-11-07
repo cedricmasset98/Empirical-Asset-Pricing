@@ -66,13 +66,13 @@ export function comparisonCsv(cmp: Comparison): string {
 }
 
 export function assetComparisonCsv(cmp: import('./analysis.ts').AssetComparison): string {
-  const rows: unknown[][] = [['# echantillon commun action/fonds', cmp.dates.length, cmp.dates[0], cmp.dates[cmp.dates.length - 1], 'marche', cmp.universe]];
+  const rows: unknown[][] = [['# echantillon commun', cmp.pair.join(' vs '), cmp.dates.length, cmp.dates[0], cmp.dates[cmp.dates.length - 1], 'univers', cmp.universe]];
   rows.push(['serie', 'valeur_finale_100', 'rendement_annualise', 'volatilite_annualisee', 'perte_maximale']);
   for (const p of cmp.perf) rows.push([p.label, p.path[p.path.length - 1], p.annReturn, p.annVol, p.maxDrawdown]);
   rows.push([]);
   rows.push(['modele', 'actif', 'alpha_mensuel', 'alpha_annualise_x12', 'ci_low_mensuel', 'ci_high_mensuel', 'stat_alpha', 'p_alpha', 'beta_marche', 'r2', 'sigma_residus_mensuel', 'n', 'erreur']);
   for (const m of cmp.models) {
-    for (const [k, f] of [['action', m.bcv], ['fonds', m.fund], ['action_moins_fonds', m.diff]] as const) {
+    for (const [k, f] of [[cmp.pair[0], m.a], [cmp.pair[1], m.b], [`${cmp.pair[0]}_moins_${cmp.pair[1]}`, m.diff]] as const) {
       if (f.ok) {
         const r = f.result;
         rows.push([m.model, k, r.beta[0], 12 * r.beta[0], r.ciLow[0], r.ciHigh[0], r.stat[0], r.pvalue[0], r.beta[1], r.r2, r.sigma, r.n, '']);

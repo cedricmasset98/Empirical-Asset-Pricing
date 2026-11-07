@@ -2,7 +2,7 @@
  * Orchestration des calculs pour l'interface (sans DOM, testable sous Node).
  */
 
-import type { Dataset } from '../data/types.ts';
+import type { Dataset, SeriesKey } from '../data/types.ts';
 import { ols, InsufficientDataError, type CovType, type OLSResult } from '../engine/ols.ts';
 import {
   assertColumns,
@@ -14,7 +14,10 @@ import {
   MODEL_IDS,
   requiredColumns,
   specLabel,
-  UNIVERSES,
+  UI_UNIVERSES,
+  DEFAULT_PAIR,
+  type Pair,
+  type SingleAsset,
   type Coherence,
   type DateRange,
   type ModelId,
@@ -29,7 +32,7 @@ import { acf, breuschPagan, defaultLjungBoxLags, jarqueBera, ljungBox, qqPoints,
 import { SingularMatrixError } from '../engine/linalg.ts';
 
 export interface Settings {
-  asset: AssetId;
+  asset: SingleAsset;
   range: DateRange;
   model: ModelId;
   universe: Universe;
@@ -77,10 +80,18 @@ export function sampleWarnings(s: Sample): string[] {
   return w;
 }
 
-export function fitModel(ds: Dataset, model: ModelId, universe: Universe, st: Settings, restrictTo?: Set<string>, asset: AssetId = st.asset): Fit {
+export function fitModel(
+  ds: Dataset,
+  model: ModelId,
+  universe: Universe,
+  st: Settings,
+  restrictTo?: Set<string>,
+  asset: AssetId = st.asset,
+  pair: Pair = DEFAULT_PAIR,
+): Fit {
   const label = specLabel(model, universe);
   try {
-    const sample = buildSample(ds, model, universe, st.range, restrictTo, asset);
+    const sample = buildSample(ds, model, universe, st.range, restrictTo, asset, pair);
     const k = sample.names.length;
     const minN = minObservations(k);
     if (sample.y.length < minN) {
@@ -136,11 +147,11 @@ export interface Comparison {
   excluded: string[];
 }
 
-/** Compare les 4 modèles × 2 univers sur un échantillon commun identique. */
+/** Compare les 4 modèles × 2 univers proposés (Suisse, Europe) sur un échantillon commun identique. */
 export function compareModels(ds: Dataset, st: Settings): Comparison {
   const specs: { model: ModelId; universe: Universe; asset: AssetId }[] = [];
   const excluded: string[] = [];
-  for (const universe of UNIVERSES) {
+  for (const universe of UI_UNIVERSES) {
     for (const model of MODEL_IDS) {
       try {
         assertColumns(ds, requiredColumns(model, universe, st.asset));
@@ -153,7 +164,7 @@ export function compareModels(ds: Dataset, st: Settings): Comparison {
   const common = commonDates(ds, specs, st.range);
   const dates = [...common].sort();
   const fits: Fit[] = [];
-  for (const universe of UNIVERSES) {
+  for (const universe of UI_UNIVERSES) {
     for (const model of MODEL_IDS) {
       if (specs.some((s) => s.model === model && s.universe === universe)) fits.push(fitModel(ds, model, universe, st, common));
       else fits.push({ ok: false, asset: st.asset, model, universe, label: specLabel(model, universe), error: 'Séries indisponibles.' });
@@ -178,10 +189,12 @@ export interface AssetComparison {
   ok: boolean;
   error?: string;
   universe: Universe;
+  /** Actifs comparés : [A, B]. */
+  pair: Pair;
   dates: string[];
   perf: PerfStats[];
-  /** Ajustements par modèle : action, fonds et différence (action − fonds). */
-  models: { model: ModelId; bcv: Fit; fund: Fit; diff: Fit }[];
+  /** Ajustements par modèle : A, B et différence (A − B). */
+  models: { model: ModelId; a: Fit; b: Fit; diff: Fit }[];
 }
 
 function perfStats(key: string, label: string, r: number[]): PerfStats {
@@ -200,16 +213,17 @@ function perfStats(key: string, label: string, r: number[]): PerfStats {
 }
 
 /**
- * Action BCV contre fonds BCV Swiss Equity A sur un échantillon STRICTEMENT
- * identique : mois où l'action, le fonds, le SPI, le SARON et tous les facteurs
- * des quatre modèles de l'univers choisi sont disponibles.
+ * Deux actifs sur un échantillon STRICTEMENT identique : mois où les deux
+ * actifs, le SPI, le SARON et tous les facteurs des quatre modèles de l'univers
+ * choisi sont disponibles.
  */
-export function compareAssets(ds: Dataset, st: Settings): AssetComparison {
+export function compareAssets(ds: Dataset, st: Settings, pair: Pair = DEFAULT_PAIR): AssetComparison {
   const universe = st.universe;
-  const empty = (error: string): AssetComparison => ({ ok: false, error, universe, dates: [], perf: [], models: [] });
+  const empty = (error: string): AssetComparison => ({ ok: false, error, universe, pair, dates: [], perf: [], models: [] });
+  if (pair[0] === pair[1]) return empty('Choisissez deux actifs différents.');
   const specs: { model: ModelId; universe: Universe; asset: AssetId }[] = [];
   for (const model of MODEL_IDS) {
-    for (const asset of ['BCV', 'FUND'] as AssetId[]) {
+    for (const asset of pair) {
       try {
         assertColumns(ds, requiredColumns(model, universe, asset));
         specs.push({ model, universe, asset });
@@ -218,29 +232,29 @@ export function compareAssets(ds: Dataset, st: Settings): AssetComparison {
       }
     }
   }
-  specs.push({ model: 'CAPM', universe: 'SPI', asset: 'BCV' }, { model: 'CAPM', universe: 'SPI', asset: 'FUND' });
+  for (const asset of pair) specs.push({ model: 'CAPM', universe: 'SPI', asset });
   const common = commonDates(ds, specs, st.range);
   const dates = [...common].sort();
-  if (dates.length < minObservations(6)) return empty(`Seulement ${dates.length} mois communs à l'action, au fonds et aux facteurs sur la période choisie.`);
+  if (dates.length < minObservations(6)) return empty(`Seulement ${dates.length} mois communs aux deux actifs et aux facteurs sur la période choisie.`);
   const idx = dates.map((d) => ds.dates.indexOf(d));
-  const col = (k: 'bcv_ret' | 'fund_ret' | 'spi_ret' | 'rf_saron') => idx.map((i) => ds.data[k]![i] as number);
+  const col = (k: SeriesKey) => idx.map((i) => ds.data[k]![i] as number);
   const perf = [
-    perfStats('bcv', 'Action BCV', col('bcv_ret')),
-    perfStats('fund', 'Fonds BCV Swiss Equity A', col('fund_ret')),
+    perfStats('a', ASSET_INFO[pair[0]].label, col(ASSET_INFO[pair[0]].column)),
+    perfStats('b', ASSET_INFO[pair[1]].label, col(ASSET_INFO[pair[1]].column)),
     perfStats('spi', 'SPI Total Return', col('spi_ret')),
     perfStats('rf', 'Placement au SARON', col('rf_saron')),
   ];
   const models = MODEL_IDS.map((model) => ({
     model,
-    bcv: fitModel(ds, model, universe, st, common, 'BCV'),
-    fund: fitModel(ds, model, universe, st, common, 'FUND'),
-    diff: fitModel(ds, model, universe, st, common, 'DIFF'),
+    a: fitModel(ds, model, universe, st, common, pair[0]),
+    b: fitModel(ds, model, universe, st, common, pair[1]),
+    diff: fitModel(ds, model, universe, st, common, 'DIFF', pair),
   }));
-  return { ok: true, universe, dates, perf, models };
+  return { ok: true, universe, pair, dates, perf, models };
 }
 
 /** Single Index (SPI) des deux actifs sur l'échantillon de la comparaison. */
-export function singleIndexPair(ds: Dataset, st: Settings, cmp: AssetComparison): { bcv: Fit; fund: Fit } {
+export function singleIndexPair(ds: Dataset, st: Settings, cmp: AssetComparison): { a: Fit; b: Fit } {
   const set = new Set(cmp.dates);
-  return { bcv: fitModel(ds, 'CAPM', 'SPI', st, set, 'BCV'), fund: fitModel(ds, 'CAPM', 'SPI', st, set, 'FUND') };
+  return { a: fitModel(ds, 'CAPM', 'SPI', st, set, cmp.pair[0]), b: fitModel(ds, 'CAPM', 'SPI', st, set, cmp.pair[1]) };
 }

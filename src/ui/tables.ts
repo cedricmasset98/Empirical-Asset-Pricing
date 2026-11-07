@@ -87,13 +87,12 @@ export function testsTable(d: Diagnostics): string {
 
 export function comparisonTable(cmp: Comparison): string {
   const rows: string[] = [];
-  const groups = { SPI: 'Marché : SPI Total Return (CHF)', EUROPE: 'Marché : Europe Fama-French converti en CHF', SWISS: 'Univers suisse : SPI TR et facteurs suisses JKP (CHF)' } as const;
-  for (const u of ['SPI', 'EUROPE', 'SWISS'] as const) {
+  const groups = { SWISS: 'Univers suisse : SPI TR et facteurs suisses JKP (CHF)', EUROPE: 'Univers européen Fama-French, converti en CHF (comparaison)' } as const;
+  for (const u of ['SWISS', 'EUROPE'] as const) {
     rows.push(`<tr class="group"><th colspan="9">${groups[u]}</th></tr>`);
     for (const m of MODEL_IDS) {
-      if (u === 'SWISS' && m === 'CAPM') continue; // identique au Single Index (SPI)
       const f = cmp.fits.find((x) => x.model === m && x.universe === u)!;
-      const tag = f.ok && f.coherence === 'hybrid' ? ' <span class="badge hybrid">hybride</span>' : '';
+      const tag = u === 'SWISS' && m === 'CAPM' ? ' <span class="muted small">(Single Index)</span>' : '';
       if (!f.ok) {
         rows.push(`<tr><th scope="row">${MODEL_SHORT[m]}${tag}</th><td colspan="8" class="err">${h(f.error)}</td></tr>`);
         continue;
@@ -125,7 +124,7 @@ export function sourcesTable(ds: Dataset): string {
   ${(ds.notes ?? []).map((n) => `<p class="muted small">${h(n)}</p>`).join('')}`;
 }
 
-// ------------------------------------------------------------------ action vs fonds
+// ------------------------------------------------------------------ comparer deux actifs
 
 export function perfTable(cmp: AssetComparison): string {
   const rows = cmp.perf
@@ -142,15 +141,16 @@ function cell(f: Fit, fn: (r: FitOk['result']) => string): string {
   return f.ok ? fn(f.result) : `<span class="err">${h(f.error)}</span>`;
 }
 
-export function alphaPairTable(m: AssetComparison['models'][number]): string {
-  const { bcv, fund, diff } = m;
-  const z = bcv.ok && bcv.result.distribution === 't' ? 't' : 'z';
+export function alphaPairTable(m: AssetComparison['models'][number], pair: AssetComparison['pair']): string {
+  const { a, b, diff } = m;
+  const [na, nb] = [ASSET_INFO[pair[0]].short, ASSET_INFO[pair[1]].short];
+  const z = a.ok && a.result.distribution === 't' ? 't' : 'z';
   const row = (label: string, fn: (r: FitOk['result']) => string, d?: string) =>
-    `<tr><th scope="row">${label}</th><td>${cell(bcv, fn)}</td><td>${cell(fund, fn)}</td><td>${d ?? ''}</td></tr>`;
+    `<tr><th scope="row">${label}</th><td>${cell(a, fn)}</td><td>${cell(b, fn)}</td><td>${d ?? ''}</td></tr>`;
   const dRow = diff.ok
     ? `${pct(12 * diff.result.beta[0], 2)}<br><span class="muted small">${z} = ${num(diff.result.stat[0], 2)} · p = ${pval(diff.result.pvalue[0])}</span>`
     : '';
-  return `<table class="reg pair"><thead><tr><th>Indicateur — ${h(MODEL_SHORT[m.model])}</th><th>Action BCV</th><th>Fonds BCV</th><th>Écart (action − fonds) ${tip("Régression du rendement de l'action moins celui du fonds sur les mêmes facteurs : son alpha est exactement α_action − α_fonds, et son erreur standard tient compte de la corrélation entre les deux actifs.")}</th></tr></thead><tbody>
+  return `<table class="reg pair"><thead><tr><th>Indicateur — ${h(MODEL_SHORT[m.model])}</th><th>${h(na)}</th><th>${h(nb)}</th><th>Écart (A − B) ${tip("Régression du rendement de A moins celui de B sur les mêmes facteurs : son alpha est exactement α_A − α_B, et son erreur standard tient compte de la corrélation entre les deux actifs.")}</th></tr></thead><tbody>
     ${row('α annualisé (12 × mensuel)', (r) => `${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup>`, dRow)}
     ${row('IC 95 % de l’α annualisé', (r) => `[${pct(12 * r.ciLow[0], 1)} ; ${pct(12 * r.ciHigh[0], 1)}]`, diff.ok ? `[${pct(12 * diff.result.ciLow[0], 1)} ; ${pct(12 * diff.result.ciHigh[0], 1)}]` : '')}
     ${row(`${z}-stat de l’α`, (r) => num(r.stat[0], 2))}
@@ -163,12 +163,13 @@ export function alphaPairTable(m: AssetComparison['models'][number]): string {
 }
 
 export function multiFactorPairTable(cmp: AssetComparison): string {
+  const [na, nb] = [ASSET_INFO[cmp.pair[0]].short, ASSET_INFO[cmp.pair[1]].short];
   const rows = cmp.models
-    .map(({ model, bcv, fund, diff }) => {
+    .map(({ model, a: bcv, b: fund, diff }) => {
       const a = (f: Fit) => (f.ok ? `${pct(12 * f.result.beta[0], 2)}<sup>${stars(f.result.pvalue[0])}</sup> <span class="muted small">p = ${pval(f.result.pvalue[0])}</span>` : `<span class="err">${h(f.error)}</span>`);
       return `<tr><th scope="row">${h(MODEL_SHORT[model])}</th><td>${a(bcv)}</td><td>${a(fund)}</td><td>${a(diff)}</td><td>${bcv.ok ? num(bcv.result.r2, 3) : '—'} / ${fund.ok ? num(fund.result.r2, 3) : '—'}</td></tr>`;
     })
     .join('');
-  return `<table class="reg"><thead><tr><th>Modèle</th><th>α action BCV</th><th>α fonds BCV</th><th>Écart (action − fonds)</th><th>R² action / fonds</th></tr></thead><tbody>${rows}</tbody></table>
+  return `<table class="reg"><thead><tr><th>Modèle</th><th>α ${h(na)}</th><th>α ${h(nb)}</th><th>Écart (A − B)</th><th>R² A / B</th></tr></thead><tbody>${rows}</tbody></table>
   <p class="table-note">α annualisé (12 × mensuel). *** p &lt; 0,01 · ** p &lt; 0,05 · * p &lt; 0,1. Toutes les estimations utilisent exactement les mêmes mois.</p>`;
 }

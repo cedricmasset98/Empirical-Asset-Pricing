@@ -96,12 +96,56 @@ code,
   margin: 2px 0 0;
   color: var(--muted);
 }
-.meta {
+.views {
   margin-left: auto;
-  text-align: right;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.views button {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.views button:hover {
+  color: var(--fg);
+  border-color: var(--border);
+}
+.views button[aria-current='page'] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.databar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+  padding: 6px 28px;
   font-size: 12px;
   color: var(--muted);
-  max-width: 520px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.linklike {
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.err-count {
+  color: var(--err);
+  font-weight: 600;
 }
 .icon-btn {
   border: 1px solid var(--border);
@@ -121,8 +165,8 @@ code,
   z-index: 10;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 16px;
-  align-items: flex-end;
+  gap: 10px 22px;
+  align-items: flex-start;
   padding: 12px 28px;
   background: color-mix(in srgb, var(--panel) 92%, transparent);
   backdrop-filter: blur(6px);
@@ -150,6 +194,51 @@ code,
   border-radius: 7px;
   padding: 6px 8px;
   min-height: 34px;
+}
+.controls[hidden] {
+  display: none;
+}
+.controls .group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-end;
+  margin: 0;
+  padding: 0 22px 0 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+.controls .group:last-child {
+  border-right: 0;
+  padding-right: 0;
+}
+.controls legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--fg);
+}
+.controls details.adv {
+  display: block;
+  align-self: flex-start;
+}
+.controls details.adv summary {
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--fg);
+  padding: 2px 0 6px;
+}
+.controls details.adv summary span {
+  font-weight: 500;
+}
+.adv-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-end;
 }
 .toggles {
   display: flex;
@@ -194,6 +283,58 @@ code,
 }
 .alert strong {
   margin-right: 4px;
+}
+details.notes {
+  margin: 12px 0 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 8px 14px;
+  font-size: 13px;
+}
+details.notes > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+details.notes[open] > summary {
+  margin-bottom: 4px;
+}
+details.notes .alert {
+  margin: 8px 0 0;
+}
+main > .view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+main > .view[hidden] {
+  display: none;
+}
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+.report-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  background: var(--bg);
+}
+.report-card h3 {
+  margin: 0 0 6px;
+}
+.report-card p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  flex: 1;
+}
+.panel > h3:first-of-type {
+  margin-top: 22px;
 }
 
 /* ---------------------------------------------------------------- mise en page */
@@ -518,10 +659,20 @@ ul.checks li {
     flex-wrap: wrap;
     padding: 14px 16px;
   }
-  .meta {
+  .views {
     margin-left: 0;
-    text-align: left;
     order: 3;
+    width: 100%;
+  }
+  .views button {
+    padding: 6px 10px;
+  }
+  .databar {
+    padding: 6px 16px;
+  }
+  .controls .group {
+    border-right: 0;
+    padding-right: 0;
     width: 100%;
   }
   .controls {
@@ -578,4 +729,13 @@ a.btn {
 /* un bouton masqué reste masqué même si .btn fixe display */
 .btn[hidden] {
   display: none;
+}
+
+/* attribut hidden prioritaire sur les display des contrôles */
+.controls [hidden],
+.views [hidden] {
+  display: none !important;
+}
+.controls select {
+  max-width: 340px;
 }

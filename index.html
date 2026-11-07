@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Empirical Asset Pricing — Action BCV et fonds BCV Swiss Equity A</title>
+    <title>Empirical Asset Pricing — action BCV, fonds BCV et fonds Raiffeisen face aux facteurs suisses</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%231d4f91%22/%3E%3Cpath d=%22M6 24 L26 9%22 stroke=%22%23ff8a3d%22 stroke-width=%223%22/%3E%3Ccircle cx=%2210%22 cy=%2218%22 r=%222%22 fill=%22white%22/%3E%3Ccircle cx=%2217%22 cy=%2217%22 r=%222%22 fill=%22white%22/%3E%3Ccircle cx=%2222%22 cy=%2210%22 r=%222%22 fill=%22white%22/%3E%3C/svg%3E" />
-    <meta name="description" content="Single Index Model et modèles Fama-French / Carhart pour l'action BCV (BCVN) et le fonds BCV Swiss Equity A, en CHF avec le SARON." />
+    <meta name="description" content="Single Index Model et modèles Fama-French / Carhart (facteurs suisses et européens) pour l'action BCV, le fonds BCV Swiss Equity A et le fonds Raiffeisen Futura - Swiss Stock A, en CHF avec le SARON." />
     <script>
       (function () {
         var t = null;
@@ -19,107 +19,123 @@
     <header class="top">
       <div class="brand">
         <h1>Empirical Asset Pricing</h1>
-        <p class="subtitle" id="subtitle">Action <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF</p>
+        <p class="subtitle" id="subtitle">Modèles factoriels pour des actifs suisses, en CHF</p>
       </div>
-      <div class="meta" id="data-meta" aria-live="polite">Chargement des données…</div>
-      <a class="btn" id="presentation-link" href="./report/presentation_fonds.pdf" target="_blank" rel="noopener" hidden title="Présentation grand public : le fonds a-t-il battu le marché suisse ? Lien avec Fama et French (2010)">Présentation ↗</a>
-      <a class="btn" id="valuation-link" href="./report/rapport_valorisation.pdf" target="_blank" rel="noopener" hidden title="Note vulgarisée : l'approche de gestion actions suisses de la BCV (scénario macro, analyses qualitative, fondamentale et comportementale, gestion du risque) et ce qu'en dit la performance du fonds">Processus de gestion ↗</a>
-      <a class="btn btn-primary" id="report-link" href="./report/rapport_bcv.pdf" target="_blank" rel="noopener" title="Ouvrir le rapport de synthèse vulgarisé de l'actif choisi (PDF, LaTeX) dans un nouvel onglet">Rapport PDF ↗</a>
+      <nav class="views" aria-label="Rubriques">
+        <button type="button" data-view="analyze" aria-current="page">Analyser</button>
+        <button type="button" data-view="compare">Comparer</button>
+        <button type="button" data-view="reports">Rapports</button>
+        <button type="button" data-view="data">Données et méthode</button>
+      </nav>
       <button id="theme-toggle" class="icon-btn" type="button" aria-label="Basculer le mode clair / sombre" title="Mode clair / sombre"></button>
     </header>
+    <div class="databar" id="data-meta" aria-live="polite">Chargement des données…</div>
 
     <form class="controls" id="controls" aria-label="Paramètres de l'estimation" onsubmit="return false">
-      <label>Actif
-        <select id="asset">
+      <fieldset class="group">
+        <legend>Actif et période</legend>
+        <label id="asset-wrap">Actif
+          <select id="asset">
           <option value="BCV">Action BCV — BCVN.SW</option>
           <option value="FUND">Fonds BCV Swiss Equity A — CH0006018706</option>
           <option value="RAIF">Fonds Raiffeisen Futura - Swiss Stock A — CH0011980981</option>
-        </select>
-      </label>
-      <label>Début
-        <input type="month" id="start" required />
-      </label>
-      <label>Fin
-        <input type="month" id="end" required />
-      </label>
-      <label>Fréquence
-        <select id="frequency">
-          <option value="monthly" selected>Mensuelle</option>
-          <option value="weekly" disabled>Hebdomadaire — non disponible (v1)</option>
-          <option value="daily" disabled>Journalière — non disponible (v1)</option>
-        </select>
-      </label>
-      <label>Marché
-        <select id="universe">
-          <option value="SPI">SPI Total Return (CHF)</option>
-          <option value="EUROPE">Europe Fama-French (CHF)</option>
-          <option value="SWISS">Suisse : SPI + facteurs JKP (CHF)</option>
-        </select>
-      </label>
-      <label>Modèle
-        <select id="model">
-          <option value="CAPM">CAPM / Single Index</option>
-          <option value="FF3">Fama-French 3 facteurs</option>
-          <option value="CARHART">Carhart 4 facteurs</option>
-          <option value="FF5">Fama-French 5 facteurs</option>
-        </select>
-      </label>
-      <label>Inférence
-        <select id="cov">
-          <option value="classical">OLS classique</option>
-          <option value="HC3">Robuste HC3</option>
-          <option value="HAC">Newey-West HAC</option>
-        </select>
-      </label>
-      <label id="hac-wrap" hidden>Retards NW
-        <select id="hac-lags"></select>
-      </label>
-      <label>Fenêtre mobile
-        <select id="window">
-          <option value="36">36 mois</option>
-          <option value="60" selected>60 mois</option>
-          <option value="120">120 mois</option>
-        </select>
-      </label>
-      <div class="toggles">
-        <label class="check"><input type="checkbox" id="band" checked /> Intervalles de confiance</label>
-        <label class="check"><input type="checkbox" id="by-year" /> Couleur par année</label>
-      </div>
+          </select>
+        </label>
+        <label id="pair-a-wrap" hidden>Actif A
+          <select id="asset-a">
+          <option value="BCV">Action BCV — BCVN.SW</option>
+          <option value="FUND">Fonds BCV Swiss Equity A — CH0006018706</option>
+          <option value="RAIF">Fonds Raiffeisen Futura - Swiss Stock A — CH0011980981</option>
+          </select>
+        </label>
+        <label id="pair-b-wrap" hidden>Actif B
+          <select id="asset-b">
+          <option value="BCV">Action BCV — BCVN.SW</option>
+          <option value="FUND">Fonds BCV Swiss Equity A — CH0006018706</option>
+          <option value="RAIF">Fonds Raiffeisen Futura - Swiss Stock A — CH0011980981</option>
+          </select>
+        </label>
+        <label>Début
+          <input type="month" id="start" required />
+        </label>
+        <label>Fin
+          <input type="month" id="end" required />
+        </label>
+      </fieldset>
+      <fieldset class="group">
+        <legend>Modèle</legend>
+        <label>Facteurs
+          <select id="universe">
+            <option value="SWISS">Suisses : SPI + JKP (recommandé)</option>
+            <option value="EUROPE">Européens : Fama-French (comparaison)</option>
+          </select>
+        </label>
+        <label>Modèle
+          <select id="model">
+            <option value="CAPM">CAPM / Single Index</option>
+            <option value="FF3">Fama-French 3 facteurs</option>
+            <option value="CARHART">Carhart 4 facteurs</option>
+            <option value="FF5">Fama-French 5 facteurs</option>
+          </select>
+        </label>
+      </fieldset>
+      <details class="group adv" id="adv">
+        <summary>Options avancées <span class="muted" id="adv-summary"></span></summary>
+        <div class="adv-body">
+          <label>Inférence
+            <select id="cov">
+              <option value="classical">OLS classique</option>
+              <option value="HC3">Robuste HC3</option>
+              <option value="HAC">Newey-West HAC</option>
+            </select>
+          </label>
+          <label id="hac-wrap" hidden>Retards NW
+            <select id="hac-lags"></select>
+          </label>
+          <label>Fenêtre mobile
+            <select id="window">
+              <option value="36">36 mois</option>
+              <option value="60" selected>60 mois</option>
+              <option value="120">120 mois</option>
+            </select>
+          </label>
+          <div class="toggles">
+            <label class="check"><input type="checkbox" id="band" checked /> Intervalles de confiance</label>
+            <label class="check"><input type="checkbox" id="by-year" /> Couleur par année</label>
+          </div>
+        </div>
+      </details>
     </form>
 
     <div id="alerts" class="alerts" aria-live="polite"></div>
 
     <main>
-      <section id="cards" class="cards" aria-label="Statistiques synthétiques"></section>
+      <section class="view" id="view-analyze">
+        <section id="cards" class="cards" aria-label="Statistiques synthétiques"></section>
 
-      <section class="panel">
-        <div class="panel-head">
-          <h2 id="reg-title">Régression</h2>
-          <div class="actions">
-            <button type="button" id="export-table" class="btn">Tableau (CSV)</button>
-            <button type="button" id="export-sample" class="btn">Échantillon (CSV)</button>
+        <nav class="tabs" role="tablist" aria-label="Résultats de l'estimation">
+          <button role="tab" type="button" data-tab="results" aria-selected="true">Résultats</button>
+          <button role="tab" type="button" data-tab="fitted" aria-selected="false">Ajustement</button>
+          <button role="tab" type="button" data-tab="diagnostics" aria-selected="false">Diagnostics</button>
+          <button role="tab" type="button" data-tab="rolling" aria-selected="false">Stabilité dans le temps</button>
+          <button role="tab" type="button" data-tab="comparison" aria-selected="false">Comparaison des modèles</button>
+        </nav>
+
+        <section class="panel tab-panel" id="tab-results" role="tabpanel">
+          <div class="panel-head">
+            <h2 id="reg-title">Régression</h2>
+            <div class="actions">
+              <button type="button" id="export-table" class="btn">Tableau (CSV)</button>
+              <button type="button" id="export-sample" class="btn">Échantillon (CSV)</button>
+            </div>
           </div>
-        </div>
-        <div id="reg-table" class="table-wrap"></div>
-      </section>
-
-      <nav class="tabs" role="tablist" aria-label="Analyses">
-        <button role="tab" type="button" data-tab="scatter" aria-selected="true">A. Single Index</button>
-        <button role="tab" type="button" data-tab="fitted" aria-selected="false">B. Observé vs prédit</button>
-        <button role="tab" type="button" data-tab="diagnostics" aria-selected="false">C. Diagnostics</button>
-        <button role="tab" type="button" data-tab="rolling" aria-selected="false">D. Régression mobile</button>
-        <button role="tab" type="button" data-tab="comparison" aria-selected="false">E. Comparaison des modèles</button>
-        <button role="tab" type="button" data-tab="versus" aria-selected="false">F. Action BCV vs Fonds BCV</button>
-        <button role="tab" type="button" data-tab="data" aria-selected="false">Données &amp; méthodologie</button>
-      </nav>
-
-      <section class="panel tab-panel" id="tab-scatter" role="tabpanel">
-        <h2 id="scatter-title">Single Index Model : action BCV contre le SPI Total Return</h2>
-        <p class="lead" id="scatter-lead"></p>
-        <div id="scatter-note"></div>
-        <div id="scatter-stats" class="strip"></div>
-        <div id="chart-scatter" class="chart chart-lg"></div>
-      </section>
+          <div id="reg-table" class="table-wrap"></div>
+          <h3 id="scatter-title">Relation avec le marché (Single Index)</h3>
+          <p class="lead" id="scatter-lead"></p>
+          <div id="scatter-note"></div>
+          <div id="scatter-stats" class="strip"></div>
+          <div id="chart-scatter" class="chart chart-lg"></div>
+        </section>
 
       <section class="panel tab-panel" id="tab-fitted" role="tabpanel" hidden>
         <h2>Rendements observés et prédits</h2>
@@ -127,7 +143,6 @@
         <div id="chart-fitted" class="chart"></div>
         <div id="chart-fitted-scatter" class="chart chart-sm"></div>
       </section>
-
       <section class="panel tab-panel" id="tab-diagnostics" role="tabpanel" hidden>
         <h2>Diagnostics des résidus</h2>
         <p class="lead" id="diag-lead"></p>
@@ -139,13 +154,11 @@
         </div>
         <div id="tests-table" class="table-wrap"></div>
       </section>
-
       <section class="panel tab-panel" id="tab-rolling" role="tabpanel" hidden>
-        <h2>Régression mobile</h2>
+        <h2>Stabilité dans le temps : régression mobile</h2>
         <p class="lead" id="rolling-lead"></p>
         <div id="rolling-charts"></div>
       </section>
-
       <section class="panel tab-panel" id="tab-comparison" role="tabpanel" hidden>
         <div class="panel-head">
           <h2>Comparaison des modèles</h2>
@@ -155,20 +168,19 @@
         <div id="chart-comparison" class="chart"></div>
         <div id="comparison-table" class="table-wrap"></div>
       </section>
+      </section>
 
-      <section class="panel tab-panel" id="tab-versus" role="tabpanel" hidden>
+      <section class="view" id="view-compare" hidden>
+      <section class="panel" id="versus-panel">
         <div class="panel-head">
-          <h2>Action BCV vs Fonds BCV</h2>
+          <h2 id="vs-title">Comparer deux actifs</h2>
           <div class="actions">
-            <a class="btn btn-primary" href="./report/rapport_comparaison.pdf" target="_blank" rel="noopener">Rapport comparatif (PDF) ↗</a>
-            <a class="btn" href="./report/rapport_valorisation.pdf" target="_blank" rel="noopener">Processus de gestion du fonds (PDF) ↗</a>
-            <button type="button" id="export-versus" class="btn">Comparaison action / fonds (CSV)</button>
+            <a class="btn btn-primary" id="vs-report" href="./report/rapport_comparaison.pdf" target="_blank" rel="noopener" hidden>Rapport comparatif (PDF) ↗</a>
+            <button type="button" id="export-versus" class="btn">Comparaison (CSV)</button>
           </div>
         </div>
-        <p class="lead"><strong>La banque a-t-elle généré davantage de rendement ajusté des facteurs pour ses propres actionnaires que pour les investisseurs de son fonds actions suisses&nbsp;?</strong></p>
-        <div class="method">
-          <p>Les deux alphas ne mesurent pas la même chose. L’<b>alpha de l’action BCV</b> est la part du rendement excédentaire historique de l’action que les facteurs retenus n’expliquent pas : il reflète l’ensemble des activités de la banque (crédit, gestion de fortune, gestion d’actifs…) et la façon dont le marché les a valorisées. L’<b>alpha du fonds BCV Swiss Equity A</b> est la part du rendement excédentaire du fonds, <em>net des frais incorporés dans sa VNI</em> et distributions réinvesties, que ces mêmes facteurs n’expliquent pas : il reflète le travail de sélection d’actions de BCV Asset Management pour le compte des porteurs de parts. Les revenus de gestion du fonds font partie des revenus de la banque ; la comparaison ne permet toutefois pas d’établir de lien de cause à effet entre les deux.</p>
-        </div>
+        <p class="lead" id="vs-question"></p>
+        <div class="method" id="vs-method"></div>
         <div id="vs-sample"></div>
 
         <h3>A. Performances, dividendes et distributions réinvestis</h3>
@@ -178,12 +190,12 @@
         <h3 id="vs-alpha-title">B. Alphas comparés</h3>
         <div id="vs-alpha-table" class="table-wrap"></div>
         <div id="chart-vs-alpha" class="chart"></div>
-        <p class="table-note">Les deux actifs sont estimés sur les mêmes mois, avec le même marché et la même méthode d’inférence. L’écart d’alpha est estimé et testé directement par la régression du rendement de l’action moins celui du fonds sur les mêmes facteurs.</p>
+        <p class="table-note">Les deux actifs sont estimés sur les mêmes mois, avec les mêmes facteurs et la même méthode d’inférence. L’écart d’alpha est estimé et testé directement par la régression du rendement de A moins celui de B sur les mêmes facteurs.</p>
 
         <h3>C. Single Index Models côte à côte (même échelle)</h3>
         <div class="grid-2">
-          <div id="chart-vs-sim-bcv" class="chart"></div>
-          <div id="chart-vs-sim-fund" class="chart"></div>
+          <div id="chart-vs-sim-a" class="chart"></div>
+          <div id="chart-vs-sim-b" class="chart"></div>
         </div>
 
         <h3>D. L’alpha résiste-t-il aux autres facteurs&nbsp;?</h3>
@@ -193,38 +205,53 @@
         <div id="vs-reading" class="method"></div>
         <div class="method">
           <p><b>Ce que la comparaison permet de dire.</b> Sur une période identique, elle mesure si l’action et le fonds ont dégagé des rendements supérieurs ou inférieurs à ce que leurs expositions aux mêmes facteurs laissaient attendre, et si l’écart entre les deux est statistiquement distinct de zéro.</p>
-          <p><b>Ce qu’elle ne permet pas de dire.</b> Un alpha plus élevé n’est pas synonyme de meilleur placement : l’action concentre le risque d’une seule entreprise, alors que le fonds est diversifié, ce qui se voit dans leurs volatilités résiduelles. Un alpha de fonds proche de zéro ou négatif ne prouve pas une mauvaise gestion : il intègre des frais, qui rémunèrent un service, et reste estimé avec incertitude. Enfin, l’action BCV a été choisie a posteriori ; son alpha passé ne préjuge pas de l’avenir.</p>
+          <p><b>Ce qu’elle ne permet pas de dire.</b> Un alpha plus élevé n’est pas synonyme de meilleur placement : une action seule concentre le risque d’une entreprise, alors qu’un fonds est diversifié, ce qui se voit dans les volatilités résiduelles. Un alpha de fonds proche de zéro ou négatif ne prouve pas une mauvaise gestion : il est net de frais, qui rémunèrent un service, et reste estimé avec incertitude. Enfin, un actif choisi a posteriori (comme l’action BCV) peut afficher un alpha passé qui ne préjuge pas de l’avenir.</p>
         </div>
       </section>
+      </section>
 
-      <section class="panel tab-panel" id="tab-data" role="tabpanel" hidden>
-        <h2>Sources des données</h2>
-        <div id="sources" class="table-wrap"></div>
+      <section class="view" id="view-reports" hidden>
+        <section class="panel">
+          <h2>Rapports et notes (PDF)</h2>
+          <p class="lead">Documents vulgarisés, rédigés en LaTeX et régénérés automatiquement à chaque mise à jour des données. Ils portent sur des spécifications de référence (échantillon maximal, erreurs standards de Newey-West), et non sur les paramètres choisis dans « Analyser » ou « Comparer ». Ils s’ouvrent dans un nouvel onglet.</p>
+          <div class="report-grid">
+            <article class="report-card">
+              <h3>Action BCV</h3>
+              <p>Rapport de synthèse : la BCV a-t-elle battu le marché suisse, robustesse aux autres facteurs, stabilité dans le temps et limites de l’exercice.</p>
+              <div class="actions"><a class="btn btn-primary" href="./report/rapport_bcv.pdf" target="_blank" rel="noopener">Ouvrir le rapport ↗</a><a class="btn" href="./report/rapport_bcv_latex.zip" download>Sources LaTeX</a></div>
+            </article>
+            <article class="report-card">
+              <h3>Fonds BCV Swiss Equity A</h3>
+              <p>Rapport de synthèse : le fonds a-t-il fait mieux que le SPI après frais, et que mesure son alpha.</p>
+              <div class="actions"><a class="btn btn-primary" href="./report/rapport_fonds.pdf" target="_blank" rel="noopener">Ouvrir le rapport ↗</a><a class="btn" href="./report/rapport_fonds_latex.zip" download>Sources LaTeX</a></div>
+            </article>
+            <article class="report-card">
+              <h3>Action BCV ou fonds BCV&nbsp;?</h3>
+              <p>Rapport comparatif : la banque a-t-elle davantage créé de valeur pour ses actionnaires que pour les porteurs de son fonds actions suisses&nbsp;? Écart d’alpha testé directement.</p>
+              <div class="actions"><a class="btn btn-primary" href="./report/rapport_comparaison.pdf" target="_blank" rel="noopener">Ouvrir le rapport ↗</a><a class="btn" href="./report/rapport_comparaison_latex.zip" download>Sources LaTeX</a></div>
+            </article>
+            <article class="report-card">
+              <h3>Processus de gestion actions suisses de la BCV</h3>
+              <p>Note : scénario macroéconomique, analyses qualitative, fondamentale (modèle Edwards-Bell-Ohlson) et comportementale, gestion du risque, confrontés à la performance mesurée du fonds.</p>
+              <div class="actions"><a class="btn btn-primary" href="./report/rapport_valorisation.pdf" target="_blank" rel="noopener">Ouvrir la note ↗</a><a class="btn" href="./report/rapport_valorisation_latex.zip" download>Sources LaTeX</a></div>
+            </article>
+            <article class="report-card">
+              <h3>Présentation : le fonds BCV face au marché</h3>
+              <p>Diaporama grand public : le fonds a-t-il battu le marché suisse, et pourquoi le résultat rejoint celui de Fama et French (2010) sur les fonds gérés activement.</p>
+              <div class="actions"><a class="btn btn-primary" href="./report/presentation_fonds.pdf" target="_blank" rel="noopener">Ouvrir la présentation ↗</a></div>
+            </article>
+          </div>
+          <p class="table-note">Aucun rapport n’est encore produit pour le fonds Raiffeisen Futura - Swiss Stock A : utilisez « Analyser » ou « Comparer ».</p>
+        </section>
+      </section>
 
-        <h2>Rapports de synthèse (PDF, LaTeX)</h2>
-        <p>Rapports vulgarisés : résultats principaux, robustesse, stabilité dans le temps et <strong>limites de l’exercice</strong>. Ils sont régénérés automatiquement à chaque mise à jour des données, pour des spécifications de référence (échantillon maximal, erreurs standards de Newey-West). Ils ne reflètent donc pas les paramètres choisis ci-dessus ni des données importées manuellement.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="./report/rapport_bcv.pdf" target="_blank" rel="noopener">Action BCV ↗</a>
-          <a class="btn btn-primary" href="./report/rapport_fonds.pdf" target="_blank" rel="noopener">Fonds BCV Swiss Equity A ↗</a>
-          <a class="btn btn-primary" href="./report/rapport_comparaison.pdf" target="_blank" rel="noopener">Action BCV vs Fonds BCV ↗</a>
-        </div>
-        <p>Note vulgarisée sur l'approche de gestion actions suisses de la BCV, commune à ses fonds en actions suisses (brochure de janvier 2021) : scénario macroéconomique, analyses qualitative, fondamentale (modèle Edwards-Bell-Ohlson) et comportementale, gestion du risque relatif. Elle est confrontée à la performance mesurée du fonds, y compris son exposition au momentum.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="./report/rapport_valorisation.pdf" target="_blank" rel="noopener">Processus de gestion actions suisses ↗</a>
-          <a class="btn" href="./report/rapport_valorisation_latex.zip" download>Sources LaTeX (.zip)</a>
-        </div>
-        <p>Présentation grand public : le fonds BCV Swiss Equity A a-t-il battu le marché suisse, et pourquoi le résultat rejoint celui de Fama et French (2010) sur les fonds gérés activement.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="./report/presentation_fonds.pdf" target="_blank" rel="noopener">Présentation : le fonds face au marché ↗</a>
-        </div>
-        <div class="actions">
-          <a class="btn" href="./report/rapport_bcv_latex.zip" download>Sources LaTeX — action (.zip)</a>
-          <a class="btn" href="./report/rapport_fonds_latex.zip" download>Sources LaTeX — fonds (.zip)</a>
-          <a class="btn" href="./report/rapport_comparaison_latex.zip" download>Sources LaTeX — comparaison (.zip)</a>
-        </div>
+      <section class="view" id="view-data" hidden>
+        <section class="panel">
+          <h2>Sources des données</h2>
+          <div id="sources" class="table-wrap"></div>
 
         <h2>Import manuel (CSV)</h2>
-        <p>Si une source n’est pas accessible, importez un fichier CSV : colonne <code>date</code> (AAAA-MM) puis les colonnes du schéma, en <strong>rendements mensuels décimaux</strong> (0.012 = 1,2 %). Colonnes obligatoires : <code>bcv_ret</code>, <code>rf_saron</code> ; le Single Index exige <code>spi_ret</code> ; les modèles multifactoriels exigent les facteurs déjà convertis en CHF (<code>mkt_eu_chf</code>, <code>smb3_chf</code>, <code>hml3_chf</code>, <code>wml_chf</code>, <code>smb5_chf</code>, <code>hml5_chf</code>, <code>rmw5_chf</code>, <code>cma5_chf</code>). Les cellules vides sont des valeurs manquantes (aucune interpolation). Les données importées restent dans votre navigateur.</p>
+        <p>Si une source n’est pas accessible, importez un fichier CSV : colonne <code>date</code> (AAAA-MM) puis les colonnes du schéma, en <strong>rendements mensuels décimaux</strong> (0.012 = 1,2 %). Colonnes obligatoires : au moins un actif (<code>bcv_ret</code>, <code>fund_ret</code> ou <code>raif_ret</code>) et <code>rf_saron</code> ; le Single Index exige <code>spi_ret</code> ; les modèles multifactoriels exigent les facteurs déjà convertis en CHF : univers suisse <code>smb_ch</code>, <code>hml_ch</code>, <code>rmw_ch</code>, <code>cma_ch</code>, <code>mom_ch</code> ; univers européen <code>mkt_eu_chf</code>, <code>smb3_chf</code>, <code>hml3_chf</code>, <code>wml_chf</code>, <code>smb5_chf</code>, <code>hml5_chf</code>, <code>rmw5_chf</code>, <code>cma5_chf</code>. Les cellules vides sont des valeurs manquantes (aucune interpolation). Les données importées restent dans votre navigateur.</p>
         <div class="actions">
           <label class="btn file-btn">Importer un CSV<input type="file" id="csv-input" accept=".csv,text/csv" /></label>
           <button type="button" id="export-dataset" class="btn">Télécharger les données actuelles (CSV)</button>
@@ -235,18 +262,19 @@
         <div class="method">
           <h3>Rendements</h3>
           <p>Fonds BCV Swiss Equity A : indice officiel de performance de Gérifonds « dividendes réinvestis » (distributions brutes réinvesties à la date ex, net des frais incorporés dans la VNI), pris en fin de mois. Le pipeline le recalcule à partir des VNI et de la table des distributions : chaque distribution doit être retrouvée une et une seule fois, et la performance YTD doit égaler celle publiée.</p>
-          <p>Fonds Raiffeisen Futura - Swiss Stock A (CH0011980981, géré par Vontobel Asset Management pour Raiffeisen, indice de référence SPI) : série « Total Return Chart Price » de Swiss Fund Data (SIX Financial Information / AMAS), distributions réinvesties à la date ex, nette des frais, quotidienne depuis novembre 2009, prise en fin de mois. Le pipeline vérifie que, hors distributions, son rendement quotidien égale celui de la VNI publiée et que chaque saut correspond à une distribution plausible. Les rendements annuels concordent avec ceux de la fiche mensuelle du fonds (2023 : 6,6 % ; 2024 : 5,9 % ; 2025 : 11,0 %). Aucun rapport de synthèse n'est produit pour ce fonds ; l'onglet F compare l'action et le fonds BCV.</p>
-          <p>Univers « Suisse » : marché = SPI TR, facteurs SMB, HML, RMW, CMA et MOM suisses de Global Factor Data (Jensen, Kelly et Pedersen, 2023, <i>Journal of Finance</i>), caractéristiques <span class="mono">market_equity</span>, <span class="mono">be_me</span>, <span class="mono">ope_be</span>, <span class="mono">at_gr1</span> et <span class="mono">ret_12_1</span>. Ce sont des portefeuilles long-short par terciles, pondérés par la capitalisation plafonnée, et non les tris 2×3 de Fama-French ; les mêmes SMB et HML servent pour FF3 et FF5. Publiés en USD, ils sont convertis en CHF par F<sub>CHF</sub> = F<sub>USD</sub>(1+s), comme les facteurs européens. Les mois où un facteur repose sur moins de 30 titres sont écartés. La publication étant annuelle, l'échantillon de cet univers s'arrête au dernier mois publié, ce qui raccourcit aussi l'échantillon commun de l'onglet E.</p>
+          <p>Fonds Raiffeisen Futura - Swiss Stock A (CH0011980981, géré par Vontobel Asset Management pour Raiffeisen, indice de référence SPI) : série « Total Return Chart Price » de Swiss Fund Data (SIX Financial Information / AMAS), distributions réinvesties à la date ex, nette des frais, quotidienne depuis novembre 2009, prise en fin de mois. Le pipeline vérifie que, hors distributions, son rendement quotidien égale celui de la VNI publiée et que chaque saut correspond à une distribution plausible. Les rendements annuels concordent avec ceux de la fiche mensuelle du fonds (2023 : 6,6 % ; 2024 : 5,9 % ; 2025 : 11,0 %). Aucun rapport de synthèse n'est produit pour ce fonds ; la rubrique « Comparer » permet de le confronter au fonds BCV.</p>
+          <p>Univers « Suisse » : marché = SPI TR, facteurs SMB, HML, RMW, CMA et MOM suisses de Global Factor Data (Jensen, Kelly et Pedersen, 2023, <i>Journal of Finance</i>), caractéristiques <span class="mono">market_equity</span>, <span class="mono">be_me</span>, <span class="mono">ope_be</span>, <span class="mono">at_gr1</span> et <span class="mono">ret_12_1</span>. Ce sont des portefeuilles long-short par terciles, pondérés par la capitalisation plafonnée, et non les tris 2×3 de Fama-French ; les mêmes SMB et HML servent pour FF3 et FF5. Publiés en USD, ils sont convertis en CHF par F<sub>CHF</sub> = F<sub>USD</sub>(1+s), comme les facteurs européens. Les mois où un facteur repose sur moins de 30 titres sont écartés. La publication étant annuelle, l'échantillon de cet univers s'arrête au dernier mois publié, ce qui raccourcit aussi l'échantillon commun de la comparaison des modèles.</p>
           <p>BCV : R<sub>t</sub> = P<sup>adj</sup><sub>t</sub>/P<sup>adj</sup><sub>t−1</sub> − 1 sur le dernier cours de chaque mois, P<sup>adj</sup> étant ajusté des dividendes et opérations sur titres (dont le split 10:1 de mai 2020, contrôlé par le pipeline). Marché suisse : SPI, indice de performance (dividendes réinvestis), jamais remplacé par un indice de prix. Un mois incomplet ou manquant rend les rendements adjacents manquants : aucun rendement multi-mois n’est présenté comme mensuel.</p>
           <h3>Taux sans risque</h3>
           <p>Le SARON est un taux overnight annualisé. Le rendement réalisé du mois m est I(fin m)/I(fin m−1) − 1 avec l’indice capitalisé I<sub>i+1</sub> = I<sub>i</sub>(1 + r<sub>i</sub>·n<sub>i</sub>/360), n<sub>i</sub> = jours calendaires jusqu’au fixing suivant (ACT/360). Le SARON annualisé n’est jamais soustrait directement à un rendement mensuel.</p>
           <h3>Facteurs Fama-French européens en CHF</h3>
-          <p>Les séries de K. French sont en USD avec un taux sans risque américain. Avec s<sub>t</sub> la variation mensuelle du cours USD/CHF : marché européen en CHF = (1 + Mkt−RF + RF<sub>US</sub>)(1 + s) − 1, puis rendement excédentaire = marché CHF − SARON ; facteurs long-short (SMB, HML, RMW, CMA, WML) : F<sub>CHF</sub> = F<sub>USD</sub>(1 + s), résultat exact puisque chaque jambe se convertit par (1 + R<sub>USD</sub>)(1 + s). L’univers « SPI + facteurs européens » est une <strong>variante hybride</strong>, signalée comme telle.</p>
+          <p>Les séries de K. French sont en USD avec un taux sans risque américain. Avec s<sub>t</sub> la variation mensuelle du cours USD/CHF : marché européen en CHF = (1 + Mkt−RF + RF<sub>US</sub>)(1 + s) − 1, puis rendement excédentaire = marché CHF − SARON ; facteurs long-short (SMB, HML, RMW, CMA, WML) : F<sub>CHF</sub> = F<sub>USD</sub>(1 + s), résultat exact puisque chaque jambe se convertit par (1 + R<sub>USD</sub>)(1 + s). L’univers européen sert de <strong>comparaison</strong> : son marché n’est pas celui d’un actif suisse, ce qui peut faire apparaître un alpha qui n’est qu’un effet de la référence choisie. La variante hybride (marché SPI et facteurs européens) n’est plus proposée depuis l’ajout des facteurs suisses.</p>
           <h3>Inférence</h3>
           <p>OLS avec constante. Classique : V = s²(X′X)⁻¹, tests de Student à n−k ddl, test F global. HC3 : V = (X′X)⁻¹X′diag(e²/(1−h)²)X(X′X)⁻¹. Newey-West : noyau de Bartlett, L = ⌊4(n/100)<sup>2/9</sup>⌋ par défaut, sans correction de petit échantillon. Pour HC3 et HAC, l’inférence est asymptotique (loi normale) et le test global est un test de Wald χ²(k−1). Les coefficients ne changent pas avec la méthode d’inférence. Alpha annualisé = 12 × alpha mensuel.</p>
           <h3>Validation</h3>
           <p>Le moteur de calcul exécuté dans le navigateur est testé automatiquement contre statsmodels (coefficients, erreurs standards, tests, intervalles, diagnostics, fenêtres mobiles) à chaque mise à jour des données.</p>
         </div>
+        </section>
       </section>
     </main>
 

@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { compareModels, diagnose, fitModel, rolling, type Settings } from '../src/ui/analysis.ts';
+import { compareAssets, compareModels, diagnose, fitModel, rolling, type Settings } from '../src/ui/analysis.ts';
 import { parseCsvDataset, datasetToCsv, validateDataset, DatasetError } from '../src/data/loader.ts';
 import type { Dataset } from '../src/data/types.ts';
 
@@ -36,13 +36,14 @@ test('série absente : erreur explicite', () => {
   assert.equal(f.ok, false);
   assert.match((f as { error: string }).error, /wml_chf/);
   const cmp = compareModels(partial, st);
-  assert.equal(cmp.excluded.length, 2);
+  assert.equal(cmp.excluded.length, 1); // Carhart européen (l'univers suisse a son propre momentum)
   assert.ok(cmp.fits.filter((x) => x.ok).every((x) => x.ok && x.result.n === cmp.commonN));
 });
 
-test('comparaison : 12 spécifications (3 univers) sur le même échantillon', () => {
+test('comparaison : 8 spécifications (univers suisse et européen) sur le même échantillon', () => {
   const cmp = compareModels(ds, st);
-  assert.equal(cmp.fits.length, 12);
+  assert.equal(cmp.fits.length, 8);
+  assert.deepEqual([...new Set(cmp.fits.map((f) => f.universe))], ['SWISS', 'EUROPE']);
   const ns = cmp.fits.map((f) => (f.ok ? f.result.n : -1));
   assert.ok(ns.every((n) => n === cmp.commonN), JSON.stringify(ns));
 });
@@ -87,17 +88,17 @@ test('action vs fonds : échantillon identique et écart d’alpha cohérent', a
   assert.equal(cmp.perf.length, 4);
   assert.ok(cmp.perf.every((p) => p.path.length === cmp.dates.length + 1));
   for (const m of cmp.models) {
-    if (!m.bcv.ok || !m.fund.ok || !m.diff.ok) throw new Error('ajustement manquant');
-    assert.equal(m.bcv.result.n, cmp.dates.length);
-    assert.equal(m.fund.result.n, cmp.dates.length);
-    assert.deepEqual(m.bcv.sample.dates, m.fund.sample.dates);
-    assert.ok(Math.abs(m.diff.result.beta[0] - (m.bcv.result.beta[0] - m.fund.result.beta[0])) < 1e-12);
+    if (!m.a.ok || !m.b.ok || !m.diff.ok) throw new Error('ajustement manquant');
+    assert.equal(m.a.result.n, cmp.dates.length);
+    assert.equal(m.b.result.n, cmp.dates.length);
+    assert.deepEqual(m.a.sample.dates, m.b.sample.dates);
+    assert.ok(Math.abs(m.diff.result.beta[0] - (m.a.result.beta[0] - m.b.result.beta[0])) < 1e-12);
   }
   const pair = singleIndexPair(ds, st, cmp);
-  if (!pair.bcv.ok || !pair.fund.ok) throw new Error('Single Index indisponible');
-  assert.deepEqual(pair.bcv.sample.dates, cmp.dates);
+  if (!pair.a.ok || !pair.b.ok) throw new Error('Single Index indisponible');
+  assert.deepEqual(pair.a.sample.dates, cmp.dates);
   // fonds synthétique : bêta proche de 0,95, risque résiduel bien plus faible que l'action
-  assert.ok(pair.fund.result.beta[1] > 0.85 && pair.fund.result.sigma < pair.bcv.result.sigma / 2);
+  assert.ok(pair.b.result.beta[1] > 0.85 && pair.b.result.sigma < pair.a.result.sigma / 2);
 });
 
 test('action vs fonds : erreur explicite si le fonds est absent', async () => {
@@ -131,4 +132,21 @@ test('univers suisse : facteurs JKP, modèle cohérent, échantillon limité à 
   const c = fitModel(ds, 'CAPM', 'SWISS', st);
   const s = fitModel(ds, 'CAPM', 'SPI', st);
   assert.ok(c.ok && s.ok && c.result.beta[1] === s.result.beta[1]); // CAPM suisse = Single Index
+});
+
+test('comparaison de deux fonds quelconques : différence = α_A − α_B', () => {
+  const cmp = compareAssets(ds, { ...st, universe: 'SWISS' }, ['FUND', 'RAIF']);
+  assert.ok(cmp.ok, cmp.error);
+  assert.deepEqual(cmp.pair, ['FUND', 'RAIF']);
+  assert.equal(cmp.perf[1].label, 'Fonds Raiffeisen Futura - Swiss Stock A');
+  for (const m of cmp.models) {
+    if (!m.a.ok || !m.b.ok || !m.diff.ok) throw new Error('ajustement manquant');
+    assert.ok(Math.abs(m.diff.result.beta[0] - (m.a.result.beta[0] - m.b.result.beta[0])) < 1e-12);
+  }
+  // y de la différence = R_fonds − R_Raiffeisen (sans taux sans risque)
+  const d = cmp.models[0].diff;
+  if (!d.ok) throw new Error(d.error);
+  const i = ds.dates.indexOf(d.sample.dates[0]);
+  assert.ok(Math.abs(d.sample.y[0] - ((ds.data.fund_ret![i] as number) - (ds.data.raif_ret![i] as number))) < 1e-15);
+  assert.equal(compareAssets(ds, st, ['RAIF', 'RAIF']).ok, false);
 });
