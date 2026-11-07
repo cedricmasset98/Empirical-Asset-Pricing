@@ -362,3 +362,52 @@ def fetch_fund():
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")
         return None, info
+
+
+# --------------------------------------------------------------------- Fonds Raiffeisen Futura - Swiss Stock A
+
+def fetch_raif():
+    """Série Swiss Fund Data « Total Return Chart Price » du fonds Raiffeisen Futura - Swiss Stock A.
+
+    Retourne (SfdSeries | None, info). Repli : data/manual/raif_tr_daily.csv (date,tr_index).
+    """
+    from .raif import SfdSeries, parse_csv, parse_ter
+
+    info: Info = {
+        "id": "raif", "name": f"{C.RAIF['name']} ({C.RAIF['isin']}) — rendement total, distributions réinvesties",
+        "provider": "Swiss Fund Data (SIX Financial Information / AMAS), export quotidien « Total Return Chart Price »",
+        "url": C.SFD_SHOW_URL, "license": C.LICENSES["swissfunddata"],
+        "columns": ["raif_ret"], "retrieved_at": _now(),
+    }
+    try:
+        manual = _manual_csv("raif_tr_daily.csv", "tr_index")
+        if manual is not None:
+            info.update(status="manual", provider="Import manuel data/manual/raif_tr_daily.csv", coverage=_coverage(manual.index))
+            return SfdSeries(nav=pd.Series(dtype=float), tr=manual), info
+
+        def run():
+            s = requests.Session()
+            s.headers.update(C.HTTP_HEADERS)
+            s.get(C.SFD_ENTRY_URL, timeout=60).raise_for_status()
+            # page d'avertissement : accès en tant qu'investisseur privé
+            s.post(C.SFD_ENTRY_URL, data={"_action_set": "einverstanden"}, timeout=60).raise_for_status()
+            csv = s.get(C.SFD_CSV_URL, timeout=120)
+            csv.raise_for_status()
+            if "Total Return Chart Price" not in csv.text[:2000]:
+                raise RuntimeError("Export Swiss Fund Data inattendu (avertissement non accepté ou format modifié).")
+            show = s.get(C.SFD_SHOW_URL, timeout=120).text
+            return csv.text, show
+
+        text, show = _retry(run)
+        ser = parse_csv(text)
+        if len(ser.tr) < 1000:
+            raise RuntimeError(f"Historique Swiss Fund Data trop court ({len(ser.tr)} points).")
+        t = parse_ter(show)
+        if t is not None:
+            ser.ter, ser.ter_date = t
+        _save_raw("raif_swissfunddata_daily.csv", pd.DataFrame({"nav": ser.nav, "tr_index": ser.tr}))
+        info.update(status="ok", coverage=_coverage(ser.tr.index), message=f"{len(ser.tr)} valeurs quotidiennes (VNI et rendement total).")
+        return ser, info
+    except Exception as exc:  # noqa: BLE001
+        info.update(status="error", message=f"{type(exc).__name__}: {exc}")
+        return None, info

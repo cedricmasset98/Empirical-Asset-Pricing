@@ -13,18 +13,21 @@ export type ModelId = 'CAPM' | 'FF3' | 'CARHART' | 'FF5';
  * régression donne exactement α_BCV − α_fonds (mêmes dates, mêmes régresseurs),
  * avec une erreur standard qui tient compte de la corrélation des deux actifs.
  */
-export type AssetId = 'BCV' | 'FUND' | 'DIFF';
-export const ASSET_IDS: AssetId[] = ['BCV', 'FUND'];
+export type AssetId = 'BCV' | 'FUND' | 'RAIF' | 'DIFF';
+export const ASSET_IDS: AssetId[] = ['BCV', 'FUND', 'RAIF'];
 
-export const ASSET_INFO: Record<AssetId, { label: string; short: string; detail: string }> = {
-  BCV: { label: 'Action BCV', short: 'Action BCV', detail: 'BCVN.SW · ISIN CH0531751755' },
-  FUND: { label: 'Fonds BCV Swiss Equity A', short: 'Fonds BCV', detail: 'ISIN CH0006018706 · gestion active · BCV Asset Management' },
-  DIFF: { label: 'Action BCV − fonds BCV', short: 'Différence', detail: 'Portefeuille long action, court fonds' },
+/** sub : indice de R dans les formules ; fund : fonds de placement (rendements nets de frais, distributions réinvesties). */
+export const ASSET_INFO: Record<AssetId, { label: string; short: string; detail: string; sub: string; fund: boolean; column: SeriesKey }> = {
+  BCV: { label: 'Action BCV', short: 'Action BCV', detail: 'BCVN.SW · ISIN CH0531751755', sub: 'BCV', fund: false, column: 'bcv_ret' },
+  FUND: { label: 'Fonds BCV Swiss Equity A', short: 'Fonds BCV', detail: 'ISIN CH0006018706 · gestion active · BCV Asset Management', sub: 'fonds', fund: true, column: 'fund_ret' },
+  RAIF: { label: 'Fonds Raiffeisen Futura - Swiss Stock A', short: 'Fonds Raiffeisen', detail: 'ISIN CH0011980981 · gestion active · Vontobel Asset Management pour Raiffeisen', sub: 'Raiffeisen', fund: true, column: 'raif_ret' },
+  DIFF: { label: 'Action BCV − fonds BCV', short: 'Différence', detail: 'Portefeuille long action, court fonds', sub: 'BCV − fonds', fund: false, column: 'bcv_ret' },
 };
 
 function assetColumns(asset: AssetId): SeriesKey[] {
   if (asset === 'BCV') return ['bcv_ret'];
   if (asset === 'FUND') return ['fund_ret'];
+  if (asset === 'RAIF') return ['raif_ret'];
   return ['bcv_ret', 'fund_ret'];
 }
 export type Universe = 'SPI' | 'EUROPE';
@@ -208,6 +211,7 @@ export function buildSample(
     // rendement excédentaire ; pour la différence, (R_BCV − Rf) − (R_fonds − Rf) = R_BCV − R_fonds
     if (asset === 'BCV') y.push(get('bcv_ret', i) - rf);
     else if (asset === 'FUND') y.push(get('fund_ret', i) - rf);
+    else if (asset === 'RAIF') y.push(get('raif_ret', i) - rf);
     else y.push(get('bcv_ret', i) - get('fund_ret', i));
     const row = [1];
     for (const f of factors) {

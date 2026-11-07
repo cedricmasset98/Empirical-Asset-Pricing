@@ -64,6 +64,32 @@ FUND = {
 }
 GERIFONDS_FUND_URL = "https://www.gerifonds.ch/fr/iframe/CH0006018706?period=6"
 
+# Fonds Raiffeisen Futura - Swiss Stock A (CH0011980981), gestion active déléguée à
+# Vontobel Asset Management (direction : Vontobel Fonds Services AG), indice de
+# référence SPI TR. Série : export quotidien de Swiss Fund Data (SIX Financial
+# Information / AMAS), « Total Return Chart Price » (distributions réinvesties, net
+# des frais), depuis le 23.11.2009. L'accès passe par la page d'avertissement du
+# site (profil « investisseur privé »). Repli : data/manual/raif_tr_daily.csv
+# (date,tr_index).
+RAIF = {
+    "name": "Raiffeisen Futura - Swiss Stock A",
+    "isin": "CH0011980981",
+    "valor": "1198098",
+    "manager": "Vontobel Asset Management AG (mandat de Raiffeisen Suisse)",
+    "fund_management": "Vontobel Fonds Services AG",
+    "currency": "CHF",
+    "benchmark": "SPI",
+    "inception": "2001-06-08",
+    "ter": 0.0120,
+    "ter_date": "2026-06-30",
+    "ter_source": "Fiche mensuelle Raiffeisen (données au 30.09.2026) et Swiss Fund Data, TER au 30.06.2026",
+}
+SFD_FUND_ID = 16291  # identifiant interne Swiss Fund Data de la classe A
+SFD_BASE = "https://www.swissfunddata.ch/sfdpub"
+SFD_ENTRY_URL = f"{SFD_BASE}/sfd-eingang/private?url=%2Fde%2Ffunds%2Fshow%2F{SFD_FUND_ID}"
+SFD_SHOW_URL = f"{SFD_BASE}/de/funds/show/{SFD_FUND_ID}"
+SFD_CSV_URL = f"{SFD_BASE}/de/funds/excelData/{SFD_FUND_ID}"
+
 FRENCH_BASE = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
 FRENCH_FILES = {
     "ff3": ["Europe_3_Factors_CSV.zip"],
@@ -86,5 +112,6 @@ LICENSES = {
     "snb": "Portail de données BNS (data.snb.ch) — données publiques, citer la source.",
     "french": "Kenneth R. French Data Library — usage libre avec citation.",
     "fred": "FRED, Federal Reserve Bank of St. Louis (H.10) — citer la source.",
+    "swissfunddata": "Swiss Fund Data (SIX Financial Information AG / AMAS), données publiques soumises aux conditions du site — seuls des rendements mensuels dérivés sont publiés ; vérifier les conditions d'utilisation avant diffusion publique.",
     "gerifonds": "Gérifonds SA (filiale de la BCV), page publique du fonds — seuls des rendements mensuels dérivés sont publiés ; vérifier les conditions d'utilisation avant diffusion publique.",
 }

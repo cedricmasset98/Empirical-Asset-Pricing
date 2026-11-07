@@ -22,7 +22,7 @@ Toutes les statistiques sont **recalculées dans le navigateur** à partir de fi
 
 ```
 pipeline/            Python : récupération, transformation, contrôles, références statsmodels
-  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds), BNS (SARON, USD/CHF), K. French (Europe)
+  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds BCV), Swiss Fund Data (fonds Raiffeisen), BNS (SARON, USD/CHF), K. French (Europe)
   fund.py            lecture de la série officielle du fonds et contrôles (VNI + distributions, YTD)
   transform.py       fins de mois, rendements, capitalisation SARON ACT/360, conversion CHF
   build.py           -> public/data/dataset.json, data/processed/monthly.csv, build_report.md
@@ -99,6 +99,7 @@ Le workflow installe LaTeX et régénère le rapport à chaque exécution. L'arc
 | SARON | BNS data.snb.ch, cube `snbgwdzid` | Fixing quotidien depuis août 2009, capitalisé ACT/360 |
 | Facteurs Europe | Kenneth R. French Data Library | 3F, 5F, Momentum ; USD, RF US |
 | Fonds BCV Swiss Equity A | Gérifonds, page publique du fonds : graphique « Évolution de la performance (dividendes réinvestis) », quotidien depuis 1997 | Série officielle, distributions brutes réinvesties, nette de frais. Contrôles automatiques : rendements quotidiens recalculés à partir des VNI et des distributions publiées, chaque distribution retrouvée une seule fois, performance YTD = publiée |
+| Fonds Raiffeisen Futura - Swiss Stock A | Swiss Fund Data (swissfunddata.ch, SIX Financial Information / AMAS), export quotidien de la fiche du fonds, « Total Return Chart Price », depuis novembre 2009 | Distributions réinvesties, nette de frais. Contrôles automatiques : Chart Price = VNI, rendement total = rendement de la VNI hors distributions, distributions implicites plausibles (montant, fréquence), TER publié = configuration. Rendements annuels vérifiés contre la fiche mensuelle officielle |
 | USD/CHF | BNS, cube `devkum` (cours de fin de mois) ; replis : FRED `DEXSZUS`, Yahoo `CHF=X` | Fin de mois |
 
 Si une source échoue, elle est marquée « ERREUR » et ses colonnes restent vides. L'interface affiche alors une erreur explicite pour les modèles concernés, sans aucun résultat de substitution. Pour contourner une source inaccessible, vous pouvez déposer des fichiers dans `data/manual/` (voir son README) ou importer un CSV mensuel directement dans le navigateur.
@@ -128,6 +129,7 @@ Vite est configuré avec `base: './'` et les données sont chargées par un chem
 - **BNS** et **FRED** (repli pour USD/CHF) : données publiques ; la source doit être citée.
 - **Kenneth R. French** : usage libre avec citation.
 - **Gérifonds** (filiale de la BCV) : page publique du fonds ; seuls des rendements mensuels dérivés sont publiés. Il n'existe pas d'API documentée : la page est lue une fois par exécution et tout changement de structure produit une erreur explicite (repli : `data/manual/fund_tr_daily.csv`).
+- **Swiss Fund Data** (SIX Financial Information, en partenariat avec l'AMAS) : l'accès à la fiche passe par la page d'avertissement du site (profil « investisseur privé ») ; seuls des rendements mensuels dérivés sont publiés. Vérifier les conditions d'utilisation avant diffusion publique (repli : `data/manual/raif_tr_daily.csv`, colonnes `date,tr_index`).
 
 Si la publication des rendements SPI ou SARON n'est pas autorisée dans votre contexte, deux options :
 

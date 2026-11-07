@@ -56,9 +56,12 @@ def make_dataset() -> dict:
     bcv = rf + 0.002 + 0.55 * (mkt_spi - rf) + 0.15 * smb3 + 0.3 * hml3 - 0.05 * wml + u
     # fonds actions suisse : bêta proche de 1, faible risque résiduel, alpha légèrement négatif
     fund = rf - 0.0008 + 0.95 * (mkt_spi - rf) + 0.05 * smb3 + RNG.normal(0, 0.008, N)
+    # second fonds (Raiffeisen) : générateur séparé pour ne pas modifier les autres séries
+    raif = rf - 0.001 + 0.9 * (mkt_spi - rf) + 0.04 * hml3 + np.random.default_rng(2026).normal(0, 0.011, N)
     cols = {
         "bcv_ret": bcv,
         "fund_ret": fund,
+        "raif_ret": raif,
         "spi_ret": mkt_spi,
         "rf_saron": rf,
         "mkt_eu_chf": mkt_eu,
@@ -81,6 +84,8 @@ def make_dataset() -> dict:
     # fonds lancé plus tard : 6 premiers mois indisponibles
     for i in range(6):
         data["fund_ret"][i] = None
+    for i in range(10):
+        data["raif_ret"][i] = None
     return {
         "schema": "eap-dataset/v1",
         "frequency": "monthly",

@@ -107,3 +107,12 @@ test('action vs fonds : erreur explicite si le fonds est absent', async () => {
   assert.equal(cmp.ok, false);
   assert.match(cmp.error!, /fund_ret/);
 });
+
+test('fonds Raiffeisen : variable dépendante R_Raiffeisen − Rf, échantillon propre', () => {
+  const f = fitModel(ds, 'CAPM', 'SPI', { ...st, asset: 'RAIF' });
+  if (!f.ok) throw new Error(f.error);
+  const idx = ds.dates.map((_, i) => i).filter((i) => ds.data.raif_ret![i] != null && ds.data.spi_ret![i] != null && ds.data.rf_saron![i] != null);
+  assert.equal(f.result.n, idx.length);
+  assert.ok(Math.abs(f.sample.y[0] - ((ds.data.raif_ret![idx[0]] as number) - (ds.data.rf_saron![idx[0]] as number))) < 1e-15);
+  assert.ok(f.result.beta[1] > 0.8 && f.result.beta[1] < 1.0); // fixture : bêta 0,9
+});

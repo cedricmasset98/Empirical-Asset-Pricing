@@ -123,7 +123,7 @@ export function plotScatter(
   );
   const a = r.beta[0];
   const b = r.beta[1];
-  const eq = `R̂ᵉ<sub>${fit.asset === 'FUND' ? 'fonds' : 'BCV'}</sub> = ${num(P(a), 3)} % ${b >= 0 ? '+' : '−'} ${num(Math.abs(b), 3)} · Rᵉ<sub>M</sub>`;
+  const eq = `R̂ᵉ<sub>${ASSET_INFO[fit.asset].sub}</sub> = ${num(P(a), 3)} % ${b >= 0 ? '+' : '−'} ${num(Math.abs(b), 3)} · Rᵉ<sub>M</sub>`;
   const statLabel = r.distribution === 't' ? 't' : 'z';
   const box = `${eq}<br>α = ${num(P(a), 3)} %/mois · ${statLabel}(α) = ${num(r.stat[0], 2)} · p(α) = ${pval(r.pvalue[0])}<br>β = ${num(b, 3)} · R² = ${num(r.r2, 3)} · N = ${r.n}`;
   Plotly.react(

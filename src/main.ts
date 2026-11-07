@@ -9,7 +9,7 @@ import { alphaPairTable, comparisonTable, multiFactorPairTable, perfTable, regre
 import { assetComparisonCsv, comparisonCsv, download, regressionCsv, sampleCsv } from './ui/export.ts';
 import { escapeHtml as h, monthLabel, num, pct, pval } from './ui/format.ts';
 import { neweyWestAutoLags, type CovType } from './engine/ols.ts';
-import { ASSET_INFO, MODEL_IDS, MODEL_SHORT, UNIVERSES, specLabel, type AssetId, type ModelId, type Universe } from './engine/models.ts';
+import { ASSET_IDS, ASSET_INFO, MODEL_IDS, MODEL_SHORT, UNIVERSES, specLabel, type AssetId, type ModelId, type Universe } from './engine/models.ts';
 
 type Tab = 'scatter' | 'fitted' | 'diagnostics' | 'rolling' | 'comparison' | 'versus' | 'data';
 
@@ -40,11 +40,10 @@ function alertHtml(level: Level, title: string, text: string): string {
 
 // ------------------------------------------------------------------ état / URL
 
-const ASSET_COL = { BCV: 'bcv_ret', FUND: 'fund_ret', DIFF: 'bcv_ret' } as const;
 
 /** Plage utile : du premier au dernier mois où le rendement de l'actif choisi existe. */
 function bounds(ds: Dataset, asset: AssetId = state?.asset ?? 'BCV'): [string, string] {
-  const months = ds.dates.filter((_, i) => ds.data[ASSET_COL[asset]]?.[i] != null);
+  const months = ds.dates.filter((_, i) => ds.data[ASSET_INFO[asset].column]?.[i] != null);
   return months.length ? [months[0], months[months.length - 1]] : [ds.dates[0], ds.dates[ds.dates.length - 1]];
 }
 
@@ -56,7 +55,7 @@ function clampRange(s: UIState, ds: Dataset): void {
 }
 
 function defaultState(ds: Dataset, asset: AssetId = 'BCV'): UIState {
-  const col = ASSET_COL[asset];
+  const col = ASSET_INFO[asset].column;
   const first = ds.dates.find((_, i) => ds.data[col]?.[i] != null && ds.data.rf_saron?.[i] != null) ?? ds.dates[0];
   return {
     asset,
@@ -78,7 +77,7 @@ function readHash(base: UIState): UIState {
   const m = /^\d{4}-\d{2}$/;
   if (m.test(p.get('start') ?? '')) s.range.start = p.get('start')!;
   if (m.test(p.get('end') ?? '')) s.range.end = p.get('end')!;
-  if (p.get('asset') === 'FUND' || p.get('asset') === 'BCV') s.asset = p.get('asset') as AssetId;
+  if (ASSET_IDS.includes(p.get('asset') as AssetId)) s.asset = p.get('asset') as AssetId;
   if (MODEL_IDS.includes(p.get('model') as ModelId)) s.model = p.get('model') as ModelId;
   if (UNIVERSES.includes(p.get('market') as Universe)) s.universe = p.get('market') as Universe;
   if (['classical', 'HC3', 'HAC'].includes(p.get('se') ?? '')) s.cov = p.get('se') as CovType;
@@ -139,15 +138,20 @@ function renderHeader(): void {
   const errors = ds.sources.filter((s) => s.status === 'error');
   const when = new Date(ds.generated_at);
   const date = Number.isNaN(when.getTime()) ? ds.generated_at : when.toLocaleString('fr-CH', { dateStyle: 'long', timeStyle: 'short' });
-  const origin = ds.origin === 'manual-csv' ? 'Import manuel CSV' : 'Yahoo Finance (BCV, SPI TR) · Gérifonds (fonds) · BNS (SARON, USD/CHF) · K. French (facteurs Europe)';
-  const months = ds.dates.filter((_, i) => ds.data[ASSET_COL[state.asset]]?.[i] != null);
+  const origin = ds.origin === 'manual-csv' ? 'Import manuel CSV' : 'Yahoo Finance (BCV, SPI TR) · Gérifonds (fonds BCV) · Swiss Fund Data (fonds Raiffeisen) · BNS (SARON, USD/CHF) · K. French (facteurs Europe)';
+  const months = ds.dates.filter((_, i) => ds.data[ASSET_INFO[state.asset].column]?.[i] != null);
   const span = months.length ? `${ASSET_INFO[state.asset].short} ${monthLabel(months[0])} → ${monthLabel(months[months.length - 1])}` : `aucun rendement pour ${ASSET_INFO[state.asset].label}`;
-  $<HTMLAnchorElement>('report-link').href = state.asset === 'FUND' ? './report/rapport_fonds.pdf' : './report/rapport_bcv.pdf';
+  const report = $<HTMLAnchorElement>('report-link');
+  report.href = state.asset === 'FUND' ? './report/rapport_fonds.pdf' : './report/rapport_bcv.pdf';
+  report.hidden = state.asset === 'RAIF'; // pas de rapport de synthèse pour ce fonds
   $<HTMLAnchorElement>('presentation-link').hidden = state.asset !== 'FUND';
   $<HTMLAnchorElement>('valuation-link').hidden = state.asset !== 'FUND';
-  $('subtitle').innerHTML = state.asset === 'FUND'
-    ? 'Fonds <b>BCV Swiss Equity A</b> <span class="mono">(BCV Asset Management)</span> · ISIN CH0006018706 · CHF'
-    : 'Action <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF';
+  $('subtitle').innerHTML = {
+    FUND: 'Fonds <b>BCV Swiss Equity A</b> <span class="mono">(BCV Asset Management)</span> · ISIN CH0006018706 · CHF',
+    RAIF: 'Fonds <b>Raiffeisen Futura - Swiss Stock A</b> <span class="mono">(Vontobel Asset Management)</span> · ISIN CH0011980981 · CHF',
+    BCV: 'Action <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF',
+    DIFF: '',
+  }[state.asset];
   $('data-meta').innerHTML =
     `<div><b>Sources :</b> ${h(origin)}</div><div><b>Actualisé :</b> ${h(date)} · ${h(span)}</div>` +
     (errors.length ? `<div style="color:var(--err)"><b>${errors.length} source(s) en erreur</b> (voir « Données & méthodologie »)</div>` : '');
@@ -206,9 +210,9 @@ function renderTab(): void {
   switch (state.tab) {
     case 'scatter': {
       const el = $('chart-scatter');
-      const who = state.asset === 'FUND' ? 'fonds' : 'BCV';
+      const who = ASSET_INFO[state.asset].sub;
       $('scatter-title').textContent = `Single Index Model : ${ASSET_INFO[state.asset].label} contre le SPI Total Return`;
-      $('scatter-lead').innerHTML = `R<sub>${who},t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, rendements mensuels en CHF${state.asset === 'FUND' ? ' (nets des frais du fonds, distributions réinvesties)' : ' (dividendes réinvestis)'}, R<sub>f</sub> = SARON capitalisé.`;
+      $('scatter-lead').innerHTML = `R<sub>${who},t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, rendements mensuels en CHF${ASSET_INFO[state.asset].fund ? ' (nets des frais du fonds, distributions réinvesties)' : ' (dividendes réinvestis)'}, R<sub>f</sub> = SARON capitalisé.`;
       const note =
         state.model !== 'CAPM' || state.universe !== 'SPI'
           ? alertHtml('info', 'Graphique du Single Index Model.', ` Le nuage de points et la droite représentent toujours la régression sur le SPI TR ; le tableau ci-dessus correspond au modèle sélectionné (${h(specLabel(state.model, state.universe))}).`)

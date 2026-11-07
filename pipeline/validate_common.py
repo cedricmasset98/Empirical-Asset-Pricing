@@ -14,7 +14,7 @@ MODELS = {
 }
 UNIVERSES = ["SPI", "EUROPE"]
 # 'DIFF' : portefeuille long action / court fonds, y = R_BCV − R_fonds (α_DIFF = α_BCV − α_fonds)
-ASSETS = {"BCV": ["bcv_ret"], "FUND": ["fund_ret"], "DIFF": ["bcv_ret", "fund_ret"]}
+ASSETS = {"BCV": ["bcv_ret"], "FUND": ["fund_ret"], "RAIF": ["raif_ret"], "DIFF": ["bcv_ret", "fund_ret"]}
 
 
 def factor_col(model: str, f: str, universe: str) -> str:
@@ -49,6 +49,8 @@ def design(ds: dict, model: str, universe: str, rows: list[int], asset: str = "B
         y = g("bcv_ret") - rf
     elif asset == "FUND":
         y = g("fund_ret") - rf
+    elif asset == "RAIF":
+        y = g("raif_ret") - rf
     else:
         y = g("bcv_ret") - g("fund_ret")
     cols = [np.ones(len(rows))]

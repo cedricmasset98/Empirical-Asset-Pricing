@@ -29,7 +29,7 @@ export function regressionCsv(fit: FitOk): string {
   const r = fit.result;
   const rows: unknown[][] = [
     ['# modele', fit.label],
-    ['# variable dependante', fit.asset === 'FUND' ? 'R_fonds - R_f (SARON), rendements mensuels decimaux' : 'R_BCV - R_f (SARON), rendements mensuels decimaux'],
+    ['# variable dependante', `R_${{ BCV: 'BCV', FUND: 'fonds', RAIF: 'Raiffeisen', DIFF: 'BCV - R_fonds' }[fit.asset]} - R_f (SARON), rendements mensuels decimaux`],
     ['# inference', r.cov + (r.cov === 'HAC' ? ` (lags=${r.hacLags})` : ''), 'loi', r.distribution],
     ['# periode', fit.sample.dates[0], fit.sample.dates.at(-1)],
     ['variable', 'coefficient', 'std_error', r.distribution === 't' ? 't_stat' : 'z_stat', 'p_value', `ci${Math.round(r.level * 100)}_low`, `ci${Math.round(r.level * 100)}_high`],
@@ -47,7 +47,7 @@ export function regressionCsv(fit: FitOk): string {
 
 export function sampleCsv(fit: FitOk): string {
   const r = fit.result;
-  const header = ['date', fit.asset === 'FUND' ? 'y_excess_fund' : 'y_excess_bcv', ...r.names.slice(1).map((n) => `x_${n}`), 'fitted', 'residual'];
+  const header = ['date', { BCV: 'y_excess_bcv', FUND: 'y_excess_fund', RAIF: 'y_excess_raif', DIFF: 'y_bcv_minus_fund' }[fit.asset], ...r.names.slice(1).map((n) => `x_${n}`), 'fitted', 'residual'];
   return toCsv([header, ...fit.sample.dates.map((d, t) => [d, fit.sample.y[t], ...fit.sample.x[t].slice(1), r.fitted[t], r.resid[t]])]);
 }
 

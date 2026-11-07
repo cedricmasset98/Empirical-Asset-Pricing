@@ -3,6 +3,7 @@
 export type SeriesKey =
   | 'bcv_ret'
   | 'fund_ret'
+  | 'raif_ret'
   | 'spi_ret'
   | 'rf_saron'
   | 'mkt_eu_chf'

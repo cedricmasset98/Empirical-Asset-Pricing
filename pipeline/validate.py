@@ -100,7 +100,7 @@ def reference(ds: dict, label: str, source_path: str) -> dict:
         return y, X, dates
 
     commons = {}
-    for asset in ("BCV", "FUND"):
+    for asset in ("BCV", "FUND", "RAIF"):
         available = [(m, u) for m, u in specs if has_data(ds, required(m, u, asset))]
         skipped += [{"asset": asset, "model": m, "universe": u, "reason": "séries indisponibles"} for m, u in specs if (m, u) not in available]
         if not available:

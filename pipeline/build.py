@@ -34,6 +34,7 @@ from .transform import (
 COLUMN_INFO = {
     "bcv_ret": ("Rendement total BCV", "BCVN.SW, cours ajusté (dividendes, splits), fin de mois à fin de mois"),
     "fund_ret": ("Rendement total BCV Swiss Equity A", "Indice de performance officiel Gérifonds, distributions brutes réinvesties, net des frais du fonds"),
+    "raif_ret": ("Rendement total Raiffeisen Futura - Swiss Stock A", "Swiss Fund Data, « Total Return Chart Price » (distributions réinvesties), net des frais du fonds"),
     "spi_ret": ("Rendement SPI TR", "Swiss Performance Index (indice de performance, CHF)"),
     "rf_saron": ("Taux sans risque SARON réalisé", "Capitalisation quotidienne ACT/360 du SARON sur le mois"),
     "mkt_eu_chf": ("Marché européen FF, rendement total en CHF", "(1 + Mkt−RF + RF_US)(1 + s) − 1"),
@@ -97,6 +98,27 @@ def bcv_checks(h: pd.DataFrame, checks: list[dict], last_complete: pd.Period) ->
         status = "pass" if diff > 0.01 and n_div > 0 else "warn"
         check(checks, "bcv-dividends", status,
               f"Ajustement des dividendes : {n_div} détachements ; rendement total − rendement de prix = {diff:+.2%} par an en moyenne.")
+
+
+def raif_checks(ser, checks: list[dict]) -> None:
+    from .raif import check as rcheck
+
+    r = rcheck(ser)
+    check(checks, "raif-nav", "pass" if r.chart_eq_nav else "fail",
+          "Fonds Raiffeisen : « Chart Price » " + ("identique à la VNI publiée." if r.chart_eq_nav else "différent de la VNI publiée."))
+    check(checks, "raif-reconciliation", "pass" if r.share_ok >= 0.995 else "fail",
+          f"Fonds Raiffeisen : hors distributions, rendement total = rendement de la VNI pour {r.share_ok:.2%} des {r.n_days - 1} jours"
+          + (f" (écarts : {', '.join(r.bad_days[:6])}{'…' if len(r.bad_days) > 6 else ''})." if r.bad_days else "."))
+    dl = ", ".join(f"{d} : {a:.2f}" for d, a in r.distributions[-6:])
+    check(checks, "raif-distributions", "warn" if r.anomalies else "pass",
+          f"Fonds Raiffeisen : {len(r.distributions)} distributions implicites (dernières : {dl})"
+          + (" ; " + " ; ".join(r.anomalies) if r.anomalies else "") + ".")
+    known = C.RAIF.get("ter")
+    if ser.ter is not None and known is not None:
+        same = abs(known - ser.ter) < 1e-9
+        check(checks, "raif-ter", "pass" if same else "warn",
+              f"Fonds Raiffeisen : TER publié {ser.ter:.2%} au {ser.ter_date.date()}"
+              + ("." if same else f", différent de la configuration ({known:.2%}) : mettre à jour pipeline/config.py."))
 
 
 def fund_checks(page, checks: list[dict]) -> None:
@@ -165,6 +187,19 @@ def main(argv: list[str] | None = None) -> int:
         stale_note("Fonds", lv.stale, checks)
         if info["status"] == "ok":
             fund_checks(fund_page, checks)
+
+    # --- Fonds Raiffeisen Futura - Swiss Stock A
+    raif_info: dict = {}
+    raif, info = S.fetch_raif()
+    sources.append(info)
+    if raif is not None:
+        lv = month_end_levels(raif.tr, gap, last_complete)
+        cols["raif_ret"] = simple_returns(lv.values)
+        stale_note("Fonds Raiffeisen", lv.stale, checks)
+        if info["status"] == "ok":
+            raif_checks(raif, checks)
+            if raif.ter is not None:
+                raif_info = {"ter": raif.ter, "ter_date": str(raif.ter_date.date()), "ter_source": "Swiss Fund Data, fiche du fonds"}
 
     # --- SPI TR
     spi, info = S.fetch_spi_tr()
@@ -272,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     # --- assemblage
     # l'index couvre les séries d'analyse ; les séries auxiliaires (change, USD)
     # remontant plus loin ne l'étendent pas
-    analysis = [c for c in cols if c in ("bcv_ret", "fund_ret", "spi_ret", "rf_saron") or c.endswith("_chf")]
+    analysis = [c for c in cols if c in ("bcv_ret", "fund_ret", "raif_ret", "spi_ret", "rf_saron") or c.endswith("_chf")]
     all_idx = sorted(set().union(*[set(cols[c].dropna().index) for c in analysis])) if analysis else []
     all_idx = [p for p in all_idx if p <= last_complete]
     if all_idx:
@@ -304,6 +339,7 @@ def main(argv: list[str] | None = None) -> int:
         "sources": sources,
         "checks": checks,
         "fund_info": fund_info,
+        "raif_info": raif_info,
         "notes": [
             f"Dernier mois complet retenu : {last_complete} (date d'exécution {today.date()}).",
             "Valeurs manquantes conservées telles quelles (null) : aucune interpolation.",

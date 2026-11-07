@@ -3,7 +3,7 @@
 import type { Dataset, SeriesKey } from './types.ts';
 
 export const KNOWN_KEYS: SeriesKey[] = [
-  'bcv_ret', 'fund_ret', 'spi_ret', 'rf_saron', 'mkt_eu_chf', 'smb3_chf', 'hml3_chf', 'wml_chf', 'smb5_chf', 'hml5_chf', 'rmw5_chf',
+  'bcv_ret', 'fund_ret', 'raif_ret', 'spi_ret', 'rf_saron', 'mkt_eu_chf', 'smb3_chf', 'hml3_chf', 'wml_chf', 'smb5_chf', 'hml5_chf', 'rmw5_chf',
   'cma5_chf', 'fx_usdchf_ret', 'rf_us', 'mkt_rf_usd', 'smb3_usd', 'hml3_usd', 'wml_usd', 'smb5_usd', 'hml5_usd', 'rmw5_usd', 'cma5_usd',
 ];
 
@@ -88,8 +88,8 @@ export function parseCsvDataset(text: string, fileName: string): Dataset {
   if (unknown.length) throw new DatasetError(`Colonnes inconnues : ${unknown.join(', ')}. Colonnes acceptées : ${KNOWN_KEYS.join(', ')}.`);
   const keys = header.slice(1) as SeriesKey[];
   if (!keys.includes('rf_saron')) throw new DatasetError('Colonne obligatoire manquante : rf_saron.');
-  if (!keys.includes('bcv_ret') && !keys.includes('fund_ret')) {
-    throw new DatasetError('Colonne obligatoire manquante : bcv_ret (action) ou fund_ret (fonds).');
+  if (!keys.includes('bcv_ret') && !keys.includes('fund_ret') && !keys.includes('raif_ret')) {
+    throw new DatasetError('Colonne obligatoire manquante : bcv_ret (action), fund_ret (fonds BCV) ou raif_ret (fonds Raiffeisen).');
   }
   const rows: { date: string; vals: (number | null)[] }[] = [];
   for (let li = 1; li < lines.length; li++) {

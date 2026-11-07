@@ -33,6 +33,7 @@
         <select id="asset">
           <option value="BCV">Action BCV — BCVN.SW</option>
           <option value="FUND">Fonds BCV Swiss Equity A — CH0006018706</option>
+          <option value="RAIF">Fonds Raiffeisen Futura - Swiss Stock A — CH0011980981</option>
         </select>
       </label>
       <label>Début
@@ -233,6 +234,7 @@
         <div class="method">
           <h3>Rendements</h3>
           <p>Fonds BCV Swiss Equity A : indice officiel de performance de Gérifonds « dividendes réinvestis » (distributions brutes réinvesties à la date ex, net des frais incorporés dans la VNI), pris en fin de mois. Le pipeline le recalcule à partir des VNI et de la table des distributions : chaque distribution doit être retrouvée une et une seule fois, et la performance YTD doit égaler celle publiée.</p>
+          <p>Fonds Raiffeisen Futura - Swiss Stock A (CH0011980981, géré par Vontobel Asset Management pour Raiffeisen, indice de référence SPI) : série « Total Return Chart Price » de Swiss Fund Data (SIX Financial Information / AMAS), distributions réinvesties à la date ex, nette des frais, quotidienne depuis novembre 2009, prise en fin de mois. Le pipeline vérifie que, hors distributions, son rendement quotidien égale celui de la VNI publiée et que chaque saut correspond à une distribution plausible. Les rendements annuels concordent avec ceux de la fiche mensuelle du fonds (2023 : 6,6 % ; 2024 : 5,9 % ; 2025 : 11,0 %). Aucun rapport de synthèse n'est produit pour ce fonds ; l'onglet F compare l'action et le fonds BCV.</p>
           <p>BCV : R<sub>t</sub> = P<sup>adj</sup><sub>t</sub>/P<sup>adj</sup><sub>t−1</sub> − 1 sur le dernier cours de chaque mois, P<sup>adj</sup> étant ajusté des dividendes et opérations sur titres (dont le split 10:1 de mai 2020, contrôlé par le pipeline). Marché suisse : SPI, indice de performance (dividendes réinvestis), jamais remplacé par un indice de prix. Un mois incomplet ou manquant rend les rendements adjacents manquants : aucun rendement multi-mois n’est présenté comme mensuel.</p>
           <h3>Taux sans risque</h3>
           <p>Le SARON est un taux overnight annualisé. Le rendement réalisé du mois m est I(fin m)/I(fin m−1) − 1 avec l’indice capitalisé I<sub>i+1</sub> = I<sub>i</sub>(1 + r<sub>i</sub>·n<sub>i</sub>/360), n<sub>i</sub> = jours calendaires jusqu’au fixing suivant (ACT/360). Le SARON annualisé n’est jamais soustrait directement à un rendement mensuel.</p>

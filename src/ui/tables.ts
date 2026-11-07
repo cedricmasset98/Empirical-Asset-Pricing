@@ -19,7 +19,7 @@ export function tip(text: string): string {
 
 export function statCards(fit: FitOk): string {
   const r = fit.result;
-  const who = fit.asset === 'FUND' ? 'du fonds' : 'de BCV';
+  const who = { BCV: 'de BCV', FUND: 'du fonds', RAIF: 'du fonds Raiffeisen', DIFF: 'de la différence' }[fit.asset];
   const z = r.distribution === 't' ? 't' : 'z';
   const mktIdx = r.names.indexOf('MKT');
   const card = (label: string, value: string, sub: string, help: string, cls = '') =>
@@ -58,7 +58,7 @@ export function regressionTable(fit: FitOk): string {
   const method = `${COV_LABELS[r.cov]}${r.cov === 'HAC' ? ` · ${r.hacLags} retards (noyau de Bartlett)` : ''}`;
   return `
   <table class="reg">
-    <caption>${h(ASSET_INFO[fit.asset].label)} · ${h(fit.label)} — variable dépendante : R<sub>${fit.asset === 'FUND' ? 'fonds' : 'BCV'}</sub> − R<sub>f</sub> (SARON), mensuel</caption>
+    <caption>${h(ASSET_INFO[fit.asset].label)} · ${h(fit.label)} — variable dépendante : R<sub>${ASSET_INFO[fit.asset].sub}</sub> − R<sub>f</sub> (SARON), mensuel</caption>
     <thead><tr><th scope="col">Variable</th><th scope="col">Coefficient</th><th scope="col">Std. Error</th><th scope="col">${z}</th><th scope="col">p-value</th><th scope="col">IC ${lvl} %</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>

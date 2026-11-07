@@ -64,7 +64,7 @@ for (const name of ['statsmodels_synthetic.json', 'statsmodels_dataset.json']) {
     continue;
   }
   const common: Record<string, Set<string>> = {};
-  for (const a of ['BCV', 'FUND'] as AssetId[]) {
+  for (const a of ['BCV', 'FUND', 'RAIF'] as AssetId[]) {
     const sp = availableSpecs(ds, a);
     if (sp.length) common[a] = commonDates(ds, sp, FULL);
   }
