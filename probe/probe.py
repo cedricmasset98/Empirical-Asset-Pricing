@@ -11,6 +11,17 @@ def links(t, pat):
 
 r = s.get(B + "/sfdpub/sfd-eingang/private?url=%2Fde%2Ffunds%2Fsearch%3Ftext%3DCH0011980981", timeout=40)
 print("status", r.status_code, r.url, len(r.text))
+for _ in range(3):
+    forms = re.findall(r"<form[^>]*action=\"([^\"]+)\"[^>]*>(.*?)</form>", r.text, flags=re.S | re.I)
+    acc = [(a, b) for a, b in forms if "_action_set" in b]
+    if not acc:
+        break
+    a, b = acc[0]
+    data = dict(re.findall(r'<input[^>]*type="hidden"[^>]*name="([^"]+)"[^>]*value="([^"]*)"', b))
+    data["_action_set"] = re.search(r'name="_action_set" value="([^"]+)"', b).group(1)
+    print("POST", a, data)
+    r = s.post(B + a.replace("&amp;", "&"), data=data, timeout=40)
+    print("status", r.status_code, r.url, len(r.text))
 L = links(r.text, r"funds/|fonds/")
 print("liens fonds:", L[:40])
 txt = re.sub(r"<[^>]+>", " ", r.text); txt = re.sub(r"\s+", " ", txt)
