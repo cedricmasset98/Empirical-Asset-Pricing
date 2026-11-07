@@ -1,50 +1,50 @@
-# Rapport de construction des données
+# Data build report
 
-Généré le 2026-11-07T18:27:37Z
+Generated on 2026-11-07T19:19:24Z
 
 ## Sources
 
-| Source | Statut | Couverture | Message |
+| Source | Status | Coverage | Message |
 |---|---|---|---|
-| BCV (BCVN.SW) — cours ajustés dividendes et opérations sur titres | ok | 2002-12-06 → 2026-11-06 |  |
-| BCV Swiss Equity A (CH0006018706) — performance officielle, distributions réinvesties | ok | 1997-12-31 → 2026-11-05 | 7325 valeurs quotidiennes ; 28 distributions publiées. |
-| Raiffeisen Futura - Swiss Stock A (CH0011980981) — rendement total, distributions réinvesties | ok | 2009-11-23 → 2026-11-05 | 4261 valeurs quotidiennes (VNI et rendement total). |
-| SPI — Swiss Performance Index (SXGE), indice de performance (TR), CHF | ok | 1988-01-04 → 2026-11-06 |  |
-| SARON — fixing quotidien (taux overnight annualisé, %) | ok | 2009-08-24 → 2026-10-30 | Série BNS D0(SARON) « SARON fixing at the close of the trading day » |
-| USD/CHF (CHF par USD), cours de fin de mois | ok | 1980-01-31 → 2026-10-31 | Série BNS devkum D0(M1),D1(USD1) |
-| European Fama-French 3 Factors (mensuel, USD, RF = T-bill US 1 mois) | ok | 1990-07 → 2026-09 | Colonnes : Mkt-RF, SMB, HML, RF. |
-| European Fama-French 5 Factors (mensuel, USD, RF = T-bill US 1 mois) | ok | 1990-07 → 2026-09 | Colonnes : Mkt-RF, SMB, HML, RMW, CMA, RF. |
-| European Momentum Factor (mensuel, USD, RF = T-bill US 1 mois) | ok | 1990-11 → 2026-09 | Colonnes : WML. |
-| Facteurs suisses Global Factor Data (JKP) : taille, valeur, rentabilité, investissement, momentum — mensuels, USD | ok | 1986-01 → 2025-12 | Caractéristiques : SMB = market_equity, HML = be_me, RMW = ope_be, CMA = at_gr1, MOM = ret_12_1 ; pondération vw_cap ; dernier mois publié 2025-12. |
+| BCV (BCVN.SW) — prices adjusted for dividends and corporate actions | ok | 2002-12-06 → 2026-11-06 |  |
+| BCV Swiss Equity A (CH0006018706) — official performance, distributions reinvested | ok | 1997-12-31 → 2026-11-05 | 7325 daily values; 28 published distributions. |
+| Raiffeisen Futura - Swiss Stock A (CH0011980981) — total return, distributions reinvested | ok | 2009-11-23 → 2026-11-05 | 4261 daily values (NAV and total return). |
+| SPI — Swiss Performance Index (SXGE), total return index, CHF | ok | 1988-01-04 → 2026-11-06 |  |
+| SARON — daily fixing (annualised overnight rate, %) | ok | 2009-08-24 → 2026-10-30 | SNB series D0(SARON) "SARON fixing at the close of the trading day" |
+| USD/CHF (CHF per USD), month-end rate | ok | 1980-01-31 → 2026-10-31 | SNB series devkum D0(M1),D1(USD1) |
+| European Fama-French 3 Factors (monthly, USD, RF = 1-month US T-bill) | ok | 1990-07 → 2026-09 | Columns: Mkt-RF, SMB, HML, RF. |
+| European Fama-French 5 Factors (monthly, USD, RF = 1-month US T-bill) | ok | 1990-07 → 2026-09 | Columns: Mkt-RF, SMB, HML, RMW, CMA, RF. |
+| European Momentum Factor (monthly, USD, RF = 1-month US T-bill) | ok | 1990-11 → 2026-09 | Columns: WML. |
+| Swiss Global Factor Data (JKP) factors: size, value, profitability, investment, momentum — monthly, USD | ok | 1986-01 → 2025-12 | Characteristics: SMB = market_equity, HML = be_me, RMW = ope_be, CMA = at_gr1, MOM = ret_12_1; weighting vw_cap; last published month 2025-12. |
 
-## Contrôles
+## Checks
 
-- **warn** — BCV : 1 mois écartés (dernière observation à plus de 5 jours de la fin du mois) : 2026-11
-- **pass** — Split 10:1 de mai 2020 présent dans les données (2020-05-28). Splits : 2020-05-28 (×10).
-- **pass** — Aucune variation quotidienne > 35 % du cours ajusté (max |r| = 14.6%, le 2009-03-10).
-- **pass** — Ajustement des dividendes : 23 détachements ; rendement total − rendement de prix = +3.39% par an en moyenne.
-- **pass** — Fonds : TER publié 1.11% au 2026-03-31.
-- **warn** — Fonds : 1 mois écartés (dernière observation à plus de 5 jours de la fin du mois) : 2026-11
-- **pass** — Fonds : 100.00% des 7323 rendements quotidiens de la série officielle retrouvés à partir des VNI et des distributions brutes (tolérance 5e-05) ; VNI des infobulles décalées d'un jour à partir de 2021-09-28 environ, décalage corrigé dans le contrôle.
-- **pass** — Fonds : les 28 distributions publiées sont incluses une et une seule fois, au montant brut (dernière : 2026-07-21, 5.70 CHF).
-- **pass** — Fonds : performance YTD recalculée 15.56% contre 15.56% publiée par Gérifonds au 2026-11-05.
-- **warn** — Fonds Raiffeisen : 1 mois écartés (dernière observation à plus de 5 jours de la fin du mois) : 2026-11
-- **pass** — Fonds Raiffeisen : « Chart Price » identique à la VNI publiée.
-- **pass** — Fonds Raiffeisen : hors distributions, rendement total = rendement de la VNI pour 100.00% des 4260 jours.
-- **pass** — Fonds Raiffeisen : 14 distributions implicites (dernières : 2021-06-24 : 3.80, 2022-11-04 : 3.70, 2023-11-06 : 5.20, 2024-11-07 : 4.50, 2025-11-05 : 4.50, 2026-09-02 : 4.60).
-- **pass** — Fonds Raiffeisen : TER publié 1.20% au 2026-06-30.
-- **pass** — SPI : historique data/history/spi_tr_history.csv raccordé à ^SSHI après contrôle de concordance — 3061 séances communes (2013-03-05 → 2025-05-16) ; ratio médian 1.00000, dérive +0.000%, jours divergents 0.03%
-- **warn** — SPI : 1 mois écartés (dernière observation à plus de 5 jours de la fin du mois) : 2026-11
-- **pass** — Plausibilité « total return » du SPI : rendement moyen SPI − SMI (indice de prix) = +2.09% par an sur 431 mois. Indicateur seulement (compositions différentes) ; la nature TR repose sur la définition SIX du SPI.
-- **pass** — SARON quotidien disponible du 2009-08-24 au 2026-10-30 ; rendement mensuel = capitalisation ACT/360.
-- **pass** — Cohérence Mkt−RF et RF entre fichiers FF3 et FF5 : écarts max 0.00e+00 et 0.00e+00.
-- **pass** — Facteurs suisses JKP du 1993-07 au 2025-12 (mois retenus : au moins 30 titres par facteur), convertis en CHF par F_USD(1+s). Publication annuelle : les derniers mois de l'échantillon peuvent manquer.
-- **pass** — Corrélation facteurs suisses JKP / européens Fama-French (USD) : SMB 0.58, HML 0.64, RMW 0.40, CMA 0.34, MOM 0.78. Corrélations modérées attendues : marchés et méthodes différents.
-- **pass** — Facteurs Fama-French européens convertis en CHF : marché = (1+Mkt−RF+RF_US)(1+s)−1, facteurs long-short = F_USD(1+s). Le rendement excédentaire du marché est calculé avec le SARON, jamais avec le RF américain.
+- **warn** — BCV: 1 months dropped (last observation more than 5 days before month-end): 2026-11
+- **pass** — 10:1 split of May 2020 present in the data (2020-05-28). Splits: 2020-05-28 (×10).
+- **pass** — No daily change > 35% in the adjusted price (max |r| = 14.6%, on 2009-03-10).
+- **pass** — Dividend adjustment: 23 ex-dividend dates; total return − price return = +3.39% per year on average.
+- **pass** — Fund: published TER 1.11% as of 2026-03-31.
+- **warn** — Fund: 1 months dropped (last observation more than 5 days before month-end): 2026-11
+- **pass** — Fund: 100.00% of the 7323 daily returns of the official series reproduced from NAVs and gross distributions (tolerance 5e-05); tooltip NAVs lag by one day from about 2021-09-28, lag corrected in the check.
+- **pass** — Fund: the 28 published distributions are included exactly once, at the gross amount (latest: 2026-07-21, 5.70 CHF).
+- **pass** — Fund: recomputed YTD performance 15.56% vs 15.56% published by Gérifonds as of 2026-11-05.
+- **warn** — Raiffeisen fund: 1 months dropped (last observation more than 5 days before month-end): 2026-11
+- **pass** — Raiffeisen fund: "Chart Price" equal to the published NAV.
+- **pass** — Raiffeisen fund: outside distributions, total return = NAV return on 100.00% of 4260 days.
+- **pass** — Raiffeisen fund: 14 implied distributions (latest: 2021-06-24: 3.80, 2022-11-04: 3.70, 2023-11-06: 5.20, 2024-11-07: 4.50, 2025-11-05: 4.50, 2026-09-02: 4.60).
+- **pass** — Raiffeisen fund: published TER 1.20% as of 2026-06-30.
+- **pass** — SPI: history data/history/spi_tr_history.csv spliced onto ^SSHI after a consistency check — 3061 common trading days (2013-03-05 → 2025-05-16); median ratio 1.00000, drift +0.000%, diverging days 0.03%
+- **warn** — SPI: 1 months dropped (last observation more than 5 days before month-end): 2026-11
+- **pass** — SPI total-return plausibility: mean return SPI − SMI (price index) = +2.09% per year over 431 months. Indicative only (different constituents); the TR nature rests on SIX's definition of the SPI.
+- **pass** — Daily SARON available from 2009-08-24 to 2026-10-30; monthly return = ACT/360 compounding.
+- **pass** — Consistency of Mkt−RF and RF between the FF3 and FF5 files: max differences 0.00e+00 and 0.00e+00.
+- **pass** — Swiss JKP factors from 1993-07 to 2025-12 (months kept: at least 30 stocks per factor), converted to CHF as F_USD(1+s). Updated annually: the latest months of the sample may be missing.
+- **pass** — Correlation of Swiss JKP / European Fama-French factors (USD): SMB 0.58, HML 0.64, RMW 0.40, CMA 0.34, MOM 0.78. Moderate correlations expected: different markets and methods.
+- **pass** — European Fama-French factors converted to CHF: market = (1+Mkt−RF+RF_US)(1+s)−1, long-short factors = F_USD(1+s). The market excess return is computed with SARON, never with the US RF.
 
-## Couverture des colonnes
+## Column coverage
 
-| Colonne | Premier mois | Dernier mois | N |
+| Column | First month | Last month | N |
 |---|---|---|---|
 | bcv_ret | 2003-01 | 2026-10 | 286 |
 | fund_ret | 1998-01 | 2026-10 | 346 |
