@@ -1,18 +1,25 @@
-"""Sonde 2 : swissfunddata.ch (disclaimer, recherche, historique des prix)."""
+"""Sonde 3 : swissfunddata.ch, accès investisseur privé, fiche du fonds et historique."""
 import re
 import requests
-from html import unescape
 
 H = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"}
 s = requests.Session(); s.headers.update(H)
 B = "https://www.swissfunddata.ch"
 
-def show(r, n=0):
-    print("status", r.status_code, "final", r.url, "len", len(r.text), "cookies", s.cookies.get_dict())
-    if n: print(r.text[:n])
+def links(t, pat):
+    return sorted(set(a for a in re.findall(r'(?:href|src|data-url|action)="([^"]+)"', t) if re.search(pat, a, re.I)))
 
-r = s.get(B + "/sfdpub/de/funds/search?text=CH0011980981", timeout=40); show(r)
-for f in re.findall(r"<form.*?</form>", r.text, flags=re.S | re.I):
-    print("FORM:", re.sub(r"\s+", " ", f)[:1500])
-for a in sorted(set(re.findall(r'href="([^"]+)"', r.text))):
-    if "sfd" in a or "disclaimer" in a.lower() or "eingang" in a: print(" a:", a)
+r = s.get(B + "/sfdpub/sfd-eingang/private?url=%2Fde%2Ffunds%2Fsearch%3Ftext%3DCH0011980981", timeout=40)
+print("status", r.status_code, r.url, len(r.text))
+L = links(r.text, r"funds/|fonds/")
+print("liens fonds:", L[:40])
+txt = re.sub(r"<[^>]+>", " ", r.text); txt = re.sub(r"\s+", " ", txt)
+i = txt.find("Swiss Stock"); print("extrait:", txt[max(0, i - 300): i + 600])
+cand = [a for a in L if re.search(r"/funds/(show|detail|overview)|/fonds/", a)]
+for a in cand[:4]:
+    u = a if a.startswith("http") else B + a
+    p = s.get(u, timeout=40); print("\n== fiche", u, p.status_code, len(p.text))
+    t2 = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", p.text))
+    print(t2[:1500])
+    for x in links(p.text, r"price|preis|kurs|export|excel|csv|xls|histor|chart|json|nav|distribution|ausschuett"):
+        print("  lien:", x)
