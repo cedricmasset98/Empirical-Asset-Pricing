@@ -32,7 +32,7 @@ import numpy as np
 
 from . import config as C
 from . import olsref
-from .validate_common import MODELS, UNIVERSES, design, has_data, required, rows_for
+from .validate_common import MODELS, REPORT_UNIVERSES as UNIVERSES, design, has_data, required, rows_for
 
 TEMPLATE = C.ROOT / "report" / "rapport.tex"
 BUILD = C.ROOT / "report" / "build"

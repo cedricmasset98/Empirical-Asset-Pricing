@@ -283,9 +283,10 @@ export function plotRolling(container: HTMLElement, roll: RollingResult, t: Them
 
 export function plotComparison(el: HTMLElement, cmp: Comparison, t: Theme): void {
   const traces: unknown[] = [];
-  (['SPI', 'EUROPE'] as const).forEach((u, ui) => {
+  (['SPI', 'EUROPE', 'SWISS'] as const).forEach((u, ui) => {
     const fits = MODEL_IDS.map((m) => cmp.fits.find((f) => f.model === m && f.universe === u)!);
-    const ok = fits.map((f) => (f.ok ? f : null));
+    // CAPM suisse = Single Index : non répété
+    const ok = fits.map((f) => (f && f.ok && !(u === 'SWISS' && f.model === 'CAPM') ? f : null));
     traces.push({
       x: MODEL_IDS.map((m) => MODEL_SHORT[m]),
       y: ok.map((f) => (f ? P(f.result.beta[0]) : null)),
@@ -294,15 +295,15 @@ export function plotComparison(el: HTMLElement, cmp: Comparison, t: Theme): void
         symmetric: false,
         array: ok.map((f) => (f ? P(f.result.ciHigh[0] - f.result.beta[0]) : null)),
         arrayminus: ok.map((f) => (f ? P(f.result.beta[0] - f.result.ciLow[0]) : null)),
-        color: ui === 0 ? t.series[0] : t.series[1],
+        color: t.series[ui],
         thickness: 1.5,
         width: 6,
       },
       customdata: ok.map((f) => (f ? [f.result.stat[0], f.result.pvalue[0], f.result.r2, f.result.n] : [null, null, null, null])),
       mode: 'markers',
       type: 'scatter',
-      marker: { size: 11, color: ui === 0 ? t.series[0] : t.series[1], symbol: ui === 0 ? 'circle' : 'diamond' },
-      name: u === 'SPI' ? 'Marché SPI TR (CAPM suisse ; FF3/Carhart/FF5 = hybrides)' : UNIVERSE_LABELS.EUROPE,
+      marker: { size: 11, color: t.series[ui], symbol: (['circle', 'diamond', 'square'] as const)[ui] },
+      name: u === 'SPI' ? 'Marché SPI TR (CAPM suisse ; FF3/Carhart/FF5 = hybrides)' : UNIVERSE_LABELS[u],
       offsetgroup: u,
       hovertemplate: 'α = %{y:.3f} %/mois<br>stat(α) = %{customdata[0]:.2f} · p = %{customdata[1]:.4f}<br>R² = %{customdata[2]:.3f} · N = %{customdata[3]}<extra>%{fullData.name}</extra>',
     });

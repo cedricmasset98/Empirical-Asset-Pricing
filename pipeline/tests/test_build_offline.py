@@ -43,6 +43,10 @@ class TestBuildOffline(unittest.TestCase):
             months = pd.period_range("2009-12", "2012-05", freq="M")
             (manual / "Europe_3_Factors.csv").write_text(french_text(["Mkt-RF", "SMB", "HML", "RF"], months, rng))
             (manual / "Europe_5_Factors.csv").write_text(french_text(["Mkt-RF", "SMB", "HML", "RMW", "CMA", "RF"], months, rng))
+            jkp_months = pd.period_range("2009-12", "2011-12", freq="M")  # publication plus courte
+            jkp = pd.DataFrame(rng.normal(0.002, 0.02, (len(jkp_months), 5)), columns=["SMB", "HML", "RMW", "CMA", "MOM"])
+            jkp.insert(0, "date", jkp_months.to_timestamp(how="end").date)
+            jkp.to_csv(manual / "jkp_che_factors.csv", index=False)
             (manual / "Europe_Mom_Factor.csv").write_text(french_text(["WML"], months, rng))
 
             saved = {k: getattr(C, k) for k in ("MANUAL_DIR", "RAW_DIR", "PROCESSED_DIR", "PUBLIC_DATA")}
@@ -70,6 +74,11 @@ class TestBuildOffline(unittest.TestCase):
             m = ds["data"]["mkt_rf_usd"][j] + ds["data"]["rf_us"][j]
             s = ds["data"]["fx_usdchf_ret"][j]
             self.assertAlmostEqual(ds["data"]["mkt_eu_chf"][j], (1 + m) * (1 + s) - 1, places=10)
+            # facteurs suisses JKP : F_CHF = F_USD (1 + s), absents après le dernier mois publié
+            src = pd.read_csv(manual / "jkp_che_factors.csv")
+            usd = float(src.loc[src["date"].str.startswith("2011-03"), "SMB"].iloc[0])
+            self.assertAlmostEqual(ds["data"]["smb_ch"][j], usd * (1 + s), places=10)
+            self.assertIsNone(ds["data"]["mom_ch"][ds["dates"].index("2012-03")])
             self.assertTrue((tmp / "processed" / "build_report.md").exists())
 
 

@@ -12,14 +12,19 @@ MODELS = {
     "CARHART": ["MKT", "SMB", "HML", "MOM"],
     "FF5": ["MKT", "SMB", "HML", "RMW", "CMA"],
 }
-UNIVERSES = ["SPI", "EUROPE"]
+# SWISS : marché SPI TR et facteurs long-short suisses de Global Factor Data (JKP)
+UNIVERSES = ["SPI", "EUROPE", "SWISS"]
+# univers repris dans les rapports PDF (inchangés)
+REPORT_UNIVERSES = ["SPI", "EUROPE"]
 # 'DIFF' : portefeuille long action / court fonds, y = R_BCV − R_fonds (α_DIFF = α_BCV − α_fonds)
 ASSETS = {"BCV": ["bcv_ret"], "FUND": ["fund_ret"], "RAIF": ["raif_ret"], "DIFF": ["bcv_ret", "fund_ret"]}
 
 
 def factor_col(model: str, f: str, universe: str) -> str:
     if f == "MKT":
-        return "spi_ret" if universe == "SPI" else "mkt_eu_chf"
+        return "mkt_eu_chf" if universe == "EUROPE" else "spi_ret"
+    if universe == "SWISS":
+        return {"SMB": "smb_ch", "HML": "hml_ch", "MOM": "mom_ch", "RMW": "rmw_ch", "CMA": "cma_ch"}[f]
     five = model == "FF5"
     return {
         "SMB": "smb5_chf" if five else "smb3_chf",

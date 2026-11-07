@@ -87,9 +87,11 @@ export function testsTable(d: Diagnostics): string {
 
 export function comparisonTable(cmp: Comparison): string {
   const rows: string[] = [];
-  for (const u of ['SPI', 'EUROPE'] as const) {
-    rows.push(`<tr class="group"><th colspan="9">${u === 'SPI' ? 'Marché : SPI Total Return (CHF)' : 'Marché : Europe Fama-French converti en CHF'}</th></tr>`);
+  const groups = { SPI: 'Marché : SPI Total Return (CHF)', EUROPE: 'Marché : Europe Fama-French converti en CHF', SWISS: 'Univers suisse : SPI TR et facteurs suisses JKP (CHF)' } as const;
+  for (const u of ['SPI', 'EUROPE', 'SWISS'] as const) {
+    rows.push(`<tr class="group"><th colspan="9">${groups[u]}</th></tr>`);
     for (const m of MODEL_IDS) {
+      if (u === 'SWISS' && m === 'CAPM') continue; // identique au Single Index (SPI)
       const f = cmp.fits.find((x) => x.model === m && x.universe === u)!;
       const tag = f.ok && f.coherence === 'hybrid' ? ' <span class="badge hybrid">hybride</span>' : '';
       if (!f.ok) {

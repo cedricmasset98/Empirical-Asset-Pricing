@@ -4,7 +4,7 @@ import type { Dataset, SeriesKey } from './types.ts';
 
 export const KNOWN_KEYS: SeriesKey[] = [
   'bcv_ret', 'fund_ret', 'raif_ret', 'spi_ret', 'rf_saron', 'mkt_eu_chf', 'smb3_chf', 'hml3_chf', 'wml_chf', 'smb5_chf', 'hml5_chf', 'rmw5_chf',
-  'cma5_chf', 'fx_usdchf_ret', 'rf_us', 'mkt_rf_usd', 'smb3_usd', 'hml3_usd', 'wml_usd', 'smb5_usd', 'hml5_usd', 'rmw5_usd', 'cma5_usd',
+  'cma5_chf', 'smb_ch', 'hml_ch', 'rmw_ch', 'cma_ch', 'mom_ch', 'fx_usdchf_ret', 'rf_us', 'mkt_rf_usd', 'smb3_usd', 'hml3_usd', 'wml_usd', 'smb5_usd', 'hml5_usd', 'rmw5_usd', 'cma5_usd',
 ];
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;

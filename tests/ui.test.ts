@@ -40,9 +40,9 @@ test('série absente : erreur explicite', () => {
   assert.ok(cmp.fits.filter((x) => x.ok).every((x) => x.ok && x.result.n === cmp.commonN));
 });
 
-test('comparaison : 8 spécifications sur le même échantillon', () => {
+test('comparaison : 12 spécifications (3 univers) sur le même échantillon', () => {
   const cmp = compareModels(ds, st);
-  assert.equal(cmp.fits.length, 8);
+  assert.equal(cmp.fits.length, 12);
   const ns = cmp.fits.map((f) => (f.ok ? f.result.n : -1));
   assert.ok(ns.every((n) => n === cmp.commonN), JSON.stringify(ns));
 });
@@ -115,4 +115,20 @@ test('fonds Raiffeisen : variable dépendante R_Raiffeisen − Rf, échantillon 
   assert.equal(f.result.n, idx.length);
   assert.ok(Math.abs(f.sample.y[0] - ((ds.data.raif_ret![idx[0]] as number) - (ds.data.rf_saron![idx[0]] as number))) < 1e-15);
   assert.ok(f.result.beta[1] > 0.8 && f.result.beta[1] < 1.0); // fixture : bêta 0,9
+});
+
+test('univers suisse : facteurs JKP, modèle cohérent, échantillon limité à leur publication', () => {
+  const f = fitModel(ds, 'FF5', 'SWISS', st);
+  if (!f.ok) throw new Error(f.error);
+  assert.equal(f.coherence, 'swiss');
+  assert.match(f.label, /univers suisse/);
+  const cols = ['bcv_ret', 'rf_saron', 'spi_ret', 'smb_ch', 'hml_ch', 'rmw_ch', 'cma_ch'] as const;
+  const idx = ds.dates.map((_, i) => i).filter((i) => cols.every((c) => ds.data[c]![i] != null));
+  assert.equal(f.result.n, idx.length);
+  assert.equal(f.sample.dates.at(-1), ds.dates[idx.at(-1)!]);
+  // la 2e colonne de facteurs est SMB suisse, non transformée
+  assert.equal(f.sample.x[0][2], ds.data.smb_ch![idx[0]]);
+  const c = fitModel(ds, 'CAPM', 'SWISS', st);
+  const s = fitModel(ds, 'CAPM', 'SPI', st);
+  assert.ok(c.ok && s.ok && c.result.beta[1] === s.result.beta[1]); // CAPM suisse = Single Index
 });

@@ -138,7 +138,7 @@ function renderHeader(): void {
   const errors = ds.sources.filter((s) => s.status === 'error');
   const when = new Date(ds.generated_at);
   const date = Number.isNaN(when.getTime()) ? ds.generated_at : when.toLocaleString('fr-CH', { dateStyle: 'long', timeStyle: 'short' });
-  const origin = ds.origin === 'manual-csv' ? 'Import manuel CSV' : 'Yahoo Finance (BCV, SPI TR) · Gérifonds (fonds BCV) · Swiss Fund Data (fonds Raiffeisen) · BNS (SARON, USD/CHF) · K. French (facteurs Europe)';
+  const origin = ds.origin === 'manual-csv' ? 'Import manuel CSV' : 'Yahoo Finance (BCV, SPI TR) · Gérifonds (fonds BCV) · Swiss Fund Data (fonds Raiffeisen) · BNS (SARON, USD/CHF) · K. French (facteurs Europe) · JKP (facteurs suisses)';
   const months = ds.dates.filter((_, i) => ds.data[ASSET_INFO[state.asset].column]?.[i] != null);
   const span = months.length ? `${ASSET_INFO[state.asset].short} ${monthLabel(months[0])} → ${monthLabel(months[months.length - 1])}` : `aucun rendement pour ${ASSET_INFO[state.asset].label}`;
   const report = $<HTMLAnchorElement>('report-link');
@@ -170,7 +170,10 @@ function renderAlerts(): void {
   if (main && !main.ok) out.push(alertHtml('error', `${main.label} : estimation impossible.`, ` ${h(main.error)}`));
   if (main?.ok) {
     if (main.coherence === 'hybrid') {
-      out.push(alertHtml('warn', 'Variante hybride.', ' Le marché est le SPI TR (Suisse) tandis que SMB, HML, MOM, RMW, CMA sont des facteurs européens Fama-French convertis en CHF : l’univers de facteurs n’est pas homogène. Pour un univers cohérent, choisissez « Europe Fama-French ».'));
+      out.push(alertHtml('warn', 'Variante hybride.', ' Le marché est le SPI TR (Suisse) tandis que SMB, HML, MOM, RMW, CMA sont des facteurs européens Fama-French convertis en CHF : l’univers de facteurs n’est pas homogène. Pour un univers cohérent, choisissez « Europe Fama-French » ou « Suisse ».'));
+    }
+    if (main.universe === 'SWISS' && main.model !== 'CAPM') {
+      out.push(alertHtml('info', 'Facteurs suisses JKP.', ' SMB, HML, RMW, CMA et MOM viennent de Global Factor Data (Jensen, Kelly et Pedersen, 2023) : portefeuilles par terciles de la caractéristique, pondérés par la capitalisation plafonnée, et non les tris 2×3 de Fama-French. Ils sont publiés une fois par an : les derniers mois peuvent manquer.'));
     }
     const s = main.sample;
     const eff = `${s.dates[0]} → ${s.dates[s.dates.length - 1]}, ${s.y.length} mois`;
@@ -270,7 +273,7 @@ function renderTab(): void {
       const cmp = comparisonCache.cmp;
       $('comparison-lead').innerHTML =
         cmp.period
-          ? `Les 8 spécifications sont estimées sur le <b>même échantillon</b> : ${cmp.commonN} mois, ${cmp.period[0]} → ${cmp.period[1]} (intersection des disponibilités). ${h(COV_LABELS[state.cov])}. Les variantes « SPI » multifactorielles sont hybrides.`
+          ? `Toutes les spécifications sont estimées sur le <b>même échantillon</b> : ${cmp.commonN} mois, ${cmp.period[0]} → ${cmp.period[1]} (intersection des disponibilités). ${h(COV_LABELS[state.cov])}. Les variantes « SPI » multifactorielles sont hybrides ; la ligne CAPM de l’univers suisse est identique au Single Index.`
           : 'Aucun mois commun à toutes les spécifications disponibles.';
       if (cmp.excluded.length) $('comparison-lead').innerHTML += `<br><span class="muted small">Exclues : ${h(cmp.excluded.join(' · '))}</span>`;
       plotComparison($('chart-comparison'), cmp, t);
@@ -288,7 +291,7 @@ function renderTab(): void {
         ['chart-vs-perf', 'chart-vs-alpha', 'chart-vs-sim-bcv', 'chart-vs-sim-fund'].forEach((c) => ($(c).innerHTML = ''));
         return;
       }
-      $('vs-sample').innerHTML = `<div class="strip"><span><b>Échantillon identique</b> pour les deux actifs : ${cmp.dates.length} mois, ${cmp.dates[0]} → ${cmp.dates[cmp.dates.length - 1]}</span><span>Marché des modèles : ${state.universe === 'SPI' ? 'SPI TR (FF3/Carhart/FF5 hybrides)' : 'Europe FF (CHF)'}</span><span>${h(COV_LABELS[state.cov])}</span></div>`;
+      $('vs-sample').innerHTML = `<div class="strip"><span><b>Échantillon identique</b> pour les deux actifs : ${cmp.dates.length} mois, ${cmp.dates[0]} → ${cmp.dates[cmp.dates.length - 1]}</span><span>Marché des modèles : ${{ SPI: 'SPI TR (FF3/Carhart/FF5 hybrides)', EUROPE: 'Europe FF (CHF)', SWISS: 'SPI TR + facteurs suisses JKP (CHF)' }[state.universe]}</span><span>${h(COV_LABELS[state.cov])}</span></div>`;
       plotPerformance($('chart-vs-perf'), cmp, t);
       $('vs-perf-table').innerHTML = perfTable(cmp);
       const sel = cmp.models.find((m) => m.model === state.model)!;

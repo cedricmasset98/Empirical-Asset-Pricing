@@ -30,10 +30,11 @@ function assetColumns(asset: AssetId): SeriesKey[] {
   if (asset === 'RAIF') return ['raif_ret'];
   return ['bcv_ret', 'fund_ret'];
 }
-export type Universe = 'SPI' | 'EUROPE';
+/** SWISS : marché SPI TR et facteurs long-short suisses de Global Factor Data (JKP). */
+export type Universe = 'SPI' | 'EUROPE' | 'SWISS';
 
 export const MODEL_IDS: ModelId[] = ['CAPM', 'FF3', 'CARHART', 'FF5'];
-export const UNIVERSES: Universe[] = ['SPI', 'EUROPE'];
+export const UNIVERSES: Universe[] = ['SPI', 'EUROPE', 'SWISS'];
 
 export type FactorId = 'MKT' | 'SMB' | 'HML' | 'MOM' | 'RMW' | 'CMA';
 
@@ -56,6 +57,7 @@ export const MODEL_SHORT: Record<ModelId, string> = { CAPM: 'CAPM', FF3: 'FF3', 
 export const UNIVERSE_LABELS: Record<Universe, string> = {
   SPI: 'Marché suisse : SPI TR (CHF)',
   EUROPE: 'Marché européen Fama-French (converti en CHF)',
+  SWISS: 'Marché suisse : SPI TR et facteurs suisses JKP (CHF)',
 };
 
 export const FACTOR_LABELS: Record<FactorId, string> = {
@@ -71,7 +73,11 @@ export const FACTOR_LABELS: Record<FactorId, string> = {
 export const FACTOR_COEF: Record<FactorId, string> = { MKT: 'β_M', SMB: 's', HML: 'h', MOM: 'm', RMW: 'r', CMA: 'c' };
 
 /** Colonnes des facteurs long-short selon le modèle (les SMB/HML diffèrent entre FF3 et FF5). */
-function factorColumn(model: ModelId, factor: Exclude<FactorId, 'MKT'>): SeriesKey {
+function factorColumn(model: ModelId, factor: Exclude<FactorId, 'MKT'>, universe: Universe): SeriesKey {
+  if (universe === 'SWISS') {
+    // mêmes SMB et HML pour FF3 et FF5 (portefeuilles JKP par caractéristique)
+    return ({ SMB: 'smb_ch', HML: 'hml_ch', MOM: 'mom_ch', RMW: 'rmw_ch', CMA: 'cma_ch' } as const)[factor];
+  }
   const five = model === 'FF5';
   switch (factor) {
     case 'SMB':
@@ -88,13 +94,13 @@ function factorColumn(model: ModelId, factor: Exclude<FactorId, 'MKT'>): SeriesK
 }
 
 export function marketColumn(universe: Universe): SeriesKey {
-  return universe === 'SPI' ? 'spi_ret' : 'mkt_eu_chf';
+  return universe === 'EUROPE' ? 'mkt_eu_chf' : 'spi_ret';
 }
 
 /** Colonnes nécessaires pour estimer un modèle dans un univers. */
 export function requiredColumns(model: ModelId, universe: Universe, asset: AssetId = 'BCV'): SeriesKey[] {
   const cols: SeriesKey[] = [...assetColumns(asset), 'rf_saron', marketColumn(universe)];
-  for (const f of MODEL_FACTORS[model]) if (f !== 'MKT') cols.push(factorColumn(model, f));
+  for (const f of MODEL_FACTORS[model]) if (f !== 'MKT') cols.push(factorColumn(model, f, universe));
   return cols;
 }
 
@@ -104,15 +110,18 @@ export type Coherence = 'swiss' | 'european' | 'hybrid';
  * Cohérence de l'univers de facteurs :
  *  - CAPM + SPI : modèle suisse cohérent (Single Index Model) ;
  *  - tout modèle + marché européen : univers Fama-French européen cohérent ;
- *  - modèle multifactoriel + SPI : variante HYBRIDE (marché suisse, facteurs européens).
+ *  - modèle multifactoriel + SPI : variante HYBRIDE (marché suisse, facteurs européens) ;
+ *  - tout modèle + SWISS : univers suisse cohérent (SPI et facteurs suisses JKP).
  */
 export function coherence(model: ModelId, universe: Universe): Coherence {
   if (universe === 'EUROPE') return 'european';
+  if (universe === 'SWISS') return 'swiss';
   return model === 'CAPM' ? 'swiss' : 'hybrid';
 }
 
 export function specLabel(model: ModelId, universe: Universe): string {
   const c = coherence(model, universe);
+  if (universe === 'SWISS' && model !== 'CAPM') return `${MODEL_LABELS[model]} — univers suisse (SPI + facteurs JKP)`;
   if (c === 'swiss') return 'Single Index Model (SPI TR)';
   if (c === 'european') return `${MODEL_LABELS[model]} — univers européen`;
   return `${MODEL_LABELS[model]} — variante hybride (SPI + facteurs européens)`;
@@ -216,7 +225,7 @@ export function buildSample(
     const row = [1];
     for (const f of factors) {
       if (f === 'MKT') row.push(get(mcol, i) - rf);
-      else row.push(get(factorColumn(model, f), i));
+      else row.push(get(factorColumn(model, f, universe), i));
     }
     x.push(row);
     dates.push(ds.dates[i]);

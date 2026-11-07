@@ -91,6 +91,24 @@ SFD_SHOW_URL = f"{SFD_BASE}/de/funds/show/{SFD_FUND_ID}"
 SFD_CSV_URL = f"{SFD_BASE}/de/funds/excelData/{SFD_FUND_ID}"
 
 FRENCH_BASE = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
+
+# Facteurs suisses de Global Factor Data (Jensen, Kelly et Pedersen, 2023, « Is There a
+# Replication Crisis in Finance? », Journal of Finance 78(5)). Portefeuilles long-short
+# par terciles de la caractéristique, pondérés par la capitalisation plafonnée
+# (vw_cap), en USD, signe déjà orienté (« direction ») vers la jambe à rendement
+# attendu élevé. Archives publiques S3 ; manifeste : availability.json.
+JKP_BASE = "https://jkpfactors-data.s3.amazonaws.com/public/"
+JKP_REGION = "che"
+JKP_WEIGHTING = "vw_cap"
+# Facteur du site -> caractéristique JKP la plus proche de la définition Fama-French
+JKP_FACTORS = {
+    "SMB": ("market_equity", "capitalisation boursière (petites − grandes)"),
+    "HML": ("be_me", "valeur comptable / capitalisation (valeur − croissance)"),
+    "RMW": ("ope_be", "bénéfice d'exploitation / fonds propres (rentables − peu rentables)"),
+    "CMA": ("at_gr1", "croissance annuelle du total des actifs (conservatrices − agressives)"),
+    "MOM": ("ret_12_1", "rendement de t−12 à t−1 (gagnantes − perdantes)"),
+}
+JKP_MIN_STOCKS = 30  # en dessous, le facteur repose sur trop peu de titres par jambe
 FRENCH_FILES = {
     "ff3": ["Europe_3_Factors_CSV.zip"],
     "ff5": ["Europe_5_Factors_CSV.zip"],
@@ -111,6 +129,7 @@ LICENSES = {
     "six": "Données d'indices SIX (SPI, SARON) — propriété de SIX Index AG ; la diffusion publique de données d'indices peut nécessiter une licence. À vérifier.",
     "snb": "Portail de données BNS (data.snb.ch) — données publiques, citer la source.",
     "french": "Kenneth R. French Data Library — usage libre avec citation.",
+    "jkp": "Global Factor Data (jkpfactors.com), Jensen, Kelly et Pedersen (2023) — données académiques gratuites, usage non commercial, citation requise.",
     "fred": "FRED, Federal Reserve Bank of St. Louis (H.10) — citer la source.",
     "swissfunddata": "Swiss Fund Data (SIX Financial Information AG / AMAS), données publiques soumises aux conditions du site — seuls des rendements mensuels dérivés sont publiés ; vérifier les conditions d'utilisation avant diffusion publique.",
     "gerifonds": "Gérifonds SA (filiale de la BCV), page publique du fonds — seuls des rendements mensuels dérivés sont publiés ; vérifier les conditions d'utilisation avant diffusion publique.",

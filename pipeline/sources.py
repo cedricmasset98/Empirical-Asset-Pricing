@@ -411,3 +411,54 @@ def fetch_raif():
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")
         return None, info
+
+
+# --------------------------------------------------------------------- Facteurs suisses JKP
+
+def fetch_jkp_che():
+    """Facteurs long-short suisses de Global Factor Data (USD, mensuels).
+
+    Retourne (DataFrame | None, info). Colonnes : SMB, HML, RMW, CMA, MOM (rendements
+    décimaux en USD) et n_SMB… (nombre de titres). Index : PeriodIndex mensuel.
+    Repli : data/manual/jkp_che_factors.csv (date,SMB,HML,RMW,CMA,MOM en USD).
+    """
+    info: Info = {
+        "id": "jkp", "name": "Facteurs suisses Global Factor Data (JKP) : taille, valeur, rentabilité, investissement, momentum — mensuels, USD",
+        "provider": "Global Factor Data, Jensen, Kelly et Pedersen (2023), archives publiques",
+        "url": "https://jkpfactors.com/", "license": C.LICENSES["jkp"],
+        "columns": ["smb_ch", "hml_ch", "rmw_ch", "cma_ch", "mom_ch"], "retrieved_at": _now(),
+    }
+    try:
+        manual = C.MANUAL_DIR / "jkp_che_factors.csv"
+        if manual.exists():
+            df = pd.read_csv(manual)
+            df.index = pd.PeriodIndex(pd.to_datetime(df.pop("date")), freq="M")
+            info.update(status="manual", provider="Import manuel data/manual/jkp_che_factors.csv",
+                        coverage=[str(df.index.min()), str(df.index.max())])
+            return df[[k for k in C.JKP_FACTORS]], info
+        out: dict[str, pd.Series] = {}
+        for key, (code, _) in C.JKP_FACTORS.items():
+            url = f"{C.JKP_BASE}%5B{C.JKP_REGION}%5D_%5B{code}%5D_%5Bmonthly%5D_%5B{C.JKP_WEIGHTING}%5D.zip"
+            content = _retry(lambda u=url: _get(u).content)
+            with zipfile.ZipFile(io.BytesIO(content)) as z:
+                member = next(n for n in z.namelist() if n.lower().endswith(".csv"))
+                raw = pd.read_csv(z.open(member), na_values="na")
+            need = {"date", "ret", "n_stocks", "location", "name"}
+            if not need <= set(raw.columns):
+                raise ValueError(f"{code} : colonnes manquantes {sorted(need - set(raw.columns))}")
+            if set(raw["location"]) != {C.JKP_REGION} or set(raw["name"]) != {code}:
+                raise ValueError(f"{code} : fichier inattendu (pays {set(raw['location'])}, facteur {set(raw['name'])})")
+            idx = pd.PeriodIndex(pd.to_datetime(raw["date"]), freq="M")
+            if idx.has_duplicates:
+                raise ValueError(f"{code} : mois en double")
+            out[key] = pd.Series(pd.to_numeric(raw["ret"], errors="coerce").values, index=idx)
+            out[f"n_{key}"] = pd.Series(pd.to_numeric(raw["n_stocks"], errors="coerce").values, index=idx)
+        df = pd.DataFrame(out).sort_index()
+        _save_raw("jkp_che_factors_usd.csv", df)
+        info.update(status="ok", coverage=[str(df.index.min()), str(df.index.max())],
+                    message="Caractéristiques : " + ", ".join(f"{k} = {c}" for k, (c, _) in C.JKP_FACTORS.items())
+                    + f" ; pondération {C.JKP_WEIGHTING} ; dernier mois publié {df.index.max()}.")
+        return df, info
+    except Exception as exc:  # noqa: BLE001
+        info.update(status="error", message=f"{type(exc).__name__}: {exc}")
+        return None, info

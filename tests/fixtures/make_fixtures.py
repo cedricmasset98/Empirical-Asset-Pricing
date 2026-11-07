@@ -58,10 +58,15 @@ def make_dataset() -> dict:
     fund = rf - 0.0008 + 0.95 * (mkt_spi - rf) + 0.05 * smb3 + RNG.normal(0, 0.008, N)
     # second fonds (Raiffeisen) : générateur séparé pour ne pas modifier les autres séries
     raif = rf - 0.001 + 0.9 * (mkt_spi - rf) + 0.04 * hml3 + np.random.default_rng(2026).normal(0, 0.011, N)
+    # facteurs suisses (JKP) : générateur séparé, corrélés aux européens, publiés jusqu'à N − 8
+    g_ch = np.random.default_rng(4146)
+    swiss = {f"{k}_ch": 0.5 * base + g_ch.normal(0, 0.02, N)
+             for k, base in (("smb", smb3), ("hml", hml3), ("rmw", rmw5), ("cma", cma5), ("mom", wml))}
     cols = {
         "bcv_ret": bcv,
         "fund_ret": fund,
         "raif_ret": raif,
+        **swiss,
         "spi_ret": mkt_spi,
         "rf_saron": rf,
         "mkt_eu_chf": mkt_eu,
@@ -86,6 +91,9 @@ def make_dataset() -> dict:
         data["fund_ret"][i] = None
     for i in range(10):
         data["raif_ret"][i] = None
+    for k in ("smb_ch", "hml_ch", "rmw_ch", "cma_ch", "mom_ch"):
+        for i in list(range(4)) + list(range(N - 8, N)):
+            data[k][i] = None
     return {
         "schema": "eap-dataset/v1",
         "frequency": "monthly",

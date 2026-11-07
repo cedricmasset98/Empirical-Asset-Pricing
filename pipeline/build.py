@@ -35,6 +35,11 @@ COLUMN_INFO = {
     "bcv_ret": ("Rendement total BCV", "BCVN.SW, cours ajusté (dividendes, splits), fin de mois à fin de mois"),
     "fund_ret": ("Rendement total BCV Swiss Equity A", "Indice de performance officiel Gérifonds, distributions brutes réinvesties, net des frais du fonds"),
     "raif_ret": ("Rendement total Raiffeisen Futura - Swiss Stock A", "Swiss Fund Data, « Total Return Chart Price » (distributions réinvesties), net des frais du fonds"),
+    "smb_ch": ("SMB suisse (JKP, CHF)", "Global Factor Data, Suisse : taille (market_equity), terciles, poids plafonnés ; F_USD(1+s)"),
+    "hml_ch": ("HML suisse (JKP, CHF)", "Global Factor Data, Suisse : valeur comptable / capitalisation (be_me)"),
+    "rmw_ch": ("RMW suisse (JKP, CHF)", "Global Factor Data, Suisse : bénéfice d'exploitation / fonds propres (ope_be)"),
+    "cma_ch": ("CMA suisse (JKP, CHF)", "Global Factor Data, Suisse : croissance des actifs (at_gr1)"),
+    "mom_ch": ("MOM suisse (JKP, CHF)", "Global Factor Data, Suisse : rendement t−12 à t−1 (ret_12_1)"),
     "spi_ret": ("Rendement SPI TR", "Swiss Performance Index (indice de performance, CHF)"),
     "rf_saron": ("Taux sans risque SARON réalisé", "Capitalisation quotidienne ACT/360 du SARON sur le mois"),
     "mkt_eu_chf": ("Marché européen FF, rendement total en CHF", "(1 + Mkt−RF + RF_US)(1 + s) − 1"),
@@ -98,6 +103,41 @@ def bcv_checks(h: pd.DataFrame, checks: list[dict], last_complete: pd.Period) ->
         status = "pass" if diff > 0.01 and n_div > 0 else "warn"
         check(checks, "bcv-dividends", status,
               f"Ajustement des dividendes : {n_div} détachements ; rendement total − rendement de prix = {diff:+.2%} par an en moyenne.")
+
+
+def jkp_block(fx_r, cols: dict, sources: list, checks: list[dict]) -> None:
+    """Facteurs suisses JKP : contrôles, puis conversion F_CHF = F_USD (1 + s)."""
+    df, info = S.fetch_jkp_che()
+    sources.append(info)
+    if df is None:
+        check(checks, "jkp", "warn", "Facteurs suisses JKP indisponibles : l'univers « Suisse » ne peut pas être estimé.")
+        return
+    bad = [k for k in C.JKP_FACTORS if df[k].abs().max() >= 0.5]
+    if bad:
+        check(checks, "jkp-range", "fail", f"Facteurs suisses JKP : rendements mensuels ≥ 50 % pour {', '.join(bad)} (unités à vérifier).")
+    for key in C.JKP_FACTORS:
+        f = df[key].copy()
+        n = df.get(f"n_{key}")
+        if n is not None:
+            thin = n < C.JKP_MIN_STOCKS
+            f[thin] = np.nan  # trop peu de titres : facteur non représentatif
+        cols[f"{key.lower()}_ch"] = convert_long_short_to_chf(f, fx_r.reindex(f.index))
+    last = df.index.max()
+    first = max(df[k].where(df.get(f"n_{k}", pd.Series(np.inf, index=df.index)) >= C.JKP_MIN_STOCKS).first_valid_index() for k in C.JKP_FACTORS)
+    check(checks, "jkp", "pass" if info["status"] in ("ok", "manual") else "warn",
+          f"Facteurs suisses JKP du {first} au {last} (mois retenus : au moins {C.JKP_MIN_STOCKS} titres par facteur), convertis en CHF par F_USD(1+s). "
+          "Publication annuelle : les derniers mois de l'échantillon peuvent manquer.")
+    pairs = {"SMB": "smb3_usd", "HML": "hml3_usd", "RMW": "rmw5_usd", "CMA": "cma5_usd", "MOM": "wml_usd"}
+    cor = {}
+    for k, v in pairs.items():
+        if v in cols:
+            x = pd.concat([df[k], pd.Series(cols[v])], axis=1).dropna()
+            if len(x) > 60:
+                cor[k] = float(x.corr().iloc[0, 1])
+    if cor:
+        check(checks, "jkp-vs-europe", "pass",
+              "Corrélation facteurs suisses JKP / européens Fama-French (USD) : " + ", ".join(f"{k} {v:.2f}" for k, v in cor.items())
+              + ". Corrélations modérées attendues : marchés et méthodes différents.")
 
 
 def raif_checks(ser, checks: list[dict]) -> None:
@@ -295,6 +335,7 @@ def main(argv: list[str] | None = None) -> int:
             wcol = "WML" if "WML" in fm.columns else fm.columns[0]
             cols["wml_usd"] = fm[wcol]
             cols["wml_chf"] = convert_long_short_to_chf(fm[wcol], fx_r.reindex(fm.index))
+        jkp_block(fx_r, cols, sources, checks)
         if ff:
             check(checks, "ff-conversion", "pass",
                   "Facteurs Fama-French européens convertis en CHF : marché = (1+Mkt−RF+RF_US)(1+s)−1, facteurs long-short = F_USD(1+s). "
