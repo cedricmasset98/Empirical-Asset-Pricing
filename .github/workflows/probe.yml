@@ -1,7 +1,7 @@
-name: Sonde Raiffeisen (temporaire)
+name: Sonde JKP (temporaire)
 on:
   push:
-    branches: [probe-raiffeisen]
+    branches: [probe-jkp]
 jobs:
   probe:
     runs-on: ubuntu-latest
