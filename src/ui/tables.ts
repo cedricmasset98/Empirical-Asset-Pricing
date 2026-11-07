@@ -1,6 +1,8 @@
 /** Rendu HTML des cartes, tableaux économétriques et tableaux de tests. */
 
-import type { FitOk, Comparison, Diagnostics } from './analysis.ts';
+import type { FitOk, Comparison, Diagnostics, GrossAlpha } from './analysis.ts';
+import { shiftAlpha } from './analysis.ts';
+import type { FeeInfo } from '../data/types.ts';
 import type { Dataset } from '../data/types.ts';
 import { ASSET_INFO, FACTOR_COEF, MODEL_IDS, MODEL_SHORT, type FactorId } from '../engine/models.ts';
 import type { AssetComparison, Fit } from './analysis.ts';
@@ -17,7 +19,7 @@ export function tip(text: string): string {
   return `<span class="tip" tabindex="0" role="note" aria-label="${h(text)}" data-tip="${h(text)}">?</span>`;
 }
 
-export function statCards(fit: FitOk): string {
+export function statCards(fit: FitOk, gross: GrossAlpha | null = null): string {
   const r = fit.result;
   const who = { BCV: 'de BCV', FUND: 'du fonds', RAIF: 'du fonds Raiffeisen', DIFF: 'de la différence' }[fit.asset];
   const z = r.distribution === 't' ? 't' : 'z';
@@ -28,8 +30,15 @@ export function statCards(fit: FitOk): string {
   return [
     card('α mensuel', pct(r.beta[0], 3), `IC 95 % [${pct(r.ciLow[0], 3)} ; ${pct(r.ciHigh[0], 3)}]`,
       'Constante de la régression des rendements excédentaires mensuels : rendement moyen non expliqué par les facteurs, en % par mois.', sig),
-    card('α annualisé', pct(12 * r.beta[0], 2), `= 12 × α mensuel · IC [${pct(12 * r.ciLow[0], 2)} ; ${pct(12 * r.ciHigh[0], 2)}]`,
-      'Annualisation arithmétique : 12 × α mensuel (les statistiques de test sont inchangées).', sig),
+    card(gross ? 'α net annualisé' : 'α annualisé', pct(12 * r.beta[0], 2), `= 12 × α mensuel · IC [${pct(12 * r.ciLow[0], 2)} ; ${pct(12 * r.ciHigh[0], 2)}]`,
+      gross
+        ? 'Alpha après frais de gestion : les rendements du fonds sont nets des frais incorporés dans la VNI. Annualisation arithmétique : 12 × α mensuel.'
+        : 'Annualisation arithmétique : 12 × α mensuel (les statistiques de test sont inchangées).', sig),
+    ...(gross
+      ? [card('α brut annualisé', pct(12 * gross.gross, 2), `≈ α net + TER ${pct(gross.ter, 2)} · ${z} = ${num(gross.stat, 2)} · p = ${pval(gross.pvalue)} ${stars(gross.pvalue)}`,
+          `Alpha avant frais de gestion : α net + TER publié (${gross.terDate}). Ajouter TER/12 à chaque rendement mensuel déplace la constante sans changer les pentes ni l’erreur standard. Approximation : TER actuel supposé constant sur la période ; les frais de transaction, non compris dans le TER, restent déduits.`,
+          gross.pvalue < 0.05 ? 'sig' : '')]
+      : []),
     card(`${z}-stat (α)`, num(r.stat[0], 2), `p-value bilatérale ${pval(r.pvalue[0])} ${stars(r.pvalue[0])}`,
       r.distribution === 't' ? `Statistique de Student à ${r.dfResid} degrés de liberté.` : 'Statistique z (inférence asymptotique normale, erreurs standards robustes).', sig),
     card('β marché', mktIdx >= 0 ? num(r.beta[mktIdx], 3) : '—', mktIdx >= 0 ? `se ${num(r.se[mktIdx], 3)} · IC [${num(r.ciLow[mktIdx], 3)} ; ${num(r.ciHigh[mktIdx], 3)}]` : '',
@@ -141,8 +150,21 @@ function cell(f: Fit, fn: (r: FitOk['result']) => string): string {
   return f.ok ? fn(f.result) : `<span class="err">${h(f.error)}</span>`;
 }
 
-export function alphaPairTable(m: AssetComparison['models'][number], pair: AssetComparison['pair']): string {
+export function alphaPairTable(m: AssetComparison['models'][number], pair: AssetComparison['pair'], fees: [FeeInfo | null, FeeInfo | null] = [null, null]): string {
   const { a, b, diff } = m;
+  const terA = fees[0]?.ter ?? 0;
+  const terB = fees[1]?.ter ?? 0;
+  const grossCell = (f: Fit, ter: number, fee: FeeInfo | null) => {
+    if (!f.ok) return '';
+    if (!fee) return '<span class="muted small">sans frais de gestion</span>';
+    const g = shiftAlpha(f, ter / 12);
+    return `${pct(12 * g.alpha, 2)}<sup>${stars(g.pvalue)}</sup><br><span class="muted small">TER ${pct(ter, 2)} · p = ${pval(g.pvalue)}</span>`;
+  };
+  let grossRow = '';
+  if (fees[0] || fees[1]) {
+    const gd = diff.ok ? shiftAlpha(diff, (terA - terB) / 12) : null;
+    grossRow = `<tr class="row-alpha"><th scope="row">α brut annualisé (≈ net + TER) ${tip('Alpha avant frais de gestion : alpha net + TER publié actuel, supposé constant sur la période. Les pentes et erreurs standards ne changent pas ; les frais de transaction restent déduits. Pour l’écart, le décalage est la différence des TER.')}</th><td>${grossCell(a, terA, fees[0])}</td><td>${grossCell(b, terB, fees[1])}</td><td>${gd ? `${pct(12 * gd.alpha, 2)}<br><span class="muted small">p = ${pval(gd.pvalue)}</span>` : ''}</td></tr>`;
+  }
   const [na, nb] = [ASSET_INFO[pair[0]].short, ASSET_INFO[pair[1]].short];
   const z = a.ok && a.result.distribution === 't' ? 't' : 'z';
   const row = (label: string, fn: (r: FitOk['result']) => string, d?: string) =>
@@ -151,7 +173,8 @@ export function alphaPairTable(m: AssetComparison['models'][number], pair: Asset
     ? `${pct(12 * diff.result.beta[0], 2)}<br><span class="muted small">${z} = ${num(diff.result.stat[0], 2)} · p = ${pval(diff.result.pvalue[0])}</span>`
     : '';
   return `<table class="reg pair"><thead><tr><th>Indicateur — ${h(MODEL_SHORT[m.model])}</th><th>${h(na)}</th><th>${h(nb)}</th><th>Écart (A − B) ${tip("Régression du rendement de A moins celui de B sur les mêmes facteurs : son alpha est exactement α_A − α_B, et son erreur standard tient compte de la corrélation entre les deux actifs.")}</th></tr></thead><tbody>
-    ${row('α annualisé (12 × mensuel)', (r) => `${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup>`, dRow)}
+    ${row(fees[0] || fees[1] ? 'α net annualisé (12 × mensuel)' : 'α annualisé (12 × mensuel)', (r) => `${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup>`, dRow)}
+    ${grossRow}
     ${row('IC 95 % de l’α annualisé', (r) => `[${pct(12 * r.ciLow[0], 1)} ; ${pct(12 * r.ciHigh[0], 1)}]`, diff.ok ? `[${pct(12 * diff.result.ciLow[0], 1)} ; ${pct(12 * diff.result.ciHigh[0], 1)}]` : '')}
     ${row(`${z}-stat de l’α`, (r) => num(r.stat[0], 2))}
     ${row('p-value de l’α', (r) => pval(r.pvalue[0]))}
@@ -172,4 +195,20 @@ export function multiFactorPairTable(cmp: AssetComparison): string {
     .join('');
   return `<table class="reg"><thead><tr><th>Modèle</th><th>α ${h(na)}</th><th>α ${h(nb)}</th><th>Écart (A − B)</th><th>R² A / B</th></tr></thead><tbody>${rows}</tbody></table>
   <p class="table-note">α annualisé (12 × mensuel). *** p &lt; 0,01 · ** p &lt; 0,05 · * p &lt; 0,1. Toutes les estimations utilisent exactement les mêmes mois.</p>`;
+}
+
+/** Encadré « Frais » sous le tableau de régression d'un fonds. */
+export function feesBlock(fit: FitOk, gross: GrossAlpha): string {
+  const r = fit.result;
+  const z = r.distribution === 't' ? 't' : 'z';
+  const verdict = (p: number) => (p < 0.05 ? 'significatif à 5 %' : 'non significatif à 5 %');
+  return `<div class="fees">
+    <h3>Frais : alpha net et alpha brut</h3>
+    <table class="reg"><thead><tr><th></th><th>α annualisé</th><th>IC 95 %</th><th>${z}-stat</th><th>p-value</th></tr></thead><tbody>
+      <tr><th scope="row">α net (après frais de gestion)</th><td>${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup></td><td>[${pct(12 * r.ciLow[0], 2)} ; ${pct(12 * r.ciHigh[0], 2)}]</td><td>${num(r.stat[0], 2)}</td><td>${pval(r.pvalue[0])}</td></tr>
+      <tr><th scope="row">+ TER publié (${h(gross.terDate)})</th><td>${pct(gross.ter, 2)}</td><td colspan="3" class="muted small">${h(gross.source)}</td></tr>
+      <tr class="row-alpha"><th scope="row">≈ α brut (avant frais de gestion)</th><td>${pct(12 * gross.gross, 2)}<sup>${stars(gross.pvalue)}</sup></td><td>[${pct(12 * gross.ciLow, 2)} ; ${pct(12 * gross.ciHigh, 2)}]</td><td>${num(gross.stat, 2)}</td><td>${pval(gross.pvalue)}</td></tr>
+    </tbody></table>
+    <p class="table-note">L’α net mesure ce que les porteurs de parts ont obtenu au-delà des facteurs ; l’α brut, ${verdict(gross.pvalue)}, approche ce que la gestion a produit avant ses frais. Ajouter TER/12 à chaque rendement mensuel déplace la constante de TER/12 sans changer les pentes ni l’erreur standard : le test de l’α brut est celui de α<sub>net</sub> = −TER/12. Limites : seul le TER actuel est connu (frais supposés constants sur la période) ; les frais de transaction ne font pas partie du TER et restent déduits.</p>
+  </div>`;
 }

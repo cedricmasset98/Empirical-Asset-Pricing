@@ -150,3 +150,21 @@ test('comparaison de deux fonds quelconques : différence = α_A − α_B', () =
   assert.ok(Math.abs(d.sample.y[0] - ((ds.data.fund_ret![i] as number) - (ds.data.raif_ret![i] as number))) < 1e-15);
   assert.equal(compareAssets(ds, st, ['RAIF', 'RAIF']).ok, false);
 });
+
+test('alpha brut = alpha d’une régression sur R + TER/12 (pentes et erreurs standards inchangées)', async () => {
+  const { grossAlpha, feeInfo } = await import('../src/ui/analysis.ts');
+  const { ols } = await import('../src/engine/ols.ts');
+  const withFee: Dataset = { ...ds, fund_info: { ter: 0.0111, ter_date: '2026-03-31' } };
+  assert.equal(feeInfo(withFee, 'BCV'), null);
+  for (const cov of ['classical', 'HAC'] as const) {
+    const f = fitModel(withFee, 'FF3', 'SWISS', { ...st, asset: 'FUND', cov });
+    if (!f.ok) throw new Error(f.error);
+    const g = grossAlpha(f, feeInfo(withFee, 'FUND')!);
+    const r2 = ols(f.sample.y.map((v) => v + 0.0111 / 12), f.sample.x, f.sample.names, { cov, hacLags: null });
+    assert.ok(Math.abs(g.gross - r2.beta[0]) < 1e-14);
+    assert.ok(Math.abs(g.stat - r2.stat[0]) < 1e-9);
+    assert.ok(Math.abs(g.pvalue - r2.pvalue[0]) < 1e-12);
+    assert.ok(Math.abs(g.ciLow - r2.ciLow[0]) < 1e-14);
+    assert.ok(Math.abs(r2.beta[1] - f.result.beta[1]) < 1e-12 && Math.abs(r2.se[0] - f.result.se[0]) < 1e-14);
+  }
+});

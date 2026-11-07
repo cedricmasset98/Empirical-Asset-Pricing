@@ -1,11 +1,11 @@
 /** Point d'entrée : chargement des données, paramètres, rendu. */
 
 import './styles.css';
-import type { Dataset } from './data/types.ts';
+import type { Dataset, FeeInfo } from './data/types.ts';
 import { loadDataset, parseCsvDataset, datasetToCsv, DatasetError } from './data/loader.ts';
-import { compareAssets, compareModels, diagnose, fitModel, rolling, singleIndexPair, type AssetComparison, type Fit, type FitOk, type Settings, type Comparison } from './ui/analysis.ts';
+import { compareAssets, compareModels, diagnose, feeInfo, fitModel, grossAlpha, rolling, shiftAlpha, singleIndexPair, type AssetComparison, type Fit, type FitOk, type Settings, type Comparison } from './ui/analysis.ts';
 import { commonRanges, plotAlphaPair, plotComparison, plotDiagnostics, plotFitted, plotFittedScatter, plotPerformance, plotRolling, plotScatter, readTheme, resizeAll } from './ui/charts.ts';
-import { alphaPairTable, comparisonTable, multiFactorPairTable, perfTable, regressionTable, sourcesTable, statCards, testsTable, COV_LABELS } from './ui/tables.ts';
+import { alphaPairTable, comparisonTable, feesBlock, multiFactorPairTable, perfTable, regressionTable, sourcesTable, statCards, testsTable, COV_LABELS } from './ui/tables.ts';
 import { assetComparisonCsv, comparisonCsv, download, regressionCsv, sampleCsv } from './ui/export.ts';
 import { escapeHtml as h, monthLabel, num, pct, pval } from './ui/format.ts';
 import { neweyWestAutoLags, type CovType } from './engine/ols.ts';
@@ -248,8 +248,11 @@ function renderMain(): void {
     $('reg-table').innerHTML = `<div class="empty">Aucun résultat : ${h(main && !main.ok ? main.error : 'données indisponibles')}</div>`;
     return;
   }
-  $('cards').innerHTML = statCards(main);
+  const fee = feeInfo(data!, main.asset);
+  const gross = fee ? grossAlpha(main, fee) : null;
+  $('cards').innerHTML = statCards(main, gross);
   $('reg-table').innerHTML = regressionTable(main);
+  $('fees').innerHTML = gross ? feesBlock(main, gross) : '';
 }
 
 function needFit(el: HTMLElement, fit: Fit | null): fit is FitOk {
@@ -392,7 +395,7 @@ function renderCompare(): void {
   $('vs-perf-table').innerHTML = perfTable(cmp);
   const sel = cmp.models.find((m) => m.model === state.model)!;
   $('vs-alpha-title').textContent = `B. Alphas comparés — ${MODEL_SHORT[state.model]}`;
-  $('vs-alpha-table').innerHTML = alphaPairTable(sel, cmp.pair);
+  $('vs-alpha-table').innerHTML = alphaPairTable(sel, cmp.pair, [feeInfo(data!, cmp.pair[0]), feeInfo(data!, cmp.pair[1])]);
   plotAlphaPair($('chart-vs-alpha'), cmp, t);
   const pair = singleIndexPair(data!, state, cmp);
   if (pair.a.ok && pair.b.ok) {
@@ -401,14 +404,15 @@ function renderCompare(): void {
     plotScatter($('chart-vs-sim-b'), pair.b, t, { band: state.band, colorByYear: false, marketLabel: 'SPI TR', ranges, compact: true });
   }
   $('vs-mf-table').innerHTML = multiFactorPairTable(cmp);
-  $('vs-reading').innerHTML = versusReading(cmp, sel);
+  $('vs-reading').innerHTML = versusReading(cmp, sel, [feeInfo(data!, cmp.pair[0]), feeInfo(data!, cmp.pair[1])]);
 }
 
 /** Lecture descriptive des résultats de la comparaison (aucune conclusion causale). */
-function versusReading(cmp: AssetComparison, m: AssetComparison['models'][number]): string {
+function versusReading(cmp: AssetComparison, m: AssetComparison['models'][number], fees: [FeeInfo | null, FeeInfo | null]): string {
   const out: string[] = [];
   const [pa, pb] = [cmp.perf[0], cmp.perf[1]];
-  const [na, nb] = cmp.pair.map((x) => ASSET_INFO[x].short.toLowerCase().replace(/^fonds /, 'le fonds ').replace(/^action /, 'l’action '));
+  const name: Record<SingleAsset, string> = { BCV: 'l’action BCV', FUND: 'le fonds BCV', RAIF: 'le fonds Raiffeisen' };
+  const [na, nb] = cmp.pair.map((x) => name[x]);
   out.push(
     `Sur ces ${cmp.dates.length} mois, ${na} a rapporté ${pct(pa.annReturn, 1)} par an et ${nb} ${pct(pb.annReturn, 1)}, ` +
       `avec une volatilité de ${pct(pa.annVol, 1)} contre ${pct(pb.annVol, 1)}.`,
@@ -421,6 +425,16 @@ function versusReading(cmp: AssetComparison, m: AssetComparison['models'][number
         `et de ${pct(12 * rb.beta[0], 1)} pour ${nb} (${sig(rb.pvalue[0])}). ` +
         `L’écart de ${pct(12 * rd.beta[0], 1)} par an est ${sig(rd.pvalue[0])} (régression de la différence de rendement, p = ${pval(rd.pvalue[0])}).`,
     );
+    if (fees[0] || fees[1]) {
+      const ta = fees[0]?.ter ?? 0;
+      const tb = fees[1]?.ter ?? 0;
+      const g = shiftAlpha(m.diff, (ta - tb) / 12);
+      out.push(
+        `Avant frais de gestion (α net + TER), l’alpha serait d’environ ${pct(12 * ra.beta[0] + ta, 1)} pour ${na} et ${pct(12 * rb.beta[0] + tb, 1)} pour ${nb} ; ` +
+          `l’écart brut de ${pct(12 * g.alpha, 1)} par an est ${sig(g.pvalue)}. ` +
+          (Math.abs(ta - tb) < 0.002 ? 'Les frais étant proches, l’écart d’alpha ne vient guère des frais.' : `La différence de frais (${pct(ta - tb, 2)} par an) explique une partie de l’écart net.`),
+      );
+    }
     out.push(
       `Bêtas de ${num(ra.beta[1], 2)} et ${num(rb.beta[1], 2)} ; volatilités résiduelles de ${pct(ra.sigma * Math.sqrt(12), 1)} et ${pct(rb.sigma * Math.sqrt(12), 1)} par an. ` +
         `Plus la volatilité résiduelle est faible, plus l’alpha est estimé précisément.`,

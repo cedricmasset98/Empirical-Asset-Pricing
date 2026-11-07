@@ -2,7 +2,8 @@
  * Orchestration des calculs pour l'interface (sans DOM, testable sous Node).
  */
 
-import type { Dataset, SeriesKey } from '../data/types.ts';
+import type { Dataset, FeeInfo, SeriesKey } from '../data/types.ts';
+import { normSf, tTwoSidedP } from '../engine/distributions.ts';
 import { ols, InsufficientDataError, type CovType, type OLSResult } from '../engine/ols.ts';
 import {
   assertColumns,
@@ -257,4 +258,45 @@ export function compareAssets(ds: Dataset, st: Settings, pair: Pair = DEFAULT_PA
 export function singleIndexPair(ds: Dataset, st: Settings, cmp: AssetComparison): { a: Fit; b: Fit } {
   const set = new Set(cmp.dates);
   return { a: fitModel(ds, 'CAPM', 'SPI', st, set, cmp.pair[0]), b: fitModel(ds, 'CAPM', 'SPI', st, set, cmp.pair[1]) };
+}
+
+// ------------------------------------------------------------------ alpha brut des fonds
+
+/** TER publié d'un fonds (null pour l'action ou si le pipeline ne l'a pas lu). */
+export function feeInfo(ds: Dataset, asset: AssetId): FeeInfo | null {
+  const f = asset === 'FUND' ? ds.fund_info : asset === 'RAIF' ? ds.raif_info : undefined;
+  return f && Number.isFinite(f.ter) && f.ter >= 0 && f.ter < 0.1 ? f : null;
+}
+
+export interface GrossAlpha {
+  ter: number;
+  terDate: string;
+  source: string;
+  /** Alphas mensuels. */
+  net: number;
+  gross: number;
+  ciLow: number;
+  ciHigh: number;
+  stat: number;
+  pvalue: number;
+}
+
+/**
+ * Alpha avant frais de gestion : ajouter TER/12 à chaque rendement mensuel
+ * décale la constante de TER/12 sans changer les pentes ni les erreurs
+ * standards (régresseurs inchangés, résidus identiques). Le test de l'alpha
+ * brut est donc celui de H0 : α_net = −TER/12, avec la même loi que le modèle.
+ * Approximation : TER actuel supposé constant ; frais de transaction non inclus.
+ */
+export function shiftAlpha(fit: FitOk, shiftMonthly: number): { alpha: number; ciLow: number; ciHigh: number; stat: number; pvalue: number } {
+  const r = fit.result;
+  const alpha = r.beta[0] + shiftMonthly;
+  const stat = alpha / r.se[0];
+  const pvalue = r.distribution === 't' ? tTwoSidedP(stat, r.dfResid) : 2 * normSf(Math.abs(stat));
+  return { alpha, ciLow: r.ciLow[0] + shiftMonthly, ciHigh: r.ciHigh[0] + shiftMonthly, stat, pvalue };
+}
+
+export function grossAlpha(fit: FitOk, fee: FeeInfo): GrossAlpha {
+  const s = shiftAlpha(fit, fee.ter / 12);
+  return { ter: fee.ter, terDate: fee.ter_date, source: fee.ter_source ?? '', net: fit.result.beta[0], gross: s.alpha, ciLow: s.ciLow, ciHigh: s.ciHigh, stat: s.stat, pvalue: s.pvalue };
 }

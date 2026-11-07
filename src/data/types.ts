@@ -77,4 +77,14 @@ export interface Dataset {
   sources: SourceInfo[];
   checks: CheckInfo[];
   notes?: string[];
+  /** Frais publiés des fonds (TER), lus par le pipeline. */
+  fund_info?: FeeInfo;
+  raif_info?: FeeInfo;
+}
+
+export interface FeeInfo {
+  /** Total expense ratio annuel, décimal (0.0111 = 1,11 %). */
+  ter: number;
+  ter_date: string;
+  ter_source?: string;
 }
