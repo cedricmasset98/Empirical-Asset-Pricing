@@ -22,19 +22,13 @@ for _ in range(3):
     print("POST", a, data)
     r = s.post(B + a.replace("&amp;", "&"), data=data, timeout=40)
     print("status", r.status_code, r.url, len(r.text))
-q = s.get(B + "/sfdpub/schnell-fondssuche", timeout=40); print("schnell", q.status_code, q.url, len(q.text))
-for a, b in re.findall(r"<form[^>]*action=\"([^\"]+)\"[^>]*>(.*?)</form>", q.text, flags=re.S | re.I):
-    print("FORM", a, re.findall(r'name="([^"]+)"', b)[:15])
-for u in ["/sfdpub/de/funds/search?searchText=CH0011980981", "/sfdpub/de/funds/quickSearch?query=CH0011980981",
-          "/sfdpub/de/funds?search=CH0011980981", "/sfdpub/de/funds/list?query=CH0011980981"]:
-    t = s.get(B + u, timeout=40); print("try", u, t.status_code, t.url, len(t.text))
-    if t.status_code == 200 and "Swiss Stock" in t.text:
-        r = t; break
-L = links(r.text, r"funds/|fonds/")
+r = s.get(B + "/sfdpub/de/funds/overview", params={"text": "CH0011980981", "search": "Suchen"}, timeout=40)
+print("overview", r.status_code, r.url, len(r.text))
+L = links(r.text, r"funds/")
 print("liens fonds:", L[:40])
 txt = re.sub(r"<[^>]+>", " ", r.text); txt = re.sub(r"\s+", " ", txt)
 i = txt.find("Swiss Stock"); print("extrait:", txt[max(0, i - 300): i + 600])
-cand = [a for a in L if re.search(r"/funds/(show|detail|overview)|/fonds/", a)]
+cand = [a for a in L if re.search(r"/funds/(show|detail|view|\\d)", a)]
 for a in cand[:4]:
     u = a if a.startswith("http") else B + a
     p = s.get(u, timeout=40); print("\n== fiche", u, p.status_code, len(p.text))
