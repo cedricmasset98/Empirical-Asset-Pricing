@@ -742,3 +742,17 @@ a.btn {
 .fees h3 {
   margin: 18px 0 6px;
 }
+
+/* ---------------------------------------------------------------- modèle choisi */
+.model-view {
+  margin: 18px 0 26px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.model-view h4 {
+  margin: 18px 0 4px;
+  font-size: 0.98rem;
+}
+.model-view .small {
+  max-width: 80ch;
+}

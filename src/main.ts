@@ -4,12 +4,13 @@ import './styles.css';
 import type { Dataset, FeeInfo } from './data/types.ts';
 import { loadDataset, parseCsvDataset, datasetToCsv, DatasetError } from './data/loader.ts';
 import { compareAssets, compareModels, diagnose, feeInfo, fitModel, grossAlpha, rolling, shiftAlpha, singleIndexPair, type AssetComparison, type Fit, type FitOk, type Settings, type Comparison } from './ui/analysis.ts';
-import { commonRanges, plotAlphaPair, plotComparison, plotDiagnostics, plotFitted, plotFittedScatter, plotPerformance, plotRolling, plotScatter, readTheme, resizeAll } from './ui/charts.ts';
+import { commonRanges, plotAlphaPair, plotComparison, plotDiagnostics, plotFitted, plotFittedScatter, plotMeanContributions, plotPartialRegressions, plotPerformance, plotRolling, plotScatter, plotVarianceContributions, readTheme, resizeAll, type Theme } from './ui/charts.ts';
+import { decompose, partialRegressions } from './engine/decompose.ts';
 import { alphaPairTable, comparisonTable, feesBlock, multiFactorPairTable, perfTable, regressionTable, sourcesTable, statCards, testsTable, COV_LABELS } from './ui/tables.ts';
 import { assetComparisonCsv, comparisonCsv, download, regressionCsv, sampleCsv } from './ui/export.ts';
 import { escapeHtml as h, monthLabel, num, pct, pval } from './ui/format.ts';
 import { neweyWestAutoLags, type CovType } from './engine/ols.ts';
-import { ASSET_IDS, ASSET_INFO, MODEL_IDS, MODEL_SHORT, UI_UNIVERSES, specLabel, type ModelId, type Pair, type SingleAsset, type Universe } from './engine/models.ts';
+import { ASSET_IDS, ASSET_INFO, FACTOR_COEF, MODEL_IDS, MODEL_SHORT, UI_UNIVERSES, specLabel, type ModelId, type Pair, type SingleAsset, type Universe } from './engine/models.ts';
 
 type View = 'analyze' | 'compare' | 'reports' | 'data';
 type Tab = 'results' | 'fitted' | 'diagnostics' | 'rolling' | 'comparison';
@@ -255,6 +256,24 @@ function renderMain(): void {
   $('fees').innerHTML = gross ? feesBlock(main, gross) : '';
 }
 
+/** Contributions factorielles et régressions partielles du modèle choisi (masqué pour le Single Index). */
+function renderModelView(fit: Fit | null, t: Theme): void {
+  const box = $('model-view');
+  box.hidden = !fit?.ok;
+  if (!fit?.ok) return;
+  const s = fit.sample;
+  const who = ASSET_INFO[fit.asset].sub;
+  const mkt = fit.universe === 'EUROPE' ? 'EU' : 'SPI';
+  const terms = s.factors.map((f) => `${FACTOR_COEF[f].replace(/_(\w+)/, '<sub>$1</sub>')}·${f}<sub>${f === 'MKT' ? `${mkt},` : ''}t</sub>`);
+  $('model-title').textContent = `Reading the selected model: ${fit.label}`;
+  $('model-lead').innerHTML =
+    `R<sub>${who},t</sub> − R<sub>f,t</sub> = α + ${terms.join(' + ')} + ε<sub>t</sub>, estimated on ${fit.result.n} months (${s.dates[0]} → ${s.dates[s.dates.length - 1]}), ${h(COV_LABELS[fit.result.cov])}.`;
+  const dec = decompose(s.y, s.x, fit.result);
+  plotMeanContributions($('chart-contrib-mean'), fit, dec, t);
+  plotVarianceContributions($('chart-contrib-var'), fit, dec, t);
+  plotPartialRegressions($('chart-partial'), fit, partialRegressions(s.y, s.x, fit.result), t, state.band);
+}
+
 function needFit(el: HTMLElement, fit: Fit | null): fit is FitOk {
   if (fit?.ok) return true;
   el.innerHTML = `<div class="empty">${h(fit && !fit.ok ? `${fit.label}: ${fit.error}` : 'Data unavailable.')}</div>`;
@@ -281,13 +300,15 @@ function renderTab(): void {
     case 'results': {
       const el = $('chart-scatter');
       const who = ASSET_INFO[state.asset].sub;
-      $('scatter-title').textContent = `Relation with the market: ${ASSET_INFO[state.asset].label} against the SPI Total Return (Single Index)`;
+      const isSim = state.model === 'CAPM' && state.universe === 'SWISS';
+      renderModelView(isSim ? null : main, t);
+      $('scatter-title').textContent = isSim
+        ? `Relation with the market: ${ASSET_INFO[state.asset].label} against the SPI Total Return (Single Index)`
+        : `For reference: the Single Index of the ${ASSET_INFO[state.asset].label} against the SPI Total Return`;
       $('scatter-lead').innerHTML = `R<sub>${who},t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, monthly returns in CHF${ASSET_INFO[state.asset].fund ? ' (net of fund fees, distributions reinvested)' : ' (dividends reinvested)'}, R<sub>f</sub> = compounded SARON.`;
-      const note =
-        state.model !== 'CAPM' || state.universe !== 'SWISS'
-          ? `<p class="muted small">The chart always shows the Single Index on the SPI TR; the table above corresponds to the selected model (${h(specLabel(state.model, state.universe))}).</p>`
-          : '';
-      $('scatter-note').innerHTML = note;
+      $('scatter-note').innerHTML = isSim
+        ? ''
+        : `<p class="muted small">This chart is not the selected model: it is the one-factor benchmark, kept for comparison. The table and the charts above belong to the selected model (${h(specLabel(state.model, state.universe))}).</p>`;
       if (!needFit(el, sim)) {
         $('scatter-stats').innerHTML = '';
         return;

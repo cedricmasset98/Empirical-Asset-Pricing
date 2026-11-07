@@ -4,7 +4,7 @@ Ce site interactif (en anglais) estime des modèles d'évaluation d'actifs pour 
 
 | Rubrique | Contenu |
 |---|---|
-| Analyze | Un actif au choix : résultats (nuage de points, droite OLS, équation, statistiques, alpha net et brut des fonds), ajustement observé / prédit, diagnostics, régressions mobiles (36, 60 ou 120 mois), comparaison des modèles |
+| Analyze | Un actif au choix : résultats (tableau, alpha net et brut des fonds ; pour les modèles multifactoriels, contributions des facteurs au rendement moyen et à la variance, régressions partielles de chaque facteur ; Single Index en référence), ajustement observé / prédit, diagnostics, régressions mobiles (36, 60 ou 120 mois), comparaison des modèles |
 | Compare | Deux actifs au choix sur un échantillon strictement identique : performances (100 CHF, rendement, volatilité, perte maximale), alphas comparés et écart testé par la régression de R_A − R_B, Single Index côte à côte |
 | Reports | Rapports PDF vulgarisés en LaTeX (en français), avec leurs sources |
 | Data & method | Sources et contrôles, import et export CSV, résumé de la méthodologie |

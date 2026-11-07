@@ -155,6 +155,16 @@ On estime y = Xb + e par OLS avec constante, où y = R_actif − R_f et X contie
 - Approximations : TER actuel supposé constant sur toute la période ; les frais de transaction, qui ne font pas partie du TER, restent déduits.
 - L'action BCV n'a pas d'alpha brut.
 
+## 7 bis. Lecture graphique du modèle choisi
+
+Dans l'onglet « Results », le nuage de points du Single Index (SPI TR) reste affiché comme référence. Pour tout autre modèle, il est précédé de graphiques propres au modèle choisi (`src/engine/decompose.ts`), tous exacts pour une OLS avec constante :
+
+- **Contributions au rendement moyen** (cascade, annualisée ×12) : ȳ = α + Σ_j β_j x̄_j. Chaque barre est le produit de la sensibilité au facteur et de la prime moyenne de ce facteur sur l'échantillon.
+- **Contributions à la variance** : R² = Σ_j β_j cov(x_j, y) / var(y), complété par la part non expliquée 1 − R². Une contribution peut être négative lorsque les facteurs sont corrélés entre eux.
+- **Régressions partielles** (added-variable plots) : pour chaque facteur j, on régresse y et x_j sur tous les autres régresseurs, constante comprise, puis on trace les résidus de y contre ceux de x_j. Par le théorème de Frisch-Waugh-Lovell, la pente vaut exactement β_j et les résidus sont ceux du modèle complet. La bande vaut ±c·se(β_j)·|x̃|, avec l'erreur standard et la valeur critique de la méthode d'inférence choisie ; le R² partiel est indiqué.
+
+Ces propriétés sont vérifiées par `tests/decompose.test.ts`.
+
 ## 8. Diagnostics
 
 | Test | Statistique | Loi |

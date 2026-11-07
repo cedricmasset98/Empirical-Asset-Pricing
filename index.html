@@ -131,6 +131,19 @@
           </div>
           <div id="reg-table" class="table-wrap"></div>
           <div id="fees" class="table-wrap"></div>
+          <section id="model-view" class="model-view" hidden>
+            <h3 id="model-title">Reading the selected model</h3>
+            <p class="lead" id="model-lead"></p>
+            <h4>Factor contributions</h4>
+            <p class="muted small">Left: the average monthly excess return, annualised, split exactly into α and loading × average factor premium (ȳ = α + Σ β<sub>j</sub> x̄<sub>j</sub>). Right: the variance of the excess return split into each factor’s share (β<sub>j</sub> cov(x<sub>j</sub>, y) / var(y), summing to R²) and the unexplained part. A share can be negative when factors are correlated.</p>
+            <div class="grid-2">
+              <div id="chart-contrib-mean" class="chart chart-sm"></div>
+              <div id="chart-contrib-var" class="chart chart-sm"></div>
+            </div>
+            <h4>Partial regressions: each factor, controlling for the others</h4>
+            <p class="muted small" id="partial-lead">Each chart plots the excess return against one factor, after removing from both what the other regressors (constant included) explain. By the Frisch-Waugh-Lovell theorem, the slope of the line is exactly the coefficient of the full model and the residuals are those of the full model. The band is the confidence interval of the slope under the selected inference method.</p>
+            <div id="chart-partial" class="grid-2"></div>
+          </section>
           <h3 id="scatter-title">Relation with the market (Single Index)</h3>
           <p class="lead" id="scatter-lead"></p>
           <div id="scatter-note"></div>
@@ -275,6 +288,8 @@
             <p>K. French’s series are in USD with a US risk-free rate. With s<sub>t</sub> the monthly change in the USD/CHF rate: European market in CHF = (1 + Mkt−RF + RF<sub>US</sub>)(1 + s) − 1, then excess return = CHF market − SARON; long-short factors (SMB, HML, RMW, CMA, WML): F<sub>CHF</sub> = F<sub>USD</sub>(1 + s), an exact result since each leg converts as (1 + R<sub>USD</sub>)(1 + s). The European universe is a <strong>comparison</strong>: its market is not that of a Swiss asset, which can produce an alpha that is merely an effect of the benchmark chosen. The hybrid variant (SPI market with European factors) is no longer offered since the Swiss factors were added.</p>
             <h3>Inference</h3>
             <p>OLS with a constant. Classical: V = s²(X′X)⁻¹, Student tests with n−k degrees of freedom, global F test. HC3: V = (X′X)⁻¹X′diag(e²/(1−h)²)X(X′X)⁻¹. Newey-West: Bartlett kernel, L = ⌊4(n/100)<sup>2/9</sup>⌋ by default, no small-sample correction. For HC3 and HAC, inference is asymptotic (normal distribution) and the global test is a Wald χ²(k−1) test. Coefficients do not change with the inference method. Annualised alpha = 12 × monthly alpha.</p>
+            <h3>Reading a multi-factor model</h3>
+            <p>The Single Index scatter stays on the Results tab as a reference. For any other model, the tab first shows exact decompositions of that model: the average excess return split into α and β<sub>j</sub> × average factor premium, the variance split into each factor’s share β<sub>j</sub>cov(x<sub>j</sub>, y)/var(y), which sums to R², and one partial regression per factor. In a partial regression, the excess return and the factor are both purged of the other regressors; by the Frisch-Waugh-Lovell theorem, the slope is the coefficient of the full model.</p>
             <h3>Gross and net alpha of the funds</h3>
             <p>Fund returns are net of the fees embedded in the NAV, so their alpha is a net alpha. The gross alpha adds the published TER: adding TER/12 to each monthly return shifts the constant by TER/12 without changing the slopes or the standard errors, so testing the gross alpha amounts to testing α<sub>net</sub> = −TER/12. Only the current TER is known (fees assumed constant over the period), and transaction costs, which are not part of the TER, remain deducted.</p>
             <h3>Validation</h3>

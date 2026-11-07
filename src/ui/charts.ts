@@ -3,9 +3,10 @@
 import Plotly from 'plotly.js-dist-min';
 import type { FitOk, Diagnostics, Comparison } from './analysis.ts';
 import type { RollingResult } from '../engine/rolling.ts';
+import type { Decomposition, PartialRegression } from '../engine/decompose.ts';
 import { meanPredictionInterval } from '../engine/ols.ts';
 import { normPdf } from '../engine/distributions.ts';
-import { ASSET_INFO, FACTOR_LABELS, MODEL_IDS, MODEL_SHORT, type FactorId } from '../engine/models.ts';
+import { ASSET_INFO, FACTOR_COEF, FACTOR_LABELS, MODEL_IDS, MODEL_SHORT, type FactorId } from '../engine/models.ts';
 import type { AssetComparison } from './analysis.ts';
 import { num, pval } from './format.ts';
 
@@ -118,7 +119,7 @@ export function plotScatter(
     { x: grid.map(P), y: pred.map((p) => P(p.fit)), mode: 'lines', line: { color: t.halo, width: 7 }, hoverinfo: 'skip', showlegend: false },
     {
       x: grid.map(P), y: pred.map((p) => P(p.fit)), mode: 'lines', line: { color: t.line, width: 3.5 }, name: 'OLS line',
-      hovertemplate: 'Droite OLS<br>x = %{x:.2f} %<br>ŷ = %{y:.2f} %<extra></extra>',
+      hovertemplate: 'OLS line<br>x = %{x:.2f}%<br>ŷ = %{y:.2f}%<extra></extra>',
     },
   );
   const a = r.beta[0];
@@ -143,6 +144,157 @@ export function plotScatter(
     }),
     CONFIG,
   );
+}
+
+// ------------------------------------------------------------------ A bis. Modèle choisi
+
+/**
+ * Contributions au rendement excédentaire moyen (cascade, annualisée) :
+ * ȳ = α + Σ β_j x̄_j, exact pour une OLS avec constante.
+ */
+export function plotMeanContributions(el: HTMLElement, fit: FitOk, dec: Decomposition, t: Theme): void {
+  const fund = ASSET_INFO[fit.asset].fund;
+  const A = (x: number) => 1200 * x; // % par an
+  const coefHtml = (n: string) => FACTOR_COEF[n as FactorId].replace(/_(\w+)/, '<sub>$1</sub>');
+  const labels = dec.mean.map((c) => (c.name === 'const' ? (fund ? 'α (net)' : 'α') : `${coefHtml(c.name)} × ${c.name}`));
+  const hover = dec.mean.map((c) =>
+    c.name === 'const'
+      ? `Alpha: ${num(A(c.value), 2)}% per year`
+      : `${FACTOR_LABELS[c.name as FactorId]}<br>loading ${coefHtml(c.name)} = ${num(c.beta, 3)}<br>mean premium = ${num(A(c.premium), 2)}% per year<br>contribution = ${num(A(c.value), 2)}% per year`,
+  );
+  const who = ASSET_INFO[fit.asset].short;
+  // bornes de la cascade : cumuls partiels, zéro inclus, marge pour les étiquettes
+  let run = 0;
+  const levels = [0, A(dec.meanY)];
+  for (const c of dec.mean) {
+    run += A(c.value);
+    levels.push(run);
+  }
+  const lo = Math.min(...levels);
+  const hi = Math.max(...levels);
+  const pad = 0.12 * (hi - lo || 1);
+  const wfRange = [lo - (lo < 0 ? pad : 0), hi + pad];
+  Plotly.react(
+    el,
+    [
+      {
+        type: 'waterfall',
+        orientation: 'v',
+        x: [...labels, 'Mean excess<br>return'],
+        y: [...dec.mean.map((c) => A(c.value)), A(dec.meanY)],
+        measure: [...dec.mean.map(() => 'relative'), 'total'],
+        text: [...dec.mean.map((c) => `${num(A(c.value), 2)}%`), `${num(A(dec.meanY), 2)}%`],
+        textposition: 'outside',
+        textfont: { color: t.fg },
+        customdata: [...hover, `Observed mean excess return of the ${who}: ${num(A(dec.meanY), 2)}% per year`],
+        hovertemplate: '%{customdata}<extra></extra>',
+        cliponaxis: false,
+        connector: { line: { color: t.grid, width: 1 } },
+        increasing: { marker: { color: t.series[0] } },
+        decreasing: { marker: { color: t.series[3] } },
+        totals: { marker: { color: t.line } },
+      },
+    ],
+    layout(t, {
+      title: { text: 'Where the average excess return comes from (% per year)', font: { size: 13 } },
+      yaxis: { title: { text: '% per year' }, ticksuffix: '%', zeroline: true, rangemode: 'tozero', range: wfRange },
+      showlegend: false,
+      margin: { l: 60, r: 15, t: 40, b: 50 },
+    }),
+    CONFIG,
+  );
+}
+
+/** Parts de la variance des rendements excédentaires : Σ β_j cov(x_j, y)/var(y) = R², plus 1 − R² non expliqué. */
+export function plotVarianceContributions(el: HTMLElement, fit: FitOk, dec: Decomposition, t: Theme): void {
+  const names = dec.variance.map((v) => v.name);
+  const vals = dec.variance.map((v) => 100 * v.value);
+  const unexplained = 100 * (1 - fit.result.r2);
+  const palette = t.series.filter((_, i) => i !== 1);
+  Plotly.react(
+    el,
+    [
+      {
+        type: 'bar',
+        orientation: 'h',
+        y: [...names, 'Unexplained (1 − R²)'],
+        x: [...vals, unexplained],
+        marker: { color: [...dec.variance.map((_, i) => palette[i % palette.length]), t.grid] },
+        text: [...vals, unexplained].map((v) => `${num(v, 1)}%`),
+        textposition: 'outside',
+        textfont: { color: t.fg },
+        cliponaxis: false,
+        hovertemplate: '%{y}: %{x:.1f}% of the variance<extra></extra>',
+      },
+    ],
+    layout(t, {
+      title: { text: `Share of the variance explained by each factor (sum = R² = ${num(100 * fit.result.r2, 1)}%)`, font: { size: 13 } },
+      xaxis: { title: { text: '% of the variance of the excess return' }, ticksuffix: '%', range: [Math.min(0, ...vals) - 14, Math.max(unexplained, ...vals) + 12] },
+      yaxis: { autorange: 'reversed', automargin: true },
+      showlegend: false,
+      margin: { l: 60, r: 40, t: 40, b: 50 },
+    }),
+    CONFIG,
+  );
+}
+
+/**
+ * Régressions partielles (Frisch-Waugh-Lovell) : pour chaque facteur, résidu
+ * de y contre résidu du facteur, les deux nets des autres régresseurs. La
+ * pente est le coefficient du modèle complet ; la bande est ±c·se·|x̃|.
+ */
+export function plotPartialRegressions(container: HTMLElement, fit: FitOk, parts: PartialRegression[], t: Theme, band: boolean): void {
+  container.innerHTML = '';
+  const who = ASSET_INFO[fit.asset].short;
+  const z = fit.result.distribution === 't' ? 't' : 'z';
+  const palette = t.series.filter((_, i) => i !== 1);
+  parts.forEach((pr, i) => {
+    const div = document.createElement('div');
+    div.className = 'chart chart-sm';
+    container.appendChild(div);
+    const xmin = Math.min(...pr.ex);
+    const xmax = Math.max(...pr.ex);
+    const grid = Array.from({ length: 41 }, (_, g) => xmin + ((xmax - xmin) * g) / 40);
+    const coef = (FACTOR_COEF[pr.name as FactorId] ?? pr.name).replace(/_(\w+)/, '<sub>$1</sub>');
+    const traces: unknown[] = [];
+    if (band) {
+      traces.push(
+        { x: grid.map(P), y: grid.map((x) => P(pr.slope * x - pr.crit * pr.se * Math.abs(x))), mode: 'lines', line: { width: 0 }, hoverinfo: 'skip', showlegend: false },
+        {
+          x: grid.map(P), y: grid.map((x) => P(pr.slope * x + pr.crit * pr.se * Math.abs(x))), mode: 'lines', line: { width: 0 },
+          fill: 'tonexty', fillcolor: t.band, hoverinfo: 'skip', showlegend: false,
+        },
+      );
+    }
+    traces.push(
+      {
+        x: pr.ex.map(P), y: pr.ey.map(P), text: fit.sample.dates, mode: 'markers', type: 'scatter',
+        marker: { size: 6, color: palette[i % palette.length], opacity: 0.65, line: { width: 0.5, color: t.halo } },
+        hovertemplate: `<b>%{text}</b><br>${pr.name}, net of the other factors: %{x:.2f}%<br>${who}, net of the other factors: %{y:.2f}%<extra></extra>`,
+      },
+      { x: grid.map(P), y: grid.map((x) => P(pr.slope * x)), mode: 'lines', line: { color: t.halo, width: 6 }, hoverinfo: 'skip', showlegend: false },
+      { x: grid.map(P), y: grid.map((x) => P(pr.slope * x)), mode: 'lines', line: { color: t.line, width: 3 }, hoverinfo: 'skip', showlegend: false },
+    );
+    Plotly.react(
+      div,
+      traces,
+      layout(t, {
+        title: { text: `${FACTOR_LABELS[pr.name as FactorId] ?? pr.name}, controlling for the other factors`, font: { size: 13 } },
+        xaxis: { title: { text: `${pr.name} residual (%)` }, ticksuffix: '%' },
+        yaxis: { title: { text: `${who} residual (%)` }, ticksuffix: '%' },
+        showlegend: false,
+        margin: { l: 60, r: 15, t: 36, b: 48 },
+        annotations: [
+          {
+            xref: 'paper', yref: 'paper', x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', align: 'left', showarrow: false,
+            text: `slope = ${coef} = ${num(pr.slope, 3)} · ${z} = ${num(pr.stat, 2)} · p = ${pval(pr.pvalue)}<br>partial R² = ${num(pr.partialR2, 3)}`,
+            font: { size: 11, color: t.fg }, bgcolor: t.panel, bordercolor: t.grid, borderwidth: 1, borderpad: 4, opacity: 0.95,
+          },
+        ],
+      }),
+      CONFIG,
+    );
+  });
 }
 
 // ------------------------------------------------------------------ B. Actual vs fitted
@@ -261,7 +413,7 @@ export function plotRolling(container: HTMLElement, roll: RollingResult, t: Them
       line: { color, width: 2 },
       name: coefLabel(name),
       customdata: roll.low[j].map((lo, i) => [scale(lo), scale(roll.high[j][i])]),
-      hovertemplate: `%{x|%Y-%m} : %{y:.3f}${name === 'const' ? ' %' : ''}<br>IC [%{customdata[0]:.3f} ; %{customdata[1]:.3f}]<extra></extra>`,
+      hovertemplate: `%{x|%Y-%m}: %{y:.3f}${name === 'const' ? '%' : ''}<br>CI [%{customdata[0]:.3f}; %{customdata[1]:.3f}]<extra></extra>`,
     });
     const ref = name === 'const' ? 0 : name === 'MKT' ? 1 : 0;
     traces.push({ x: [roll.dates[0], roll.dates.at(-1)], y: [ref, ref], mode: 'lines', line: { color: t.muted, dash: 'dot', width: 1 }, hoverinfo: 'skip', showlegend: false });

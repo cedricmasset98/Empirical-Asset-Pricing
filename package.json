@@ -12,7 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --no-warnings --test tests/engine.test.ts tests/statsmodels.test.ts tests/ui.test.ts",
+    "test": "node --experimental-strip-types --no-warnings --test tests/engine.test.ts tests/statsmodels.test.ts tests/ui.test.ts tests/decompose.test.ts",
     "data": "python -m pipeline.build && python -m pipeline.validate",
     "report": "python -m pipeline.report && python -m pipeline.presentation",
     "fixtures": "python tests/fixtures/make_fixtures.py"
