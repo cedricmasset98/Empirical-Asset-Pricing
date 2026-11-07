@@ -1,6 +1,6 @@
 # Rapport de construction des données
 
-Généré le 2026-11-06T19:38:23Z
+Généré le 2026-11-07T06:35:52Z
 
 ## Sources
 
@@ -21,6 +21,7 @@ Généré le 2026-11-06T19:38:23Z
 - **pass** — Split 10:1 de mai 2020 présent dans les données (2020-05-28). Splits : 2020-05-28 (×10).
 - **pass** — Aucune variation quotidienne > 35 % du cours ajusté (max |r| = 14.6%, le 2009-03-10).
 - **pass** — Ajustement des dividendes : 23 détachements ; rendement total − rendement de prix = +3.39% par an en moyenne.
+- **pass** — Fonds : TER publié 1.11% au 2026-03-31.
 - **warn** — Fonds : 1 mois écartés (dernière observation à plus de 5 jours de la fin du mois) : 2026-11
 - **pass** — Fonds : 100.00% des 7323 rendements quotidiens de la série officielle retrouvés à partir des VNI et des distributions brutes (tolérance 5e-05) ; VNI des infobulles décalées d'un jour à partir de 2021-09-28 environ, décalage corrigé dans le contrôle.
 - **pass** — Fonds : les 28 distributions publiées sont incluses une et une seule fois, au montant brut (dernière : 2026-07-21, 5.70 CHF).
