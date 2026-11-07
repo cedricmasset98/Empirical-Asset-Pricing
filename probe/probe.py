@@ -1,40 +1,46 @@
-"""Sonde 5 : validation de la série swissfunddata (TR) contre factsheet et Yahoo."""
-import io
-import numpy as np, pandas as pd, requests, yfinance as yf
+"""Sonde JKP : manifeste, facteurs suisses (che), format."""
+import io, json, zipfile
+import pandas as pd, requests
 
-H = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"}
-s = requests.Session(); s.headers.update(H)
-B = "https://www.swissfunddata.ch"
-s.get(B + "/sfdpub/sfd-eingang/private?url=%2Fde%2Ffunds%2Fshow%2F16291", timeout=40)
-s.post(B + "/sfdpub/sfd-eingang/private?url=%2Fde%2Ffunds%2Fshow%2F16291", data={"_action_set": "einverstanden"}, timeout=40)
-x = s.get(B + "/sfdpub/de/funds/excelData/16291", timeout=60)
-lines = x.text.splitlines()
-print(lines[:4]); print(lines[-3:])
-df = pd.read_csv(io.StringIO("\n".join(lines[2:])), sep=";")
-df["Date"] = pd.to_datetime(df["Date"]); df = df.set_index("Date").sort_index()
-print(df.dtypes.to_string()); print("n", len(df), df.index[0].date(), df.index[-1].date())
-print("NaN par colonne", df.isna().sum().to_dict())
-print("Chart Price == NAV ?", float((df["Chart Price"] - df["Net Asset Value"]).abs().max()))
-gaps = df.index.to_series().diff().dt.days
-print("écarts > 5 jours:", gaps[gaps > 5].to_string())
-tr = df["Total Return Chart Price"]; nav = df["Net Asset Value"]
-y = tr.resample("YE").last().pct_change() * 100
-print("TR annuel:", {k.year: round(v, 2) for k, v in y.dropna().items()})
-print("factsheet: 2023 6.6, 2024 5.9, 2025 11.0 ; YTD 30.09.2026 7.8")
-print("YTD 30.09.2026:", round((tr[:"2026-09-30"].iloc[-1] / tr[:"2025-12-31"].iloc[-1] - 1) * 100, 2))
-ratio = tr / nav
-jumps = ratio.pct_change()
-j = jumps[jumps.abs() > 1e-4]
-for d, v in j.items():
-    i = nav.index.get_loc(d)
-    impl = nav.iloc[i] * v  # distribution implicite ≈ NAV_ex × saut du ratio
-    print("saut ratio", d.date(), round(v * 100, 4), "% → distribution implicite ≈", round(impl, 2), "NAV", nav.iloc[i - 1], "->", nav.iloc[i])
-m = tr.resample("ME").last().pct_change().dropna()
-yh = yf.Ticker("0P00000KCT.SW").history(period="max", auto_adjust=False)
-if not yh.empty:
-    a = pd.Series(yh["Adj Close"].values, index=yh.index.tz_localize(None)).resample("ME").last().pct_change().dropna()
-    j2 = pd.concat([m, a], axis=1, keys=["sfd", "yahoo"]).dropna()
-    d = (j2.sfd - j2.yahoo)
-    print("mois communs", len(j2), "corr", round(j2.corr().iloc[0, 1], 5), "écart abs moyen (pb)", round(d.abs().mean() * 1e4, 1), "max (pb)", round(d.abs().max() * 1e4, 1))
-    print(d.abs().sort_values().tail(5).to_string())
-print("derniers points:"); print(df.tail(5)[["Net Asset Value", "Total Return Chart Price", "Closing Price"]].to_string())
+B = "https://jkpfactors-data.s3.amazonaws.com/public/"
+H = {"User-Agent": "empirical-asset-pricing-pipeline/1.0"}
+m = requests.get(B + "availability.json", headers=H, timeout=60); print("manifest", m.status_code, len(m.text))
+av = m.json()
+print("clés:", list(av)[:20])
+def show(o, depth=0, maxk=12):
+    if isinstance(o, dict):
+        for k in list(o)[:maxk]:
+            v = o[k]; print("  " * depth + str(k), ":", (type(v).__name__, len(v) if hasattr(v, "__len__") else v))
+            if depth < 2: show(v, depth + 1, 6)
+    elif isinstance(o, list):
+        print("  " * depth, o[:15])
+show(av)
+s = json.dumps(av)
+print("'che' présent:", "che" in s, "| 'CHE':", "CHE" in s)
+
+def get(sel, w="vw_cap", region="che"):
+    u = f"{B}%5B{region}%5D_%5B{sel}%5D_%5Bmonthly%5D_%5B{w}%5D.zip"
+    r = requests.get(u, headers=H, timeout=180)
+    print("\n==", sel, w, r.status_code, len(r.content))
+    if r.status_code != 200: return None
+    z = zipfile.ZipFile(io.BytesIO(r.content)); n = [x for x in z.namelist() if x.lower().endswith(".csv")][0]
+    df = pd.read_csv(z.open(n), na_values="na"); print("fichier", n, df.shape, list(df.columns))
+    print(df.head(3).to_string()); print(df.tail(3).to_string())
+    return df
+
+mk = get("mkt")
+facs = {}
+for code in ["market_equity", "be_me", "ope_be", "at_gr1", "ret_12_1"]:
+    d = get(code)
+    if d is not None: facs[code] = d
+for code, d in facs.items():
+    print(code, "début", d["date"].min(), "fin", d["date"].max(), "direction", d["direction"].unique() if "direction" in d else "-",
+          "n_stocks min/médiane/dernier", d["n_stocks"].min() if "n_stocks" in d else "-", d["n_stocks"].median() if "n_stocks" in d else "-", d["n_stocks"].iloc[-1] if "n_stocks" in d else "-",
+          "moyenne annualisée %.2f%%" % (12 * 100 * d["ret"].mean()))
+# séries pour comparaison locale
+out = pd.DataFrame({c: d.set_index("date")["ret"] for c, d in facs.items()})
+if mk is not None:
+    for c in mk.columns:
+        if c not in ("location", "name", "freq", "weighting", "date", "excntry", "obs"): pass
+    out["mkt"] = mk.set_index("date")[[c for c in mk.columns if "ret" in c][0]]
+print("CSVSTART"); print(out.loc["2005-01-01":].to_csv(float_format="%.6f")); print("CSVEND")
