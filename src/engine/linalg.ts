@@ -94,7 +94,7 @@ export function cholesky(a: Matrix): Matrix {
     for (let k = 0; k < j; k++) s -= l[j][k] * l[j][k];
     if (!(s > tol)) {
       throw new SingularMatrixError(
-        "La matrice X'X est singulière : régresseurs parfaitement colinéaires ou variable constante.",
+        "The X'X matrix is singular: perfectly collinear regressors or a constant variable.",
       );
     }
     const d = Math.sqrt(s);
@@ -142,7 +142,7 @@ export function inv(a: Matrix): Matrix {
   for (let c = 0; c < n; c++) {
     let p = c;
     for (let r = c + 1; r < n; r++) if (Math.abs(m[r][c]) > Math.abs(m[p][c])) p = r;
-    if (Math.abs(m[p][c]) < 1e-300) throw new SingularMatrixError('Matrice singulière.');
+    if (Math.abs(m[p][c]) < 1e-300) throw new SingularMatrixError('Singular matrix.');
     [m[c], m[p]] = [m[p], m[c]];
     const piv = m[c][c];
     for (let j = 0; j < 2 * n; j++) m[c][j] /= piv;

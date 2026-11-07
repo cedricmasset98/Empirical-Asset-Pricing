@@ -19,16 +19,16 @@ export class DatasetError extends Error {
 /** Contrôles structurels : dates AAAA-MM uniques et croissantes, séries de même longueur, valeurs finies ou null. */
 export function validateDataset(raw: unknown): Dataset {
   const ds = raw as Dataset;
-  if (!ds || typeof ds !== 'object') throw new DatasetError('Fichier de données illisible.');
-  if (ds.schema !== 'eap-dataset/v1') throw new DatasetError(`Schéma de données inattendu : ${String((ds as { schema?: unknown }).schema)}.`);
-  if (!Array.isArray(ds.dates) || ds.dates.length === 0) throw new DatasetError('Le jeu de données ne contient aucune date.');
+  if (!ds || typeof ds !== 'object') throw new DatasetError('Unreadable data file.');
+  if (ds.schema !== 'eap-dataset/v1') throw new DatasetError(`Unexpected data schema: ${String((ds as { schema?: unknown }).schema)}.`);
+  if (!Array.isArray(ds.dates) || ds.dates.length === 0) throw new DatasetError('The dataset contains no dates.');
   for (let i = 0; i < ds.dates.length; i++) {
     if (!MONTH_RE.test(ds.dates[i])) throw new DatasetError(`Date invalide : ${ds.dates[i]} (format AAAA-MM attendu).`);
-    if (i && ds.dates[i] <= ds.dates[i - 1]) throw new DatasetError(`Dates non strictement croissantes autour de ${ds.dates[i]}.`);
+    if (i && ds.dates[i] <= ds.dates[i - 1]) throw new DatasetError(`Dates not strictly increasing around ${ds.dates[i]}.`);
   }
   for (const [k, v] of Object.entries(ds.data ?? {})) {
-    if (!Array.isArray(v) || v.length !== ds.dates.length) throw new DatasetError(`Série ${k} : longueur incohérente.`);
-    for (const x of v) if (x !== null && !(typeof x === 'number' && Number.isFinite(x))) throw new DatasetError(`Série ${k} : valeur non numérique.`);
+    if (!Array.isArray(v) || v.length !== ds.dates.length) throw new DatasetError(`Series ${k}: inconsistent length.`);
+    for (const x of v) if (x !== null && !(typeof x === 'number' && Number.isFinite(x))) throw new DatasetError(`Series ${k}: non-numeric value.`);
   }
   ds.sources ??= [];
   ds.checks ??= [];
@@ -41,12 +41,12 @@ export async function loadDataset(url: string): Promise<Dataset> {
   try {
     resp = await fetch(url, { cache: 'no-cache' });
   } catch (e) {
-    throw new DatasetError(`Impossible de charger ${url} : ${(e as Error).message}`);
+    throw new DatasetError(`Could not load ${url}: ${(e as Error).message}`);
   }
   if (!resp.ok) {
     throw new DatasetError(
-      `Jeu de données introuvable (${resp.status}). Les données sont produites par le pipeline Python (python -m pipeline.build) ` +
-        'ou par le workflow GitHub Actions. Vous pouvez aussi importer un fichier CSV.',
+      `Dataset not found (${resp.status}). The data are produced by the Python pipeline (python -m pipeline.build) ` +
+        'or by the GitHub Actions workflow. You can also import a CSV file.',
     );
   }
   return validateDataset(await resp.json());
@@ -83,13 +83,13 @@ export function parseCsvDataset(text: string, fileName: string): Dataset {
   if (lines.length < 2) throw new DatasetError('CSV vide.');
   const sep = lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',';
   const header = splitCsvLine(lines[0], sep).map((h) => h.toLowerCase());
-  if (header[0] !== 'date') throw new DatasetError('La première colonne doit s’appeler « date ».');
+  if (header[0] !== 'date') throw new DatasetError('The first column must be named “date”.');
   const unknown = header.slice(1).filter((h) => !KNOWN_KEYS.includes(h as SeriesKey));
-  if (unknown.length) throw new DatasetError(`Colonnes inconnues : ${unknown.join(', ')}. Colonnes acceptées : ${KNOWN_KEYS.join(', ')}.`);
+  if (unknown.length) throw new DatasetError(`Unknown columns: ${unknown.join(', ')}. Accepted columns: ${KNOWN_KEYS.join(', ')}.`);
   const keys = header.slice(1) as SeriesKey[];
-  if (!keys.includes('rf_saron')) throw new DatasetError('Colonne obligatoire manquante : rf_saron.');
+  if (!keys.includes('rf_saron')) throw new DatasetError('Missing required column: rf_saron.');
   if (!keys.includes('bcv_ret') && !keys.includes('fund_ret') && !keys.includes('raif_ret')) {
-    throw new DatasetError('Colonne obligatoire manquante : bcv_ret (action), fund_ret (fonds BCV) ou raif_ret (fonds Raiffeisen).');
+    throw new DatasetError('Missing required column: bcv_ret (stock), fund_ret (BCV fund) or raif_ret (Raiffeisen fund).');
   }
   const rows: { date: string; vals: (number | null)[] }[] = [];
   for (let li = 1; li < lines.length; li++) {
@@ -100,9 +100,9 @@ export function parseCsvDataset(text: string, fileName: string): Dataset {
       const c = (cells[j + 1] ?? '').replace(',', sep === ';' ? '.' : ',');
       if (c === '' || c.toLowerCase() === 'na' || c.toLowerCase() === 'nan') return null;
       const v = Number(c);
-      if (!Number.isFinite(v)) throw new DatasetError(`Ligne ${li + 1}, ${k} : valeur non numérique « ${cells[j + 1]} ».`);
+      if (!Number.isFinite(v)) throw new DatasetError(`Row ${li + 1}, ${k}: non-numeric value “${cells[j + 1]}”.`);
       if (Math.abs(v) >= 1) {
-        throw new DatasetError(`Ligne ${li + 1}, ${k} = ${v} : les rendements doivent être des décimaux mensuels (0.012 pour 1,2 %), pas des pourcentages.`);
+        throw new DatasetError(`Row ${li + 1}, ${k} = ${v}: returns must be monthly decimals (0.012 for 1.2%), not percentages.`);
       }
       return v;
     });
@@ -126,11 +126,11 @@ export function parseCsvDataset(text: string, fileName: string): Dataset {
     sources: [
       {
         id: 'manual',
-        name: `Import manuel : ${fileName}`,
-        provider: 'Fichier CSV fourni par l’utilisateur',
+        name: `Manual import: ${fileName}`,
+        provider: 'CSV file supplied by the user',
         url: '',
         status: 'manual',
-        message: 'Données non vérifiées par le pipeline (provenance, ajustements et conventions sous la responsabilité de l’utilisateur).',
+        message: 'Data not checked by the pipeline (origin, adjustments and conventions are the user’s responsibility).',
         columns: keys,
       },
     ],

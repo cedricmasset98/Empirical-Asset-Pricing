@@ -46,12 +46,12 @@ class TestSplice(unittest.TestCase):
     def test_refuse_un_niveau_different(self):
         sp = splice_history(self.hist, self.recent * 1.05)
         self.assertFalse(sp.ok)
-        self.assertIn("niveaux", sp.message)
+        self.assertIn("levels", sp.message)
 
     def test_refuse_un_recouvrement_trop_court(self):
         sp = splice_history(self.hist[:"2013-06-30"], self.recent)
         self.assertFalse(sp.ok)
-        self.assertIn("recouvrement", sp.message)
+        self.assertIn("overlap", sp.message)
 
 
 if __name__ == "__main__":

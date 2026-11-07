@@ -45,7 +45,7 @@ class FundPage:
 def parse_page(text: str) -> FundPage:
     charts = re.findall(r'data-chart="([^"]*)"', text)
     if not charts:
-        raise ValueError("Graphique de performance (data-chart) introuvable dans la page Gérifonds.")
+        raise ValueError("Performance chart (data-chart) not found in the Gérifonds page.")
     points = json.loads(html_lib.unescape(charts[0]))
     rows = []
     for v in points.values():

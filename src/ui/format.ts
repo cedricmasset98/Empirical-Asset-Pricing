@@ -2,7 +2,7 @@
 
 export function pct(x: number, digits = 2): string {
   if (!Number.isFinite(x)) return '—';
-  return `${(x * 100).toFixed(digits)} %`;
+  return `${(x * 100).toFixed(digits)}%`;
 }
 
 export function num(x: number, digits = 3): string {
@@ -28,7 +28,7 @@ export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
-const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export function monthLabel(key: string): string {
   const [y, m] = key.split('-').map(Number);
   return `${MONTHS[m - 1]} ${y}`;

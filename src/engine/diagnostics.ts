@@ -39,7 +39,7 @@ export function ljungBox(resid: Vector, m: number): TestResult {
   let q = 0;
   for (let k = 1; k <= m; k++) q += (r[k - 1] * r[k - 1]) / (n - k);
   q *= n * (n + 2);
-  return { name: `Ljung-Box (${m} retards)`, stat: q, df: m, pvalue: chi2Sf(q, m), h0: 'Absence d’autocorrélation des résidus' };
+  return { name: `Ljung-Box (${m} lags)`, stat: q, df: m, pvalue: chi2Sf(q, m), h0: 'No autocorrelation of residuals' };
 }
 
 /**
@@ -53,7 +53,7 @@ export function breuschPagan(resid: Vector, x: Matrix): TestResult {
   const names = Array.from({ length: k }, (_, i) => `x${i}`);
   const aux = ols(e2, x, names, { cov: 'classical' });
   const lm = n * aux.r2;
-  return { name: 'Breusch-Pagan (Koenker)', stat: lm, df: k - 1, pvalue: chi2Sf(lm, k - 1), h0: 'Homoscédasticité des résidus' };
+  return { name: 'Breusch-Pagan (Koenker)', stat: lm, df: k - 1, pvalue: chi2Sf(lm, k - 1), h0: 'Homoskedastic residuals' };
 }
 
 export interface Moments {
@@ -86,7 +86,7 @@ export function jarqueBera(resid: Vector): TestResult & Moments {
   const n = resid.length;
   const { skewness, kurtosis } = moments(resid);
   const jb = (n / 6) * (skewness * skewness + ((kurtosis - 3) * (kurtosis - 3)) / 4);
-  return { name: 'Jarque-Bera', stat: jb, df: 2, pvalue: chi2Sf(jb, 2), h0: 'Normalité des résidus', skewness, kurtosis };
+  return { name: 'Jarque-Bera', stat: jb, df: 2, pvalue: chi2Sf(jb, 2), h0: 'Normally distributed residuals', skewness, kurtosis };
 }
 
 /**

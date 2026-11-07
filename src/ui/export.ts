@@ -28,10 +28,10 @@ export function download(filename: string, content: string, mime = 'text/csv;cha
 export function regressionCsv(fit: FitOk): string {
   const r = fit.result;
   const rows: unknown[][] = [
-    ['# modele', fit.label],
-    ['# variable dependante', `R_${{ BCV: 'BCV', FUND: 'fonds', RAIF: 'Raiffeisen', DIFF: 'BCV - R_fonds' }[fit.asset]} - R_f (SARON), rendements mensuels decimaux`],
-    ['# inference', r.cov + (r.cov === 'HAC' ? ` (lags=${r.hacLags})` : ''), 'loi', r.distribution],
-    ['# periode', fit.sample.dates[0], fit.sample.dates.at(-1)],
+    ['# model', fit.label],
+    ['# dependent variable', `R_${{ BCV: 'BCV', FUND: 'fund', RAIF: 'Raiffeisen', DIFF: 'A - R_B' }[fit.asset]} - R_f (SARON), monthly decimal returns`],
+    ['# inference', r.cov + (r.cov === 'HAC' ? ` (lags=${r.hacLags})` : ''), 'distribution', r.distribution],
+    ['# period', fit.sample.dates[0], fit.sample.dates.at(-1)],
     ['variable', 'coefficient', 'std_error', r.distribution === 't' ? 't_stat' : 'z_stat', 'p_value', `ci${Math.round(r.level * 100)}_low`, `ci${Math.round(r.level * 100)}_high`],
     ...r.names.map((n, i) => [n, r.beta[i], r.se[i], r.stat[i], r.pvalue[i], r.ciLow[i], r.ciHigh[i]]),
     [],
@@ -53,7 +53,7 @@ export function sampleCsv(fit: FitOk): string {
 
 export function comparisonCsv(cmp: Comparison): string {
   const rows: unknown[][] = [
-    ['# echantillon commun', cmp.commonN, cmp.period?.[0] ?? '', cmp.period?.[1] ?? ''],
+    ['# common sample', cmp.commonN, cmp.period?.[0] ?? '', cmp.period?.[1] ?? ''],
     ['marche', 'modele', 'coherence', 'alpha_mensuel', 'alpha_annualise_x12', 'stat_alpha', 'p_alpha', 'beta_marche', 'r2', 'r2_ajuste', 'n', 'erreur'],
   ];
   for (const f of cmp.fits) {
@@ -66,7 +66,7 @@ export function comparisonCsv(cmp: Comparison): string {
 }
 
 export function assetComparisonCsv(cmp: import('./analysis.ts').AssetComparison): string {
-  const rows: unknown[][] = [['# echantillon commun', cmp.pair.join(' vs '), cmp.dates.length, cmp.dates[0], cmp.dates[cmp.dates.length - 1], 'univers', cmp.universe]];
+  const rows: unknown[][] = [['# common sample', cmp.pair.join(' vs '), cmp.dates.length, cmp.dates[0], cmp.dates[cmp.dates.length - 1], 'universe', cmp.universe]];
   rows.push(['serie', 'valeur_finale_100', 'rendement_annualise', 'volatilite_annualisee', 'perte_maximale']);
   for (const p of cmp.perf) rows.push([p.label, p.path[p.path.length - 1], p.annReturn, p.annVol, p.maxDrawdown]);
   rows.push([]);

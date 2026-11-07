@@ -106,7 +106,7 @@ def parse_french_csv(text: str) -> pd.DataFrame:
         elif first == "" and len(cells) > 1:
             header = cells[1:]
     if header is None or not data:
-        raise ValueError("Bloc mensuel introuvable dans le fichier Fama-French.")
+        raise ValueError("Monthly block not found in the Fama-French file.")
     idx = pd.PeriodIndex([pd.Period(year=int(r[0][:4]), month=int(r[0][4:]), freq="M") for r in data])
     values = np.array([[float(v) for v in r[1 : 1 + len(header)]] for r in data])
     df = pd.DataFrame(values, index=idx, columns=header)
@@ -164,19 +164,19 @@ def splice_history(history: pd.Series, recent: pd.Series, *, min_overlap: int = 
     h, r = h[~h.index.duplicated(keep="last")], r[~r.index.duplicated(keep="last")]
     common = h.index.intersection(r.index)
     if len(common) < min_overlap:
-        return Splice(None, False, f"recouvrement trop court ({len(common)} séances, minimum {min_overlap}).")
+        return Splice(None, False, f"overlap too short ({len(common)} trading days, minimum {min_overlap}).")
     ratio = r.loc[common] / h.loc[common]
     med = float(ratio.median())
     first, last = float(ratio.iloc[:60].median()), float(ratio.iloc[-60:].median())
     outliers = float(((ratio / med - 1).abs() > tol_day).mean())
-    stats = (f"{len(common)} séances communes ({common[0].date()} → {common[-1].date()}) ; "
-             f"ratio médian {med:.5f}, dérive {last / first - 1:+.3%}, jours divergents {outliers:.2%}")
+    stats = (f"{len(common)} common trading days ({common[0].date()} → {common[-1].date()}); "
+             f"median ratio {med:.5f}, drift {last / first - 1:+.3%}, diverging days {outliers:.2%}")
     if abs(med - 1) > tol_level:
-        return Splice(None, False, f"niveaux différents ({stats}) : autre variante de l'indice ?")
+        return Splice(None, False, f"different levels ({stats}): another variant of the index?")
     if abs(last / first - 1) > tol_drift:
-        return Splice(None, False, f"dérive entre les sources ({stats}) : indice de prix contre indice de performance ?")
+        return Splice(None, False, f"drift between the sources ({stats}): price index vs total return index?")
     if outliers > max_outliers:
-        return Splice(None, False, f"trop de jours divergents ({stats}).")
+        return Splice(None, False, f"too many diverging days ({stats}).")
     junction = r.index[0]
     if junction in h.index:
         scale = r.loc[junction] / h.loc[junction]

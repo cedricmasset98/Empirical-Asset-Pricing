@@ -47,11 +47,11 @@ def parse_csv(text: str) -> SfdSeries:
     try:
         start = next(i for i, l in enumerate(lines) if l.startswith("Date;"))
     except StopIteration as exc:
-        raise ValueError("Export Swiss Fund Data : ligne d'en-tête « Date; » introuvable.") from exc
+        raise ValueError("Swiss Fund Data export: header line \"Date;\" not found.") from exc
     df = pd.read_csv(io.StringIO("\n".join(lines[start:])), sep=";")
     need = {"Date", "Net Asset Value", "Total Return Chart Price"}
     if not need <= set(df.columns):
-        raise ValueError(f"Export Swiss Fund Data : colonnes manquantes {sorted(need - set(df.columns))}.")
+        raise ValueError(f"Swiss Fund Data export: missing columns {sorted(need - set(df.columns))}.")
     df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d")
     df = df.set_index("Date").sort_index()
     df = df[~df.index.duplicated(keep="last")]
@@ -98,10 +98,10 @@ def check(s: SfdSeries) -> Checks:
         amount = float(nav.iloc[i - 1] * (1 + r_tr.loc[d]) - nav.iloc[i])
         dists.append((str(d.date()), round(amount, 2)))
         if not 0 < amount < 0.05 * nav.iloc[i - 1]:
-            anomalies.append(f"distribution implicite atypique le {d.date()} : {amount:.2f}")
+            anomalies.append(f"atypical implied distribution on {d.date()}: {amount:.2f}")
     for d in ratio_jump[ratio_jump < -JUMP].index:
-        anomalies.append(f"baisse du rapport TR/VNI le {d.date()} ({ratio_jump.loc[d]:.2%})")
+        anomalies.append(f"drop in the TR/NAV ratio on {d.date()} ({ratio_jump.loc[d]:.2%})")
     per_year = pd.Series([pd.Timestamp(d).year for d, _ in dists]).value_counts()
     if len(per_year) and per_year.max() > 2:
-        anomalies.append(f"plus de deux distributions implicites en {int(per_year.idxmax())}")
+        anomalies.append(f"more than two implied distributions in {int(per_year.idxmax())}")
     return Checks(len(nav), chart_eq, share, bad, dists, anomalies)

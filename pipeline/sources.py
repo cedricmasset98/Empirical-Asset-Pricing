@@ -68,7 +68,7 @@ def _manual_csv(name: str, value_col: str) -> pd.Series | None:
 def _read_level_csv(path: Path, value_col: str) -> pd.Series:
     df = pd.read_csv(path)
     if "date" not in df.columns or value_col not in df.columns:
-        raise ValueError(f"{path.name} : colonnes attendues 'date' et '{value_col}'.")
+        raise ValueError(f"{path.name}: expected columns 'date' and '{value_col}'.")
     s = pd.Series(pd.to_numeric(df[value_col], errors="coerce").values, index=pd.to_datetime(df["date"]))
     return s.dropna().sort_index()
 
@@ -86,7 +86,7 @@ def yahoo_history(ticker: str) -> pd.DataFrame:
     def run() -> pd.DataFrame:
         h = yf.Ticker(ticker).history(period="max", interval="1d", auto_adjust=False, actions=True)
         if h is None or h.empty:
-            raise RuntimeError(f"Aucune donnée renvoyée par Yahoo Finance pour {ticker}.")
+            raise RuntimeError(f"No data returned by Yahoo Finance for {ticker}.")
         h = h.copy()
         h.index = pd.to_datetime(pd.Index(h.index).map(lambda d: d.date()))
         return h
@@ -98,14 +98,14 @@ def fetch_bcv() -> tuple[pd.DataFrame | None, Info]:
     """Cours BCV : Close (ajusté des splits) et Adj Close (ajusté des splits et
     des dividendes), dividendes et splits."""
     info: Info = {
-        "id": "bcv", "name": "BCV (BCVN.SW) — cours ajustés dividendes et opérations sur titres",
+        "id": "bcv", "name": "BCV (BCVN.SW) — prices adjusted for dividends and corporate actions",
         "provider": "Yahoo Finance via yfinance", "url": "https://finance.yahoo.com/quote/BCVN.SW/history",
         "license": C.LICENSES["yahoo"], "columns": ["bcv_ret"], "retrieved_at": _now(),
     }
     try:
         manual = _manual_csv("bcv_daily.csv", "adj_close")
         if manual is not None:
-            info.update(status="manual", provider="Import manuel data/manual/bcv_daily.csv", coverage=_coverage(manual.index))
+            info.update(status="manual", provider="Manual import data/manual/bcv_daily.csv", coverage=_coverage(manual.index))
             return pd.DataFrame({"Adj Close": manual}), info
         h = yahoo_history(C.YAHOO_BCV)
         _save_raw("bcv_daily.csv", h)
@@ -118,14 +118,14 @@ def fetch_bcv() -> tuple[pd.DataFrame | None, Info]:
 
 def fetch_spi_tr() -> tuple[pd.Series | None, Info]:
     info: Info = {
-        "id": "spi", "name": "SPI — Swiss Performance Index (SXGE), indice de performance (TR), CHF",
+        "id": "spi", "name": "SPI — Swiss Performance Index (SXGE), total return index, CHF",
         "provider": "Yahoo Finance via yfinance (^SSHI)", "url": "https://finance.yahoo.com/quote/%5ESSHI/history",
         "license": C.LICENSES["six"] + " " + C.LICENSES["yahoo"], "columns": ["spi_ret"], "retrieved_at": _now(),
     }
     try:
         manual = _manual_csv("spi_tr_daily.csv", "spi_tr")
         if manual is not None:
-            info.update(status="manual", provider="Import manuel data/manual/spi_tr_daily.csv", coverage=_coverage(manual.index))
+            info.update(status="manual", provider="Manual import data/manual/spi_tr_daily.csv", coverage=_coverage(manual.index))
             return manual, info
         h = yahoo_history(C.YAHOO_SPI_TR)
         _save_raw("spi_daily.csv", h)
@@ -139,7 +139,7 @@ def fetch_spi_tr() -> tuple[pd.Series | None, Info]:
             if sp.ok:
                 s = sp.series
                 info.update(coverage=_coverage(s.index),
-                            provider=f"{info['provider']} ; avant le {sp.junction.date()} : historique data/history/{C.SPI_TR_HISTORY}")
+                            provider=f"{info['provider']}; before {sp.junction.date()}: history data/history/{C.SPI_TR_HISTORY}")
         return s, info
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")
@@ -191,21 +191,21 @@ def parse_snb_csv(text: str) -> pd.DataFrame:
 
 def fetch_saron() -> tuple[pd.Series | None, Info]:
     info: Info = {
-        "id": "saron", "name": "SARON — fixing quotidien (taux overnight annualisé, %)",
-        "provider": "Banque nationale suisse, data.snb.ch (cube snbgwdzid) ; administrateur : SIX Index AG",
+        "id": "saron", "name": "SARON — daily fixing (annualised overnight rate, %)",
+        "provider": "Swiss National Bank, data.snb.ch (cube snbgwdzid); administrator: SIX Index AG",
         "url": "https://data.snb.ch/en/topics/ziredev/cube/snbgwdzid",
         "license": C.LICENSES["snb"] + " " + C.LICENSES["six"], "columns": ["rf_saron"], "retrieved_at": _now(),
     }
     try:
         manual = _manual_csv("saron_daily.csv", "rate_pct")
         if manual is not None:
-            info.update(status="manual", provider="Import manuel data/manual/saron_daily.csv", coverage=_coverage(manual.index))
+            info.update(status="manual", provider="Manual import data/manual/saron_daily.csv", coverage=_coverage(manual.index))
             return manual, info
         dims = _retry(lambda: _get(C.SNB_DIMENSIONS_URL).json())
         items = _find_saron_items(dims)
         candidates = [(d, i, n) for d, i, n in items if "SARON" in n.upper() and "COMPOUND" not in n.upper()]
         if not candidates:
-            raise RuntimeError(f"Série SARON introuvable dans le cube {C.SNB_CUBE} : {json.dumps(items)[:400]}")
+            raise RuntimeError(f"SARON series not found in cube {C.SNB_CUBE}: {json.dumps(items)[:400]}")
         dim_id, item_id, item_name = candidates[0]
         # sans fromDate, l'API ne renvoie que les observations les plus récentes
         params = {"dimSel": f"{dim_id}({item_id})", "fromDate": C.SNB_FROM_DATE}
@@ -215,9 +215,9 @@ def fetch_saron() -> tuple[pd.Series | None, Info]:
             df = df[df[dim_id] == item_id]
         s = pd.Series(df["Value"].values, index=pd.to_datetime(df["Date"])).dropna().sort_index()
         if s.empty:
-            raise RuntimeError("Série SARON vide.")
+            raise RuntimeError("Empty SARON series.")
         _save_raw("saron_daily.csv", s.rename("rate_pct"))
-        info.update(status="ok", coverage=_coverage(s.index), message=f"Série BNS {dim_id}({item_id}) « {item_name} »")
+        info.update(status="ok", coverage=_coverage(s.index), message=f"SNB series {dim_id}({item_id}) \"{item_name}\"")
         return s, info
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")
@@ -231,13 +231,13 @@ def fetch_french(key: str) -> tuple[str | None, Info]:
     manual_names = {"ff3": "Europe_3_Factors.csv", "ff5": "Europe_5_Factors.csv", "mom": "Europe_Mom_Factor.csv"}
     cols = {"ff3": ["mkt_eu_chf", "smb3_chf", "hml3_chf"], "ff5": ["smb5_chf", "hml5_chf", "rmw5_chf", "cma5_chf"], "mom": ["wml_chf"]}
     info: Info = {
-        "id": key, "name": f"{labels[key]} (mensuel, USD, RF = T-bill US 1 mois)",
+        "id": key, "name": f"{labels[key]} (monthly, USD, RF = 1-month US T-bill)",
         "provider": "Kenneth R. French Data Library", "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html",
         "license": C.LICENSES["french"], "columns": cols[key], "retrieved_at": _now(),
     }
     manual = C.MANUAL_DIR / manual_names[key]
     if manual.exists():
-        info.update(status="manual", provider=f"Import manuel data/manual/{manual.name}")
+        info.update(status="manual", provider=f"Manual import data/manual/{manual.name}")
         return manual.read_text(encoding="latin-1"), info
     errors = []
     for fname in C.FRENCH_FILES[key]:
@@ -273,7 +273,7 @@ def fetch_usdchf_snb() -> tuple[pd.Series, str]:
         elif usd:
             sel.append(f"{did}({usd[0]})")
     if len(sel) != len(by_dim) or not sel:
-        raise RuntimeError(f"Dimensions BNS devkum non reconnues : {json.dumps(by_dim)[:400]}")
+        raise RuntimeError(f"SNB devkum dimensions not recognised: {json.dumps(by_dim)[:400]}")
     params = {"dimSel": ",".join(sel), "fromDate": "1980-01"}
     df = parse_snb_csv(_retry(lambda: _get(C.SNB_FX_DATA_URL, params=params).text))
     for part in sel:
@@ -284,48 +284,48 @@ def fetch_usdchf_snb() -> tuple[pd.Series, str]:
     idx = pd.PeriodIndex(df["Date"].str[:7], freq="M").to_timestamp(how="end").normalize()
     s = pd.Series(df["Value"].values, index=idx).dropna().sort_index()
     if s.empty:
-        raise RuntimeError("Série USD/CHF BNS vide.")
+        raise RuntimeError("Empty SNB USD/CHF series.")
     return s, ",".join(sel)
 
 
 def fetch_usdchf() -> tuple[pd.Series | None, Info]:
     """USD/CHF (CHF par USD) : BNS (fin de mois) → FRED (quotidien) → Yahoo (quotidien)."""
     info: Info = {
-        "id": "fx", "name": "USD/CHF (CHF par USD), cours de fin de mois",
-        "provider": "Banque nationale suisse, data.snb.ch (cube devkum, cours de fin de mois)",
+        "id": "fx", "name": "USD/CHF (CHF per USD), month-end rate",
+        "provider": "Swiss National Bank, data.snb.ch (cube devkum, month-end rates)",
         "url": "https://data.snb.ch/en/topics/ziredev/cube/devkum", "license": C.LICENSES["snb"],
         "columns": ["fx_usdchf_ret"], "retrieved_at": _now(),
     }
     manual = _manual_csv("usdchf_daily.csv", "chf_per_usd")
     if manual is not None:
-        info.update(status="manual", provider="Import manuel data/manual/usdchf_daily.csv", coverage=_coverage(manual.index))
+        info.update(status="manual", provider="Manual import data/manual/usdchf_daily.csv", coverage=_coverage(manual.index))
         return manual, info
     errors = []
     try:
         s, sel = fetch_usdchf_snb()
         _save_raw("usdchf_snb_monthly.csv", s.rename("chf_per_usd"))
-        info.update(status="ok", coverage=_coverage(s.index), message=f"Série BNS devkum {sel}")
+        info.update(status="ok", coverage=_coverage(s.index), message=f"SNB series devkum {sel}")
         return s, info
     except Exception as exc:  # noqa: BLE001
-        errors.append(f"BNS : {type(exc).__name__}: {exc}")
+        errors.append(f"SNB: {type(exc).__name__}: {exc}")
     try:
         text = _retry(lambda: _get(C.FRED_USDCHF, timeout=30).text, attempts=2)
         df = pd.read_csv(io.StringIO(text))
         s = pd.Series(pd.to_numeric(df["DEXSZUS"], errors="coerce").values, index=pd.to_datetime(df[df.columns[0]])).dropna().sort_index()
         _save_raw("usdchf_fred_daily.csv", s.rename("chf_per_usd"))
-        info.update(status="ok", provider="FRED, Federal Reserve Bank of St. Louis — DEXSZUS (H.10, midi New York)",
+        info.update(status="ok", provider="FRED, Federal Reserve Bank of St. Louis — DEXSZUS (H.10, noon New York)",
                     url="https://fred.stlouisfed.org/series/DEXSZUS", license=C.LICENSES["fred"], coverage=_coverage(s.index),
-                    message="Repli : " + " | ".join(errors))
+                    message="Fallback: " + " | ".join(errors))
         return s, info
     except Exception as exc:  # noqa: BLE001
-        errors.append(f"FRED : {type(exc).__name__}: {exc}")
+        errors.append(f"FRED: {type(exc).__name__}: {exc}")
     try:
         s = yahoo_history(C.YAHOO_USDCHF)["Close"].astype(float)
         info.update(status="ok", provider="Yahoo Finance (CHF=X)", url="https://finance.yahoo.com/quote/CHF%3DX",
-                    license=C.LICENSES["yahoo"], coverage=_coverage(s.index), message="Repli : " + " | ".join(errors))
+                    license=C.LICENSES["yahoo"], coverage=_coverage(s.index), message="Fallback: " + " | ".join(errors))
         return s, info
     except Exception as exc:  # noqa: BLE001
-        errors.append(f"Yahoo : {type(exc).__name__}: {exc}")
+        errors.append(f"Yahoo: {type(exc).__name__}: {exc}")
     info.update(status="error", message=" | ".join(errors))
     return None, info
 
@@ -341,23 +341,23 @@ def fetch_fund():
     from .fund import FundPage, parse_page
 
     info: Info = {
-        "id": "fund", "name": "BCV Swiss Equity A (CH0006018706) — performance officielle, distributions réinvesties",
-        "provider": "Gérifonds SA, page publique du fonds (graphique « Évolution de la performance (dividendes réinvestis) »)",
+        "id": "fund", "name": "BCV Swiss Equity A (CH0006018706) — official performance, distributions reinvested",
+        "provider": "Gérifonds SA, public fund page (chart \"Évolution de la performance (dividendes réinvestis)\")",
         "url": "https://www.gerifonds.ch/fr/iframe/CH0006018706", "license": C.LICENSES["gerifonds"],
         "columns": ["fund_ret"], "retrieved_at": _now(),
     }
     try:
         manual = _manual_csv("fund_tr_daily.csv", "tr_index")
         if manual is not None:
-            info.update(status="manual", provider="Import manuel data/manual/fund_tr_daily.csv", coverage=_coverage(manual.index))
+            info.update(status="manual", provider="Manual import data/manual/fund_tr_daily.csv", coverage=_coverage(manual.index))
             return FundPage(manual, pd.Series(dtype=float), pd.Series(dtype=float)), info
         text = _retry(lambda: _get(C.GERIFONDS_FUND_URL, timeout=120).text)
         page = parse_page(text)
         if len(page.tr) < 250:
-            raise RuntimeError(f"Historique Gérifonds trop court ({len(page.tr)} points) : structure de page modifiée ?")
+            raise RuntimeError(f"Gérifonds history too short ({len(page.tr)} points): page structure changed?")
         _save_raw("fund_gerifonds_daily.csv", pd.DataFrame({"tr_index": page.tr, "nav_tooltip": page.nav}))
         info.update(status="ok", coverage=_coverage(page.tr.index),
-                    message=f"{len(page.tr)} valeurs quotidiennes ; {len(page.distributions)} distributions publiées.")
+                    message=f"{len(page.tr)} daily values; {len(page.distributions)} published distributions.")
         return page, info
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")
@@ -374,15 +374,15 @@ def fetch_raif():
     from .raif import SfdSeries, parse_csv, parse_ter
 
     info: Info = {
-        "id": "raif", "name": f"{C.RAIF['name']} ({C.RAIF['isin']}) — rendement total, distributions réinvesties",
-        "provider": "Swiss Fund Data (SIX Financial Information / AMAS), export quotidien « Total Return Chart Price »",
+        "id": "raif", "name": f"{C.RAIF['name']} ({C.RAIF['isin']}) — total return, distributions reinvested",
+        "provider": "Swiss Fund Data (SIX Financial Information / AMAS), daily \"Total Return Chart Price\" export",
         "url": C.SFD_SHOW_URL, "license": C.LICENSES["swissfunddata"],
         "columns": ["raif_ret"], "retrieved_at": _now(),
     }
     try:
         manual = _manual_csv("raif_tr_daily.csv", "tr_index")
         if manual is not None:
-            info.update(status="manual", provider="Import manuel data/manual/raif_tr_daily.csv", coverage=_coverage(manual.index))
+            info.update(status="manual", provider="Manual import data/manual/raif_tr_daily.csv", coverage=_coverage(manual.index))
             return SfdSeries(nav=pd.Series(dtype=float), tr=manual), info
 
         def run():
@@ -394,19 +394,19 @@ def fetch_raif():
             csv = s.get(C.SFD_CSV_URL, timeout=120)
             csv.raise_for_status()
             if "Total Return Chart Price" not in csv.text[:2000]:
-                raise RuntimeError("Export Swiss Fund Data inattendu (avertissement non accepté ou format modifié).")
+                raise RuntimeError("Unexpected Swiss Fund Data export (disclaimer not accepted or format changed).")
             show = s.get(C.SFD_SHOW_URL, timeout=120).text
             return csv.text, show
 
         text, show = _retry(run)
         ser = parse_csv(text)
         if len(ser.tr) < 1000:
-            raise RuntimeError(f"Historique Swiss Fund Data trop court ({len(ser.tr)} points).")
+            raise RuntimeError(f"Swiss Fund Data history too short ({len(ser.tr)} points).")
         t = parse_ter(show)
         if t is not None:
             ser.ter, ser.ter_date = t
         _save_raw("raif_swissfunddata_daily.csv", pd.DataFrame({"nav": ser.nav, "tr_index": ser.tr}))
-        info.update(status="ok", coverage=_coverage(ser.tr.index), message=f"{len(ser.tr)} valeurs quotidiennes (VNI et rendement total).")
+        info.update(status="ok", coverage=_coverage(ser.tr.index), message=f"{len(ser.tr)} daily values (NAV and total return).")
         return ser, info
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")
@@ -423,8 +423,8 @@ def fetch_jkp_che():
     Repli : data/manual/jkp_che_factors.csv (date,SMB,HML,RMW,CMA,MOM en USD).
     """
     info: Info = {
-        "id": "jkp", "name": "Facteurs suisses Global Factor Data (JKP) : taille, valeur, rentabilité, investissement, momentum — mensuels, USD",
-        "provider": "Global Factor Data, Jensen, Kelly et Pedersen (2023), archives publiques",
+        "id": "jkp", "name": "Swiss Global Factor Data (JKP) factors: size, value, profitability, investment, momentum — monthly, USD",
+        "provider": "Global Factor Data, Jensen, Kelly and Pedersen (2023), public archives",
         "url": "https://jkpfactors.com/", "license": C.LICENSES["jkp"],
         "columns": ["smb_ch", "hml_ch", "rmw_ch", "cma_ch", "mom_ch"], "retrieved_at": _now(),
     }
@@ -433,7 +433,7 @@ def fetch_jkp_che():
         if manual.exists():
             df = pd.read_csv(manual)
             df.index = pd.PeriodIndex(pd.to_datetime(df.pop("date")), freq="M")
-            info.update(status="manual", provider="Import manuel data/manual/jkp_che_factors.csv",
+            info.update(status="manual", provider="Manual import data/manual/jkp_che_factors.csv",
                         coverage=[str(df.index.min()), str(df.index.max())])
             return df[[k for k in C.JKP_FACTORS]], info
         out: dict[str, pd.Series] = {}
@@ -445,19 +445,19 @@ def fetch_jkp_che():
                 raw = pd.read_csv(z.open(member), na_values="na")
             need = {"date", "ret", "n_stocks", "location", "name"}
             if not need <= set(raw.columns):
-                raise ValueError(f"{code} : colonnes manquantes {sorted(need - set(raw.columns))}")
+                raise ValueError(f"{code}: missing columns {sorted(need - set(raw.columns))}")
             if set(raw["location"]) != {C.JKP_REGION} or set(raw["name"]) != {code}:
-                raise ValueError(f"{code} : fichier inattendu (pays {set(raw['location'])}, facteur {set(raw['name'])})")
+                raise ValueError(f"{code}: unexpected file (country {set(raw['location'])}, factor {set(raw['name'])})")
             idx = pd.PeriodIndex(pd.to_datetime(raw["date"]), freq="M")
             if idx.has_duplicates:
-                raise ValueError(f"{code} : mois en double")
+                raise ValueError(f"{code}: duplicate months")
             out[key] = pd.Series(pd.to_numeric(raw["ret"], errors="coerce").values, index=idx)
             out[f"n_{key}"] = pd.Series(pd.to_numeric(raw["n_stocks"], errors="coerce").values, index=idx)
         df = pd.DataFrame(out).sort_index()
         _save_raw("jkp_che_factors_usd.csv", df)
         info.update(status="ok", coverage=[str(df.index.min()), str(df.index.max())],
-                    message="Caractéristiques : " + ", ".join(f"{k} = {c}" for k, (c, _) in C.JKP_FACTORS.items())
-                    + f" ; pondération {C.JKP_WEIGHTING} ; dernier mois publié {df.index.max()}.")
+                    message="Characteristics: " + ", ".join(f"{k} = {c}" for k, (c, _) in C.JKP_FACTORS.items())
+                    + f"; weighting {C.JKP_WEIGHTING}; last published month {df.index.max()}.")
         return df, info
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")

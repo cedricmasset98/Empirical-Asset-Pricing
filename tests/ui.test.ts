@@ -17,7 +17,7 @@ test('modèle hybride identifié comme tel', () => {
   const f = fitModel(ds, 'FF3', 'SPI', st);
   if (!f.ok) throw new Error(f.error);
   assert.equal(f.coherence, 'hybrid');
-  assert.match(f.label, /hybride/);
+  assert.match(f.label, /hybrid/);
   const g = fitModel(ds, 'FF3', 'EUROPE', st);
   assert.ok(g.ok && g.coherence === 'european');
   const c = fitModel(ds, 'CAPM', 'SPI', st);
@@ -27,7 +27,7 @@ test('modèle hybride identifié comme tel', () => {
 test('période trop courte : erreur explicite, aucun résultat', () => {
   const f = fitModel(ds, 'FF5', 'EUROPE', { ...st, range: { start: '2010-01', end: '2011-06' } });
   assert.equal(f.ok, false);
-  assert.match((f as { error: string }).error, /insuffisantes/);
+  assert.match((f as { error: string }).error, /Insufficient/);
 });
 
 test('série absente : erreur explicite', () => {
@@ -69,7 +69,7 @@ test('import CSV : aller-retour et refus des pourcentages', () => {
   assert.deepEqual(back.data.smb5_chf, ds.data.smb5_chf);
   assert.throws(() => parseCsvDataset('date,bcv_ret,rf_saron\n2020-01,1.5,0.001\n', 'p.csv'), DatasetError);
   assert.throws(() => parseCsvDataset('date,bcv_ret\n2020-01,0.01\n', 'p.csv'), /rf_saron/);
-  assert.throws(() => parseCsvDataset('date,bcv_ret,rf_saron,foo\n2020-01,0.01,0,1\n', 'p.csv'), /inconnues/);
+  assert.throws(() => parseCsvDataset('date,bcv_ret,rf_saron,foo\n2020-01,0.01,0,1\n', 'p.csv'), /Unknown columns/);
   const semi = parseCsvDataset('date;bcv_ret;rf_saron\n2020-02-29;0,0125;0,0001\n2020-01-31;-0,02;\n', 's.csv');
   assert.deepEqual(semi.dates, ['2020-01', '2020-02']);
   assert.equal(semi.data.bcv_ret![1], 0.0125);
@@ -77,8 +77,8 @@ test('import CSV : aller-retour et refus des pourcentages', () => {
 });
 
 test('validation du schéma', () => {
-  assert.throws(() => validateDataset({ ...ds, dates: ['2020-02', '2020-01'], data: {} }), /croissantes/);
-  assert.throws(() => validateDataset({ ...ds, schema: 'x' }), /Schéma/);
+  assert.throws(() => validateDataset({ ...ds, dates: ['2020-02', '2020-01'], data: {} }), /strictly increasing/);
+  assert.throws(() => validateDataset({ ...ds, schema: 'x' }), /schema/);
 });
 
 test('action vs fonds : échantillon identique et écart d’alpha cohérent', async () => {
@@ -122,7 +122,7 @@ test('univers suisse : facteurs JKP, modèle cohérent, échantillon limité à 
   const f = fitModel(ds, 'FF5', 'SWISS', st);
   if (!f.ok) throw new Error(f.error);
   assert.equal(f.coherence, 'swiss');
-  assert.match(f.label, /univers suisse/);
+  assert.match(f.label, /Swiss universe/);
   const cols = ['bcv_ret', 'rf_saron', 'spi_ret', 'smb_ch', 'hml_ch', 'rmw_ch', 'cma_ch'] as const;
   const idx = ds.dates.map((_, i) => i).filter((i) => cols.every((c) => ds.data[c]![i] != null));
   assert.equal(f.result.n, idx.length);
@@ -138,7 +138,7 @@ test('comparaison de deux fonds quelconques : différence = α_A − α_B', () =
   const cmp = compareAssets(ds, { ...st, universe: 'SWISS' }, ['FUND', 'RAIF']);
   assert.ok(cmp.ok, cmp.error);
   assert.deepEqual(cmp.pair, ['FUND', 'RAIF']);
-  assert.equal(cmp.perf[1].label, 'Fonds Raiffeisen Futura - Swiss Stock A');
+  assert.equal(cmp.perf[1].label, 'Raiffeisen Futura - Swiss Stock A fund');
   for (const m of cmp.models) {
     if (!m.a.ok || !m.b.ok || !m.diff.ok) throw new Error('ajustement manquant');
     assert.ok(Math.abs(m.diff.result.beta[0] - (m.a.result.beta[0] - m.b.result.beta[0])) < 1e-12);

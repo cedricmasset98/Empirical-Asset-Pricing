@@ -18,9 +18,9 @@ export interface RollingResult {
 export function rollingOLS(dates: string[], y: Vector, x: Matrix, names: string[], window: number, options: FitOptions): RollingResult {
   const n = y.length;
   const k = names.length;
-  if (window <= k + 1) throw new Error(`Fenêtre de ${window} observations trop courte pour ${k} paramètres.`);
+  if (window <= k + 1) throw new Error(`A ${window}-observation window is too short for ${k} parameters.`);
   if (n < window) {
-    throw new Error(`Observations insuffisantes pour une fenêtre de ${window} mois (n = ${n}).`);
+    throw new Error(`Insufficient observations for a ${window}-month window (n = ${n}).`);
   }
   const out: RollingResult = {
     window,

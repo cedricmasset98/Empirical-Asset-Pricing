@@ -65,17 +65,17 @@ export type Fit = FitOk | FitErr;
 
 function describeError(e: unknown): string {
   if (e instanceof DataUnavailableError || e instanceof InsufficientDataError || e instanceof SingularMatrixError) return e.message;
-  return `Erreur de calcul : ${(e as Error).message}`;
+  return `Calculation error: ${(e as Error).message}`;
 }
 
 export function sampleWarnings(s: Sample): string[] {
   const w: string[] = [];
-  if (s.droppedMonths > 0) w.push(`${s.droppedMonths} mois de la plage exclus faute de données complètes (aucune interpolation).`);
+  if (s.droppedMonths > 0) w.push(`${s.droppedMonths} month(s) of the range excluded for lack of complete data (no interpolation).`);
   if (s.gaps.length) {
-    const list = s.gaps.slice(0, 4).map((g) => `${g.after} → ${g.before} (${g.missing} mois)`).join(', ');
+    const list = s.gaps.slice(0, 4).map((g) => `${g.after} → ${g.before} (${g.missing} months)`).join(', ');
     w.push(
       `Échantillon non contigu : ${s.gaps.length} rupture(s) ${list}${s.gaps.length > 4 ? ' …' : ''}. ` +
-        'Les tests d’autocorrélation, Newey-West et les fenêtres mobiles traitent les observations comme consécutives.',
+        'Autocorrelation tests, Newey-West and rolling windows treat the observations as consecutive.',
     );
   }
   return w;
@@ -97,7 +97,7 @@ export function fitModel(
     const minN = minObservations(k);
     if (sample.y.length < minN) {
       throw new InsufficientDataError(
-        `Observations insuffisantes : ${sample.y.length} mois disponibles sur la période, minimum requis ${minN} pour ${k} paramètres.`,
+        `Insufficient observations: ${sample.y.length} months available over the period, minimum required ${minN} for ${k} parameters.`,
       );
     }
     const result = ols(sample.y, sample.x, sample.names, { cov: st.cov, hacLags: st.cov === 'HAC' ? st.hacLags : null });
@@ -168,7 +168,7 @@ export function compareModels(ds: Dataset, st: Settings): Comparison {
   for (const universe of UI_UNIVERSES) {
     for (const model of MODEL_IDS) {
       if (specs.some((s) => s.model === model && s.universe === universe)) fits.push(fitModel(ds, model, universe, st, common));
-      else fits.push({ ok: false, asset: st.asset, model, universe, label: specLabel(model, universe), error: 'Séries indisponibles.' });
+      else fits.push({ ok: false, asset: st.asset, model, universe, label: specLabel(model, universe), error: 'Series unavailable.' });
     }
   }
   return { fits, commonN: common.size, period: dates.length ? [dates[0], dates[dates.length - 1]] : null, excluded };
@@ -221,7 +221,7 @@ function perfStats(key: string, label: string, r: number[]): PerfStats {
 export function compareAssets(ds: Dataset, st: Settings, pair: Pair = DEFAULT_PAIR): AssetComparison {
   const universe = st.universe;
   const empty = (error: string): AssetComparison => ({ ok: false, error, universe, pair, dates: [], perf: [], models: [] });
-  if (pair[0] === pair[1]) return empty('Choisissez deux actifs différents.');
+  if (pair[0] === pair[1]) return empty('Choose two different assets.');
   const specs: { model: ModelId; universe: Universe; asset: AssetId }[] = [];
   for (const model of MODEL_IDS) {
     for (const asset of pair) {
@@ -236,14 +236,14 @@ export function compareAssets(ds: Dataset, st: Settings, pair: Pair = DEFAULT_PA
   for (const asset of pair) specs.push({ model: 'CAPM', universe: 'SPI', asset });
   const common = commonDates(ds, specs, st.range);
   const dates = [...common].sort();
-  if (dates.length < minObservations(6)) return empty(`Seulement ${dates.length} mois communs aux deux actifs et aux facteurs sur la période choisie.`);
+  if (dates.length < minObservations(6)) return empty(`Only ${dates.length} months common to both assets and the factors over the selected period.`);
   const idx = dates.map((d) => ds.dates.indexOf(d));
   const col = (k: SeriesKey) => idx.map((i) => ds.data[k]![i] as number);
   const perf = [
     perfStats('a', ASSET_INFO[pair[0]].label, col(ASSET_INFO[pair[0]].column)),
     perfStats('b', ASSET_INFO[pair[1]].label, col(ASSET_INFO[pair[1]].column)),
     perfStats('spi', 'SPI Total Return', col('spi_ret')),
-    perfStats('rf', 'Placement au SARON', col('rf_saron')),
+    perfStats('rf', 'SARON deposit', col('rf_saron')),
   ];
   const models = MODEL_IDS.map((model) => ({
     model,

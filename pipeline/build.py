@@ -32,26 +32,26 @@ from .transform import (
 )
 
 COLUMN_INFO = {
-    "bcv_ret": ("Rendement total BCV", "BCVN.SW, cours ajusté (dividendes, splits), fin de mois à fin de mois"),
-    "fund_ret": ("Rendement total BCV Swiss Equity A", "Indice de performance officiel Gérifonds, distributions brutes réinvesties, net des frais du fonds"),
-    "raif_ret": ("Rendement total Raiffeisen Futura - Swiss Stock A", "Swiss Fund Data, « Total Return Chart Price » (distributions réinvesties), net des frais du fonds"),
-    "smb_ch": ("SMB suisse (JKP, CHF)", "Global Factor Data, Suisse : taille (market_equity), terciles, poids plafonnés ; F_USD(1+s)"),
-    "hml_ch": ("HML suisse (JKP, CHF)", "Global Factor Data, Suisse : valeur comptable / capitalisation (be_me)"),
-    "rmw_ch": ("RMW suisse (JKP, CHF)", "Global Factor Data, Suisse : bénéfice d'exploitation / fonds propres (ope_be)"),
-    "cma_ch": ("CMA suisse (JKP, CHF)", "Global Factor Data, Suisse : croissance des actifs (at_gr1)"),
-    "mom_ch": ("MOM suisse (JKP, CHF)", "Global Factor Data, Suisse : rendement t−12 à t−1 (ret_12_1)"),
-    "spi_ret": ("Rendement SPI TR", "Swiss Performance Index (indice de performance, CHF)"),
-    "rf_saron": ("Taux sans risque SARON réalisé", "Capitalisation quotidienne ACT/360 du SARON sur le mois"),
-    "mkt_eu_chf": ("Marché européen FF, rendement total en CHF", "(1 + Mkt−RF + RF_US)(1 + s) − 1"),
-    "smb3_chf": ("SMB (FF3 Europe) en CHF", "SMB_USD × (1 + s)"),
-    "hml3_chf": ("HML (FF3 Europe) en CHF", "HML_USD × (1 + s)"),
-    "wml_chf": ("WML momentum Europe en CHF", "WML_USD × (1 + s)"),
-    "smb5_chf": ("SMB (FF5 Europe) en CHF", "SMB_USD × (1 + s)"),
-    "hml5_chf": ("HML (FF5 Europe) en CHF", "HML_USD × (1 + s)"),
-    "rmw5_chf": ("RMW (FF5 Europe) en CHF", "RMW_USD × (1 + s)"),
-    "cma5_chf": ("CMA (FF5 Europe) en CHF", "CMA_USD × (1 + s)"),
-    "fx_usdchf_ret": ("Variation USD/CHF (s)", "CHF par USD, fin de mois"),
-    "rf_us": ("RF US (FF)", "T-bill 1 mois, tel que publié par K. French"),
+    "bcv_ret": ("BCV total return", "BCVN.SW, adjusted price (dividends, splits), month-end to month-end"),
+    "fund_ret": ("BCV Swiss Equity A total return", "Official Gérifonds performance index, gross distributions reinvested, net of fund fees"),
+    "raif_ret": ("Raiffeisen Futura - Swiss Stock A total return", "Swiss Fund Data, \"Total Return Chart Price\" (distributions reinvested), net of fund fees"),
+    "smb_ch": ("Swiss SMB (JKP, CHF)", "Global Factor Data, Switzerland: size (market_equity), terciles, capped weights; F_USD(1+s)"),
+    "hml_ch": ("Swiss HML (JKP, CHF)", "Global Factor Data, Switzerland: book equity / market equity (be_me)"),
+    "rmw_ch": ("Swiss RMW (JKP, CHF)", "Global Factor Data, Switzerland: operating profit / book equity (ope_be)"),
+    "cma_ch": ("Swiss CMA (JKP, CHF)", "Global Factor Data, Switzerland: asset growth (at_gr1)"),
+    "mom_ch": ("Swiss MOM (JKP, CHF)", "Global Factor Data, Switzerland: return from t−12 to t−1 (ret_12_1)"),
+    "spi_ret": ("SPI TR return", "Swiss Performance Index (total return index, CHF)"),
+    "rf_saron": ("Realised SARON risk-free rate", "Daily ACT/360 compounding of SARON over the month"),
+    "mkt_eu_chf": ("FF European market, total return in CHF", "(1 + Mkt−RF + RF_US)(1 + s) − 1"),
+    "smb3_chf": ("SMB (FF3 Europe) in CHF", "SMB_USD × (1 + s)"),
+    "hml3_chf": ("HML (FF3 Europe) in CHF", "HML_USD × (1 + s)"),
+    "wml_chf": ("WML momentum Europe in CHF", "WML_USD × (1 + s)"),
+    "smb5_chf": ("SMB (FF5 Europe) in CHF", "SMB_USD × (1 + s)"),
+    "hml5_chf": ("HML (FF5 Europe) in CHF", "HML_USD × (1 + s)"),
+    "rmw5_chf": ("RMW (FF5 Europe) in CHF", "RMW_USD × (1 + s)"),
+    "cma5_chf": ("CMA (FF5 Europe) in CHF", "CMA_USD × (1 + s)"),
+    "fx_usdchf_ret": ("USD/CHF change (s)", "CHF per USD, month-end"),
+    "rf_us": ("US RF (FF)", "1-month T-bill, as published by K. French"),
     "mkt_rf_usd": ("Mkt−RF Europe (USD, original)", "Kenneth French, Europe 3 Factors"),
     "smb3_usd": ("SMB FF3 (USD, original)", ""),
     "hml3_usd": ("HML FF3 (USD, original)", ""),
@@ -75,26 +75,26 @@ def stale_note(name: str, stale: list[str], checks: list[dict]) -> None:
     if stale:
         shown = ", ".join(stale[:12]) + (" …" if len(stale) > 12 else "")
         check(checks, f"{name}-stale", "warn",
-              f"{name} : {len(stale)} mois écartés (dernière observation à plus de {C.MAX_MONTH_END_GAP_DAYS} jours de la fin du mois) : {shown}")
+              f"{name}: {len(stale)} months dropped (last observation more than {C.MAX_MONTH_END_GAP_DAYS} days before month-end): {shown}")
 
 
 def bcv_checks(h: pd.DataFrame, checks: list[dict], last_complete: pd.Period) -> None:
     if "Stock Splits" in h.columns:
         splits = h.loc[h["Stock Splits"].fillna(0) != 0, "Stock Splits"]
-        listed = ", ".join(f"{d.date()} (×{v:g})" for d, v in splits.items()) or "aucun"
+        listed = ", ".join(f"{d.date()} (×{v:g})" for d, v in splits.items()) or "none"
         may2020 = splits[(splits.index >= "2020-05-01") & (splits.index <= "2020-05-31")]
         if len(may2020) and abs(float(may2020.iloc[0]) - 10) < 1e-9:
-            check(checks, "bcv-split-2020", "pass", f"Split 10:1 de mai 2020 présent dans les données ({may2020.index[0].date()}). Splits : {listed}.")
+            check(checks, "bcv-split-2020", "pass", f"10:1 split of May 2020 present in the data ({may2020.index[0].date()}). Splits: {listed}.")
         else:
-            check(checks, "bcv-split-2020", "warn", f"Split 10:1 de mai 2020 NON détecté dans les actions sur titres. Splits : {listed}.")
+            check(checks, "bcv-split-2020", "warn", f"10:1 split of May 2020 NOT detected in the corporate actions. Splits: {listed}.")
     adj = h["Adj Close"].astype(float).dropna()
     r = adj.pct_change().dropna()
     big = r[r.abs() > 0.35]
     if len(big):
-        check(checks, "bcv-jumps", "fail", "Variations quotidiennes > 35 % du cours ajusté (split non ajusté ?) : "
+        check(checks, "bcv-jumps", "fail", "Daily changes > 35% in the adjusted price (unadjusted split?): "
               + ", ".join(f"{d.date()} {v:+.1%}" for d, v in big.items()))
     else:
-        check(checks, "bcv-jumps", "pass", f"Aucune variation quotidienne > 35 % du cours ajusté (max |r| = {r.abs().max():.1%}, le {r.abs().idxmax().date()}).")
+        check(checks, "bcv-jumps", "pass", f"No daily change > 35% in the adjusted price (max |r| = {r.abs().max():.1%}, on {r.abs().idxmax().date()}).")
     if "Close" in h.columns:
         lv_tr = month_end_levels(adj, C.MAX_MONTH_END_GAP_DAYS, last_complete).values
         lv_pr = month_end_levels(h["Close"].astype(float), C.MAX_MONTH_END_GAP_DAYS, last_complete).values
@@ -102,7 +102,7 @@ def bcv_checks(h: pd.DataFrame, checks: list[dict], last_complete: pd.Period) ->
         n_div = int((h.get("Dividends", pd.Series(dtype=float)).fillna(0) > 0).sum())
         status = "pass" if diff > 0.01 and n_div > 0 else "warn"
         check(checks, "bcv-dividends", status,
-              f"Ajustement des dividendes : {n_div} détachements ; rendement total − rendement de prix = {diff:+.2%} par an en moyenne.")
+              f"Dividend adjustment: {n_div} ex-dividend dates; total return − price return = {diff:+.2%} per year on average.")
 
 
 def jkp_block(fx_r, cols: dict, sources: list, checks: list[dict]) -> None:
@@ -110,11 +110,11 @@ def jkp_block(fx_r, cols: dict, sources: list, checks: list[dict]) -> None:
     df, info = S.fetch_jkp_che()
     sources.append(info)
     if df is None:
-        check(checks, "jkp", "warn", "Facteurs suisses JKP indisponibles : l'univers « Suisse » ne peut pas être estimé.")
+        check(checks, "jkp", "warn", "Swiss JKP factors unavailable: the Switzerland universe cannot be estimated.")
         return
     bad = [k for k in C.JKP_FACTORS if df[k].abs().max() >= 0.5]
     if bad:
-        check(checks, "jkp-range", "fail", f"Facteurs suisses JKP : rendements mensuels ≥ 50 % pour {', '.join(bad)} (unités à vérifier).")
+        check(checks, "jkp-range", "fail", f"Swiss JKP factors: monthly returns ≥ 50% for {', '.join(bad)} (check units).")
     for key in C.JKP_FACTORS:
         f = df[key].copy()
         n = df.get(f"n_{key}")
@@ -125,8 +125,8 @@ def jkp_block(fx_r, cols: dict, sources: list, checks: list[dict]) -> None:
     last = df.index.max()
     first = max(df[k].where(df.get(f"n_{k}", pd.Series(np.inf, index=df.index)) >= C.JKP_MIN_STOCKS).first_valid_index() for k in C.JKP_FACTORS)
     check(checks, "jkp", "pass" if info["status"] in ("ok", "manual") else "warn",
-          f"Facteurs suisses JKP du {first} au {last} (mois retenus : au moins {C.JKP_MIN_STOCKS} titres par facteur), convertis en CHF par F_USD(1+s). "
-          "Publication annuelle : les derniers mois de l'échantillon peuvent manquer.")
+          f"Swiss JKP factors from {first} to {last} (months kept: at least {C.JKP_MIN_STOCKS} stocks per factor), converted to CHF as F_USD(1+s). "
+          "Updated annually: the latest months of the sample may be missing.")
     pairs = {"SMB": "smb3_usd", "HML": "hml3_usd", "RMW": "rmw5_usd", "CMA": "cma5_usd", "MOM": "wml_usd"}
     cor = {}
     for k, v in pairs.items():
@@ -136,8 +136,8 @@ def jkp_block(fx_r, cols: dict, sources: list, checks: list[dict]) -> None:
                 cor[k] = float(x.corr().iloc[0, 1])
     if cor:
         check(checks, "jkp-vs-europe", "pass",
-              "Corrélation facteurs suisses JKP / européens Fama-French (USD) : " + ", ".join(f"{k} {v:.2f}" for k, v in cor.items())
-              + ". Corrélations modérées attendues : marchés et méthodes différents.")
+              "Correlation of Swiss JKP / European Fama-French factors (USD): " + ", ".join(f"{k} {v:.2f}" for k, v in cor.items())
+              + ". Moderate correlations expected: different markets and methods.")
 
 
 def raif_checks(ser, checks: list[dict]) -> None:
@@ -145,20 +145,20 @@ def raif_checks(ser, checks: list[dict]) -> None:
 
     r = rcheck(ser)
     check(checks, "raif-nav", "pass" if r.chart_eq_nav else "fail",
-          "Fonds Raiffeisen : « Chart Price » " + ("identique à la VNI publiée." if r.chart_eq_nav else "différent de la VNI publiée."))
+          "Raiffeisen fund: \"Chart Price\" " + ("equal to the published NAV." if r.chart_eq_nav else "different from the published NAV."))
     check(checks, "raif-reconciliation", "pass" if r.share_ok >= 0.995 else "fail",
-          f"Fonds Raiffeisen : hors distributions, rendement total = rendement de la VNI pour {r.share_ok:.2%} des {r.n_days - 1} jours"
-          + (f" (écarts : {', '.join(r.bad_days[:6])}{'…' if len(r.bad_days) > 6 else ''})." if r.bad_days else "."))
-    dl = ", ".join(f"{d} : {a:.2f}" for d, a in r.distributions[-6:])
+          f"Raiffeisen fund: outside distributions, total return = NAV return on {r.share_ok:.2%} of {r.n_days - 1} days"
+          + (f" (mismatches: {', '.join(r.bad_days[:6])}{'…' if len(r.bad_days) > 6 else ''})." if r.bad_days else "."))
+    dl = ", ".join(f"{d}: {a:.2f}" for d, a in r.distributions[-6:])
     check(checks, "raif-distributions", "warn" if r.anomalies else "pass",
-          f"Fonds Raiffeisen : {len(r.distributions)} distributions implicites (dernières : {dl})"
+          f"Raiffeisen fund: {len(r.distributions)} implied distributions (latest: {dl})"
           + (" ; " + " ; ".join(r.anomalies) if r.anomalies else "") + ".")
     known = C.RAIF.get("ter")
     if ser.ter is not None and known is not None:
         same = abs(known - ser.ter) < 1e-9
         check(checks, "raif-ter", "pass" if same else "warn",
-              f"Fonds Raiffeisen : TER publié {ser.ter:.2%} au {ser.ter_date.date()}"
-              + ("." if same else f", différent de la configuration ({known:.2%}) : mettre à jour pipeline/config.py."))
+              f"Raiffeisen fund: published TER {ser.ter:.2%} as of {ser.ter_date.date()}"
+              + ("." if same else f", different from the configuration ({known:.2%}): update pipeline/config.py."))
 
 
 def fund_checks(page, checks: list[dict]) -> None:
@@ -167,30 +167,30 @@ def fund_checks(page, checks: list[dict]) -> None:
     rec = reconcile(page)
     ok_share = rec.matched_share >= 0.995
     check(checks, "fund-reconciliation", "pass" if ok_share else "fail",
-          f"Fonds : {rec.matched_share:.2%} des {rec.n_days} rendements quotidiens de la série officielle retrouvés à partir des VNI "
-          f"et des distributions brutes (tolérance {5e-5:.0e})"
-          + (f" ; VNI des infobulles décalées d'un jour à partir de {rec.lag_switch} environ, décalage corrigé dans le contrôle." if rec.lag_switch else "."))
+          f"Fund: {rec.matched_share:.2%} of the {rec.n_days} daily returns of the official series reproduced from NAVs "
+          f"and gross distributions (tolerance {5e-5:.0e})"
+          + (f"; tooltip NAVs lag by one day from about {rec.lag_switch}, lag corrected in the check." if rec.lag_switch else "."))
     if rec.dist_bad:
-        check(checks, "fund-distributions", "fail", "Fonds : distributions non retrouvées ou comptées incorrectement : "
-              + ", ".join(f"{d} (publié {g}, implicite {i})" for d, g, i in rec.dist_bad))
+        check(checks, "fund-distributions", "fail", "Fund: distributions not found or counted incorrectly: "
+              + ", ".join(f"{d} (published {g}, implied {i})" for d, g, i in rec.dist_bad))
     else:
         check(checks, "fund-distributions", "pass",
-              f"Fonds : les {len(rec.dist_ok)} distributions publiées sont incluses une et une seule fois, au montant brut "
-              f"(dernière : {rec.dist_ok[-1][0]}, {rec.dist_ok[-1][1]:.2f} CHF)." if rec.dist_ok else "Fonds : aucune distribution à contrôler.")
+              f"Fund: the {len(rec.dist_ok)} published distributions are included exactly once, at the gross amount "
+              f"(latest: {rec.dist_ok[-1][0]}, {rec.dist_ok[-1][1]:.2f} CHF)." if rec.dist_ok else "Fund: no distribution to check.")
     if rec.unexplained:
-        check(checks, "fund-jumps", "warn", "Fonds : écarts VNI / performance non expliqués par une distribution publiée : " + ", ".join(rec.unexplained))
+        check(checks, "fund-jumps", "warn", "Fund: NAV / performance gaps not explained by a published distribution: " + ", ".join(rec.unexplained))
     y = ytd_check(page)
     if y is None:
-        check(checks, "fund-ytd", "warn", "Fonds : performance YTD officielle non lue ; contrôle non effectué.")
+        check(checks, "fund-ytd", "warn", "Fund: official YTD performance not read; check skipped.")
     else:
         calc, off = y
         check(checks, "fund-ytd", "pass" if abs(calc - off) < 1e-4 else "fail",
-              f"Fonds : performance YTD recalculée {calc:.2%} contre {off:.2%} publiée par Gérifonds au {page.ytd_date.date()}.")
+              f"Fund: recomputed YTD performance {calc:.2%} vs {off:.2%} published by Gérifonds as of {page.ytd_date.date()}.")
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--run-date", default=None, help="date de référence (AAAA-MM-JJ) ; défaut : aujourd'hui UTC")
+    ap.add_argument("--run-date", default=None, help="reference date (YYYY-MM-DD); default: today UTC")
     args = ap.parse_args(argv)
     today = pd.Timestamp(args.run_date) if args.run_date else pd.Timestamp(datetime.now(timezone.utc).date())
     last_complete = today.to_period("M") - 1
@@ -213,18 +213,18 @@ def main(argv: list[str] | None = None) -> int:
     fund_info: dict = {}
     fund_page, info = S.fetch_fund()
     if fund_page is not None and fund_page.ter is not None:
-        fund_info = {"ter": fund_page.ter, "ter_date": str(fund_page.ter_date.date()), "ter_source": "Gérifonds, page publique du fonds"}
+        fund_info = {"ter": fund_page.ter, "ter_date": str(fund_page.ter_date.date()), "ter_source": "Gérifonds, public fund page"}
         known = C.FUND.get("ter")
         if known is not None and abs(known - fund_page.ter) > 1e-9:
-            check(checks, "fund-ter", "warn", f"Fonds : TER publié {fund_page.ter:.2%} ({fund_info['ter_date']}) différent de celui de la configuration "
-                  f"({known:.2%}) utilisé par la présentation : mettre à jour pipeline/config.py.")
+            check(checks, "fund-ter", "warn", f"Fund: published TER {fund_page.ter:.2%} ({fund_info['ter_date']}) differs from the configuration value "
+                  f"({known:.2%}) used by the site: update pipeline/config.py.")
         else:
-            check(checks, "fund-ter", "pass", f"Fonds : TER publié {fund_page.ter:.2%} au {fund_info['ter_date']}.")
+            check(checks, "fund-ter", "pass", f"Fund: published TER {fund_page.ter:.2%} as of {fund_info['ter_date']}.")
     sources.append(info)
     if fund_page is not None:
         lv = month_end_levels(fund_page.tr, gap, last_complete)
         cols["fund_ret"] = simple_returns(lv.values)
-        stale_note("Fonds", lv.stale, checks)
+        stale_note("Fund", lv.stale, checks)
         if info["status"] == "ok":
             fund_checks(fund_page, checks)
 
@@ -235,11 +235,11 @@ def main(argv: list[str] | None = None) -> int:
     if raif is not None:
         lv = month_end_levels(raif.tr, gap, last_complete)
         cols["raif_ret"] = simple_returns(lv.values)
-        stale_note("Fonds Raiffeisen", lv.stale, checks)
+        stale_note("Raiffeisen fund", lv.stale, checks)
         if info["status"] == "ok":
             raif_checks(raif, checks)
             if raif.ter is not None:
-                raif_info = {"ter": raif.ter, "ter_date": str(raif.ter_date.date()), "ter_source": "Swiss Fund Data, fiche du fonds"}
+                raif_info = {"ter": raif.ter, "ter_date": str(raif.ter_date.date()), "ter_source": "Swiss Fund Data, fund page"}
 
     # --- SPI TR
     spi, info = S.fetch_spi_tr()
@@ -247,9 +247,9 @@ def main(argv: list[str] | None = None) -> int:
     sp = info.get("splice")
     if sp:
         check(checks, "spi-history", "pass" if sp["ok"] else "warn",
-              (f"SPI : historique {sp['file']} raccordé à ^SSHI après contrôle de concordance — {sp['message']}"
+              (f"SPI: history {sp['file']} spliced onto ^SSHI after a consistency check — {sp['message']}"
                if sp["ok"] else
-               f"SPI : raccord de l'historique {sp['file']} refusé, série Yahoo seule conservée — {sp['message']}"))
+               f"SPI: splice of history {sp['file']} rejected, Yahoo series kept alone — {sp['message']}"))
     if spi is not None:
         lv = month_end_levels(spi, gap, last_complete)
         cols["spi_ret"] = simple_returns(lv.values)
@@ -261,8 +261,8 @@ def main(argv: list[str] | None = None) -> int:
             if len(common) >= 24:
                 d = annual_mean(cols["spi_ret"][common]) - annual_mean(smi_r[common])
                 check(checks, "spi-total-return", "pass" if d > 0 else "warn",
-                      f"Plausibilité « total return » du SPI : rendement moyen SPI − SMI (indice de prix) = {d:+.2%} par an sur "
-                      f"{len(common)} mois. Indicateur seulement (compositions différentes) ; la nature TR repose sur la définition SIX du SPI.")
+                      f"SPI total-return plausibility: mean return SPI − SMI (price index) = {d:+.2%} per year over "
+                      f"{len(common)} months. Indicative only (different constituents); the TR nature rests on SIX's definition of the SPI.")
 
     # --- SARON
     saron, info = S.fetch_saron()
@@ -272,10 +272,10 @@ def main(argv: list[str] | None = None) -> int:
         cols["rf_saron"] = rf
         stale_note("SARON", stale, checks)
         if gaps:
-            check(checks, "saron-gaps", "warn", f"{len(gaps)} intervalles > 5 jours entre fixings SARON (le dernier taux connu court jusqu'au fixing suivant) : "
+            check(checks, "saron-gaps", "warn", f"{len(gaps)} gaps > 5 days between SARON fixings (the last known rate runs until the next fixing): "
                   + ", ".join(gaps[:8]) + (" …" if len(gaps) > 8 else ""))
         check(checks, "saron-coverage", "pass",
-              f"SARON quotidien disponible du {saron.index.min().date()} au {saron.index.max().date()} ; rendement mensuel = capitalisation ACT/360.")
+              f"Daily SARON available from {saron.index.min().date()} to {saron.index.max().date()}; monthly return = ACT/360 compounding.")
 
     # --- USD/CHF
     fx, info = S.fetch_usdchf()
@@ -296,18 +296,18 @@ def main(argv: list[str] | None = None) -> int:
                 ff[key] = parse_french_csv(text)
                 df = ff[key]
                 info["coverage"] = [str(df.index.min()), str(df.index.max())]
-                info["message"] = (info.get("message", "") + f" Colonnes : {', '.join(df.columns)}.").strip()
+                info["message"] = (info.get("message", "") + f" Columns: {', '.join(df.columns)}.").strip()
             except Exception as exc:  # noqa: BLE001
-                info.update(status="error", message=f"Lecture impossible : {exc}")
+                info.update(status="error", message=f"Could not parse: {exc}")
         sources.append(info)
 
     if fx_r is None:
         for key in ff:
             for s in sources:
                 if s["id"] == key:
-                    s["message"] = (s.get("message", "") + " Conversion en CHF impossible : USD/CHF indisponible.").strip()
+                    s["message"] = (s.get("message", "") + " CHF conversion impossible: USD/CHF unavailable.").strip()
                     s["status"] = "error"
-        check(checks, "ff-conversion", "fail", "Facteurs Fama-French non convertibles en CHF (taux de change indisponible) : modèles multifactoriels non estimables.")
+        check(checks, "ff-conversion", "fail", "Fama-French factors cannot be converted to CHF (exchange rate unavailable): multifactor models cannot be estimated.")
     else:
         if "ff3" in ff:
             f3 = ff["ff3"]
@@ -329,7 +329,7 @@ def main(argv: list[str] | None = None) -> int:
                 dm = float((ff["ff3"].loc[common, "Mkt-RF"] - f5.loc[common, "Mkt-RF"]).abs().max())
                 dr = float((ff["ff3"].loc[common, "RF"] - f5.loc[common, "RF"]).abs().max())
                 check(checks, "ff-consistency", "pass" if max(dm, dr) < 1e-9 else "warn",
-                      f"Cohérence Mkt−RF et RF entre fichiers FF3 et FF5 : écarts max {dm:.2e} et {dr:.2e}.")
+                      f"Consistency of Mkt−RF and RF between the FF3 and FF5 files: max differences {dm:.2e} and {dr:.2e}.")
         if "mom" in ff:
             fm = ff["mom"]
             wcol = "WML" if "WML" in fm.columns else fm.columns[0]
@@ -338,12 +338,12 @@ def main(argv: list[str] | None = None) -> int:
         jkp_block(fx_r, cols, sources, checks)
         if ff:
             check(checks, "ff-conversion", "pass",
-                  "Facteurs Fama-French européens convertis en CHF : marché = (1+Mkt−RF+RF_US)(1+s)−1, facteurs long-short = F_USD(1+s). "
-                  "Le rendement excédentaire du marché est calculé avec le SARON, jamais avec le RF américain.")
+                  "European Fama-French factors converted to CHF: market = (1+Mkt−RF+RF_US)(1+s)−1, long-short factors = F_USD(1+s). "
+                  "The market excess return is computed with SARON, never with the US RF.")
 
     base = [c for c in ("bcv_ret", "spi_ret", "rf_saron") if c in cols and cols[c].notna().any()]
     if not base:
-        print("ERREUR : aucune série de base (BCV, SPI, SARON) n'a pu être construite.", file=sys.stderr)
+        print("ERROR: no base series (BCV, SPI, SARON) could be built.", file=sys.stderr)
 
     # --- assemblage
     # l'index couvre les séries d'analyse ; les séries auxiliaires (change, USD)
@@ -361,7 +361,7 @@ def main(argv: list[str] | None = None) -> int:
         bad = frame[c].dropna()
         bad = bad[bad.abs() >= 1]
         if len(bad):
-            check(checks, f"range-{c}", "fail", f"{c} : valeurs ≥ 100 % en valeur absolue ({len(bad)}), unités à vérifier.")
+            check(checks, f"range-{c}", "fail", f"{c}: absolute values ≥ 100% ({len(bad)}), check units.")
 
     def clean(v: float) -> float | None:
         if v is None or (isinstance(v, float) and math.isnan(v)):
@@ -374,7 +374,7 @@ def main(argv: list[str] | None = None) -> int:
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "origin": "pipeline",
         "asset": C.ASSET,
-        "columns": {k: {"label": COLUMN_INFO[k][0], "unit": "rendement mensuel décimal", "description": COLUMN_INFO[k][1]} for k in frame.columns},
+        "columns": {k: {"label": COLUMN_INFO[k][0], "unit": "monthly return, decimal", "description": COLUMN_INFO[k][1]} for k in frame.columns},
         "dates": [str(p) for p in index],
         "data": {k: [clean(v) for v in frame[k].tolist()] for k in frame.columns},
         "sources": sources,
@@ -382,8 +382,8 @@ def main(argv: list[str] | None = None) -> int:
         "fund_info": fund_info,
         "raif_info": raif_info,
         "notes": [
-            f"Dernier mois complet retenu : {last_complete} (date d'exécution {today.date()}).",
-            "Valeurs manquantes conservées telles quelles (null) : aucune interpolation.",
+            f"Last complete month kept: {last_complete} (run date {today.date()}).",
+            "Missing values kept as they are (null): no interpolation.",
         ],
     }
     C.PUBLIC_DATA.mkdir(parents=True, exist_ok=True)
@@ -394,7 +394,7 @@ def main(argv: list[str] | None = None) -> int:
     out.index.name = "date"
     out.to_csv(C.PROCESSED_DIR / "monthly.csv", float_format="%.10g")
     write_report(dataset)
-    print(f"dataset.json : {len(index)} mois, colonnes {list(frame.columns)}")
+    print(f"dataset.json: {len(index)} months, columns {list(frame.columns)}")
     for s in sources:
         print(f"  [{s['status']:>6}] {s['id']}: {s.get('coverage')} {s.get('message', '')}")
     for c in checks:
@@ -403,15 +403,15 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def write_report(ds: dict) -> None:
-    lines = ["# Rapport de construction des données", "", f"Généré le {ds['generated_at']}", "", "## Sources", "",
-             "| Source | Statut | Couverture | Message |", "|---|---|---|---|"]
+    lines = ["# Data build report", "", f"Generated on {ds['generated_at']}", "", "## Sources", "",
+             "| Source | Status | Coverage | Message |", "|---|---|---|---|"]
     for s in ds["sources"]:
         cov = " → ".join(s.get("coverage") or []) or "—"
         msg = (s.get("message") or "").replace("|", "/")
         lines.append(f"| {s['name']} | {s['status']} | {cov} | {msg} |")
-    lines += ["", "## Contrôles", ""]
+    lines += ["", "## Checks", ""]
     lines += [f"- **{c['status']}** — {c['message']}" for c in ds["checks"]]
-    lines += ["", "## Couverture des colonnes", "", "| Colonne | Premier mois | Dernier mois | N |", "|---|---|---|---|"]
+    lines += ["", "## Column coverage", "", "| Column | First month | Last month | N |", "|---|---|---|---|"]
     for k, v in ds["data"].items():
         idx = [i for i, x in enumerate(v) if x is not None]
         if idx:

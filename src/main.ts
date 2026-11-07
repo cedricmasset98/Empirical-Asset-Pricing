@@ -165,41 +165,41 @@ function syncControls(): void {
     `<option value="auto">Auto${nAuto !== null ? ` (${nAuto})` : ''}</option>` +
     Array.from({ length: 25 }, (_, i) => `<option value="${i}">${i}</option>`).join('');
   lags.value = state.hacLags === null ? 'auto' : String(state.hacLags);
-  const lagTxt = state.cov === 'HAC' ? (state.hacLags === null ? ', retards auto' : `, ${state.hacLags} retards`) : '';
-  $('adv-summary').textContent = `· ${COV_LABELS[state.cov].split(' (')[0]}${lagTxt} · fenêtre ${state.window} mois`;
+  const lagTxt = state.cov === 'HAC' ? (state.hacLags === null ? ', auto lags' : `, ${state.hacLags} lags`) : '';
+  $('adv-summary').textContent = `· ${COV_LABELS[state.cov].split(' (')[0]}${lagTxt} · ${state.window}-month window`;
 }
 
 // ------------------------------------------------------------------ rendu
 
 const SUBTITLES: Record<SingleAsset, string> = {
-  BCV: 'Action <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF',
-  FUND: 'Fonds <b>BCV Swiss Equity A</b> <span class="mono">(BCV Asset Management)</span> · ISIN CH0006018706 · CHF',
-  RAIF: 'Fonds <b>Raiffeisen Futura - Swiss Stock A</b> <span class="mono">(Vontobel Asset Management)</span> · ISIN CH0011980981 · CHF',
+  BCV: 'Stock <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF',
+  FUND: 'Fund <b>BCV Swiss Equity A</b> <span class="mono">(BCV Asset Management)</span> · ISIN CH0006018706 · CHF',
+  RAIF: 'Fund <b>Raiffeisen Futura - Swiss Stock A</b> <span class="mono">(Vontobel Asset Management)</span> · ISIN CH0011980981 · CHF',
 };
 
 function renderHeader(): void {
   const ds = data!;
   const errors = ds.sources.filter((s) => s.status === 'error');
   const when = new Date(ds.generated_at);
-  const date = Number.isNaN(when.getTime()) ? ds.generated_at : when.toLocaleString('fr-CH', { dateStyle: 'long', timeStyle: 'short' });
-  const origin = ds.origin === 'manual-csv' ? 'import manuel CSV' : 'données publiques mises à jour automatiquement';
+  const date = Number.isNaN(when.getTime()) ? ds.generated_at : when.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' });
+  const origin = ds.origin === 'manual-csv' ? 'manual CSV import' : 'public data, updated automatically';
   document.querySelectorAll<HTMLButtonElement>('.views button').forEach((b) => {
     if (b.dataset.view === state.view) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
   $('subtitle').innerHTML = {
     analyze: SUBTITLES[state.asset],
-    compare: `Comparaison : <b>${h(ASSET_INFO[state.pair[0]].label)}</b> et <b>${h(ASSET_INFO[state.pair[1]].label)}</b> · CHF`,
-    reports: 'Rapports et notes vulgarisés (PDF)',
-    data: 'Sources, contrôles et méthodologie',
+    compare: `Comparison: <b>${h(ASSET_INFO[state.pair[0]].label)}</b> and <b>${h(ASSET_INFO[state.pair[1]].label)}</b> · CHF`,
+    reports: 'Plain-language reports and notes (PDF)',
+    data: 'Sources, checks and methodology',
   }[state.view];
   const assets = activeAssets(state);
   const [lo, hi] = bounds(ds, assets);
-  const span = state.view === 'analyze' || state.view === 'compare' ? ` · données disponibles ${monthLabel(lo)} → ${monthLabel(hi)}` : '';
+  const span = state.view === 'analyze' || state.view === 'compare' ? ` · data available ${monthLabel(lo)} → ${monthLabel(hi)}` : '';
   $('data-meta').innerHTML =
-    `<span>Actualisé le ${h(date)} (${h(origin)})${h(span)}</span>` +
-    `<button type="button" class="linklike" data-goto="data">Sources et méthode</button>` +
-    (errors.length ? `<span class="err-count">${errors.length} source(s) en erreur</span>` : '');
+    `<span>Updated ${h(date)} (${h(origin)})${h(span)}</span>` +
+    `<button type="button" class="linklike" data-goto="data">Sources and method</button>` +
+    (errors.length ? `<span class="err-count">${errors.length} source(s) in error</span>` : '');
 }
 
 function renderAlerts(): void {
@@ -207,28 +207,28 @@ function renderAlerts(): void {
   const errors: string[] = [];
   const notes: string[] = [];
   if (ds.origin === 'manual-csv') {
-    notes.push(alertHtml('warn', 'Données importées manuellement.', ' Elles n’ont pas été contrôlées par le pipeline ; la provenance et les conventions relèvent de l’utilisateur.'));
+    notes.push(alertHtml('warn', 'Manually imported data.', ' They have not been checked by the pipeline; their origin and conventions are the user’s responsibility.'));
   }
   for (const s of ds.sources.filter((x) => x.status === 'error')) {
-    errors.push(alertHtml('error', `Source indisponible : ${s.name}.`, ` ${h(s.message ?? '')} Les modèles qui en dépendent ne sont pas estimés.`));
+    errors.push(alertHtml('error', `Source unavailable: ${s.name}.`, ` ${h(s.message ?? '')} Models that depend on it are not estimated.`));
   }
-  for (const c of ds.checks.filter((x) => x.status === 'fail')) errors.push(alertHtml('error', 'Contrôle de données échoué.', ` ${h(c.message)}`));
+  for (const c of ds.checks.filter((x) => x.status === 'fail')) errors.push(alertHtml('error', 'Data check failed.', ` ${h(c.message)}`));
   if (state.view === 'analyze') {
-    if (main && !main.ok) errors.push(alertHtml('error', `${main.label} : estimation impossible.`, ` ${h(main.error)}`));
+    if (main && !main.ok) errors.push(alertHtml('error', `${main.label}: estimation not possible.`, ` ${h(main.error)}`));
     if (main?.ok) {
       if (main.universe === 'SWISS' && main.model !== 'CAPM') {
-        notes.push(alertHtml('info', 'Facteurs suisses JKP.', ' SMB, HML, RMW, CMA et MOM viennent de Global Factor Data (Jensen, Kelly et Pedersen, 2023) : portefeuilles par terciles de la caractéristique, pondérés par la capitalisation plafonnée, et non les tris 2×3 de Fama-French. Ils sont publiés une fois par an : les derniers mois peuvent manquer.'));
+        notes.push(alertHtml('info', 'Swiss JKP factors.', ' SMB, HML, RMW, CMA and MOM come from Global Factor Data (Jensen, Kelly and Pedersen, 2023): tercile portfolios on the characteristic, weighted by capped market capitalisation, not the Fama-French 2×3 sorts. They are published once a year: the latest months may be missing.'));
       }
       if (main.universe === 'EUROPE') {
-        notes.push(alertHtml('warn', 'Univers de comparaison.', ' Le marché et les facteurs sont européens : ce n’est pas la référence naturelle d’un actif suisse. Un alpha obtenu ici peut n’être qu’un effet du mauvais marché de référence ; comparez avec les facteurs suisses.'));
+        notes.push(alertHtml('warn', 'Comparison universe.', ' The market and the factors are European: this is not the natural benchmark for a Swiss asset. An alpha obtained here may simply reflect the wrong benchmark; compare with the Swiss factors.'));
       }
       const s = main.sample;
       if (s.droppedMonths > 0) {
-        notes.push(alertHtml('info', 'Échantillon effectif :', ` ${s.dates[0]} → ${s.dates[s.dates.length - 1]}, ${s.y.length} mois. ${s.droppedMonths} mois de la plage choisie n’ont pas toutes les séries requises et sont exclus (aucune interpolation).`));
+        notes.push(alertHtml('info', 'Effective sample:', ` ${s.dates[0]} → ${s.dates[s.dates.length - 1]}, ${s.y.length} months. ${s.droppedMonths} month(s) of the selected range lack some required series and are excluded (no interpolation).`));
       }
-      for (const w of main.warnings.filter((x) => !x.includes('exclus faute'))) notes.push(alertHtml('warn', 'Échantillon.', ` ${h(w)}`));
+      for (const w of main.warnings.filter((x) => !x.includes('excluded for lack'))) notes.push(alertHtml('warn', 'Sample.', ` ${h(w)}`));
       if (main.result.cov !== 'classical') {
-        notes.push(alertHtml('info', 'Inférence robuste.', ` ${COV_LABELS[main.result.cov]} : statistiques z, p-values et intervalles fondés sur la loi normale ; le test global est un test de Wald χ² (une statistique F classique ne serait pas robuste).`));
+        notes.push(alertHtml('info', 'Robust inference.', ` ${COV_LABELS[main.result.cov]}: z statistics, p-values and intervals based on the normal distribution; the global test is a Wald χ² test (a classical F statistic would not be robust).`));
       }
     }
   }
@@ -237,15 +237,15 @@ function renderAlerts(): void {
   $('alerts').innerHTML =
     errors.join('') +
     (showNotes
-      ? `<details class="notes"${wasOpen ? ' open' : ''}><summary>${notes.length} remarque${notes.length > 1 ? 's' : ''} sur cette estimation</summary>${notes.join('')}</details>`
+      ? `<details class="notes"${wasOpen ? ' open' : ''}><summary>${notes.length} note${notes.length > 1 ? 's' : ''} on this estimation</summary>${notes.join('')}</details>`
       : '');
 }
 
 function renderMain(): void {
-  $('reg-title').textContent = main ? `Régression — ${main.label}` : 'Régression';
+  $('reg-title').textContent = main ? `Regression — ${main.label}` : 'Regression';
   if (!main || !main.ok) {
     $('cards').innerHTML = '';
-    $('reg-table').innerHTML = `<div class="empty">Aucun résultat : ${h(main && !main.ok ? main.error : 'données indisponibles')}</div>`;
+    $('reg-table').innerHTML = `<div class="empty">No result: ${h(main && !main.ok ? main.error : 'data unavailable')}</div>`;
     return;
   }
   const fee = feeInfo(data!, main.asset);
@@ -257,7 +257,7 @@ function renderMain(): void {
 
 function needFit(el: HTMLElement, fit: Fit | null): fit is FitOk {
   if (fit?.ok) return true;
-  el.innerHTML = `<div class="empty">${h(fit && !fit.ok ? `${fit.label} : ${fit.error}` : 'Données indisponibles.')}</div>`;
+  el.innerHTML = `<div class="empty">${h(fit && !fit.ok ? `${fit.label}: ${fit.error}` : 'Data unavailable.')}</div>`;
   return false;
 }
 
@@ -281,11 +281,11 @@ function renderTab(): void {
     case 'results': {
       const el = $('chart-scatter');
       const who = ASSET_INFO[state.asset].sub;
-      $('scatter-title').textContent = `Relation avec le marché : ${ASSET_INFO[state.asset].label} contre le SPI Total Return (Single Index)`;
-      $('scatter-lead').innerHTML = `R<sub>${who},t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, rendements mensuels en CHF${ASSET_INFO[state.asset].fund ? ' (nets des frais du fonds, distributions réinvesties)' : ' (dividendes réinvestis)'}, R<sub>f</sub> = SARON capitalisé.`;
+      $('scatter-title').textContent = `Relation with the market: ${ASSET_INFO[state.asset].label} against the SPI Total Return (Single Index)`;
+      $('scatter-lead').innerHTML = `R<sub>${who},t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, monthly returns in CHF${ASSET_INFO[state.asset].fund ? ' (net of fund fees, distributions reinvested)' : ' (dividends reinvested)'}, R<sub>f</sub> = compounded SARON.`;
       const note =
         state.model !== 'CAPM' || state.universe !== 'SWISS'
-          ? `<p class="muted small">Le graphique montre toujours le Single Index sur le SPI TR ; le tableau ci-dessus correspond au modèle choisi (${h(specLabel(state.model, state.universe))}).</p>`
+          ? `<p class="muted small">The chart always shows the Single Index on the SPI TR; the table above corresponds to the selected model (${h(specLabel(state.model, state.universe))}).</p>`
           : '';
       $('scatter-note').innerHTML = note;
       if (!needFit(el, sim)) {
@@ -295,14 +295,14 @@ function renderTab(): void {
       const r = sim.result;
       const z = r.distribution === 't' ? 't' : 'z';
       $('scatter-stats').innerHTML =
-        `<span>α = <b>${pct(r.beta[0], 3)}</b> / mois (${pct(12 * r.beta[0], 2)} / an)</span><span>β = <b>${num(r.beta[1], 3)}</b></span>` +
+        `<span>α = <b>${pct(r.beta[0], 3)}</b> / month (${pct(12 * r.beta[0], 2)} / year)</span><span>β = <b>${num(r.beta[1], 3)}</b></span>` +
         `<span>R² = <b>${num(r.r2, 3)}</b></span><span>${z}(α) = <b>${num(r.stat[0], 2)}</b></span><span>p(α) = <b>${pval(r.pvalue[0])}</b></span>` +
         `<span>N = <b>${r.n}</b></span><span class="muted">${COV_LABELS[r.cov]}${r.cov === 'HAC' ? `, L = ${r.hacLags}` : ''}</span>`;
       plotScatter(el, sim, t, { band: state.band, colorByYear: state.byYear, marketLabel: 'SPI TR' });
       break;
     }
     case 'fitted': {
-      $('fitted-lead').textContent = main?.ok ? `${ASSET_INFO[main.asset].label} · ${main.label} : rendements excédentaires mensuels observés et valeurs ajustées ŷ = Xb.` : '';
+      $('fitted-lead').textContent = main?.ok ? `${ASSET_INFO[main.asset].label} · ${main.label}: observed monthly excess returns and fitted values ŷ = Xb.` : '';
       if (!needFit($('chart-fitted'), main)) {
         $('chart-fitted-scatter').innerHTML = '';
         return;
@@ -314,7 +314,7 @@ function renderTab(): void {
     case 'diagnostics': {
       if (!needFit($('tests-table'), main)) return;
       const d = diagnose(main);
-      $('diag-lead').textContent = `${main.label} — résidus OLS (N = ${main.result.n}, écart-type s = ${pct(main.result.sigma, 2)} par mois).`;
+      $('diag-lead').textContent = `${main.label} — OLS residuals (N = ${main.result.n}, standard deviation s = ${pct(main.result.sigma, 2)} per month).`;
       plotDiagnostics({ time: $('chart-resid'), hist: $('chart-hist'), qq: $('chart-qq'), acf: $('chart-acf') }, main, d, t);
       $('tests-table').innerHTML = testsTable(d);
       break;
@@ -329,8 +329,8 @@ function renderTab(): void {
         return;
       }
       $('rolling-lead').textContent =
-        `${main.label} — fenêtre de ${roll.window} mois glissant d’un mois, ${roll.dates.length} estimations, ` +
-        `${COV_LABELS[state.cov]}${state.cov === 'HAC' ? ` (L = ${roll.hacLags[0]})` : ''}${state.band ? ', intervalles de confiance à 95 %' : ''}. Date = fin de fenêtre.`;
+        `${main.label} — ${roll.window}-month window moved one month at a time, ${roll.dates.length} estimates, ` +
+        `${COV_LABELS[state.cov]}${state.cov === 'HAC' ? ` (L = ${roll.hacLags[0]})` : ''}${state.band ? ', 95% confidence intervals' : ''}. Date = end of window.`;
       plotRolling(c, roll, t, state.band);
       break;
     }
@@ -340,9 +340,9 @@ function renderTab(): void {
       const cmp = comparisonCache.cmp;
       $('comparison-lead').innerHTML =
         cmp.period
-          ? `Toutes les spécifications sont estimées sur le <b>même échantillon</b> : ${cmp.commonN} mois, ${cmp.period[0]} → ${cmp.period[1]} (intersection des disponibilités). ${h(COV_LABELS[state.cov])}. Dans l’univers suisse, le CAPM est le Single Index sur le SPI TR ; l’univers européen sert de comparaison.`
-          : 'Aucun mois commun à toutes les spécifications disponibles.';
-      if (cmp.excluded.length) $('comparison-lead').innerHTML += `<br><span class="muted small">Exclues : ${h(cmp.excluded.join(' · '))}</span>`;
+          ? `All specifications are estimated on the <b>same sample</b>: ${cmp.commonN} months, ${cmp.period[0]} → ${cmp.period[1]} (intersection of availabilities). ${h(COV_LABELS[state.cov])}. In the Swiss universe, the CAPM is the Single Index on the SPI TR; the European universe serves as a comparison.`
+          : 'No month common to all available specifications.';
+      if (cmp.excluded.length) $('comparison-lead').innerHTML += `<br><span class="muted small">Excluded: ${h(cmp.excluded.join(' · '))}</span>`;
       plotComparison($('chart-comparison'), cmp, t);
       $('comparison-table').innerHTML = comparisonTable(cmp);
       break;
@@ -355,20 +355,20 @@ function compareIntro(pair: Pair): { question: string; method: string } {
   const bcvFund = pair.includes('BCV') && pair.includes('FUND');
   if (bcvFund) {
     return {
-      question: '<strong>La banque a-t-elle généré davantage de rendement ajusté des facteurs pour ses propres actionnaires que pour les investisseurs de son fonds actions suisses&nbsp;?</strong>',
+      question: '<strong>Did the bank generate more factor-adjusted return for its own shareholders than for the investors in its Swiss equity fund?</strong>',
       method:
-        '<p>Les deux alphas ne mesurent pas la même chose. L’<b>alpha de l’action BCV</b> est la part du rendement excédentaire historique de l’action que les facteurs retenus n’expliquent pas : il reflète l’ensemble des activités de la banque (crédit, gestion de fortune, gestion d’actifs…) et la façon dont le marché les a valorisées. L’<b>alpha du fonds BCV Swiss Equity A</b> est la part du rendement excédentaire du fonds, <em>net des frais incorporés dans sa VNI</em> et distributions réinvesties, que ces mêmes facteurs n’expliquent pas : il reflète le travail de sélection d’actions de BCV Asset Management pour le compte des porteurs de parts. Les revenus de gestion du fonds font partie des revenus de la banque ; la comparaison ne permet toutefois pas d’établir de lien de cause à effet entre les deux.</p>',
+        '<p>The two alphas do not measure the same thing. The <b>BCV stock alpha</b> is the part of the stock’s historical excess return that the chosen factors do not explain: it reflects all of the bank’s activities (lending, wealth management, asset management…) and how the market valued them. The <b>BCV Swiss Equity A fund alpha</b> is the part of the fund’s excess return, <em>net of the fees embedded in its NAV</em> with distributions reinvested, that the same factors do not explain: it reflects BCV Asset Management’s stock selection on behalf of unitholders. The fund’s management fees are part of the bank’s revenue; the comparison does not, however, establish any causal link between the two.</p>',
     };
   }
   if (a.fund && b.fund) {
     return {
-      question: `<strong>Lequel des deux fonds a dégagé le meilleur rendement ajusté des facteurs, après frais&nbsp;?</strong>`,
-      method: `<p>Les deux alphas sont <b>nets des frais</b> incorporés dans la VNI, distributions réinvesties : ils mesurent ce que les porteurs de parts ont obtenu au-delà de l’exposition aux facteurs. Un écart d’alpha peut venir de la sélection de titres, de l’allocation, ou simplement de frais différents. Les deux fonds ont le SPI pour indice de référence, mais pas forcément les mêmes contraintes de risque : comparez aussi leurs R² et leurs volatilités résiduelles.</p>`,
+      question: `<strong>Which of the two funds delivered the better factor-adjusted return, after fees?</strong>`,
+      method: `<p>Both alphas are <b>net of the fees</b> embedded in the NAV, distributions reinvested: they measure what unitholders earned beyond their factor exposure. An alpha gap can come from stock selection, allocation, or simply different fees. Both funds use the SPI as their benchmark, but not necessarily with the same risk constraints: compare their R² and residual volatilities too.</p>`,
     };
   }
   return {
-    question: `<strong>${h(a.label)} et ${h(b.label)} ont-ils dégagé un rendement ajusté des facteurs différent&nbsp;?</strong>`,
-    method: `<p>Un alpha de fonds est net de frais et porte sur un portefeuille diversifié ; un alpha d’action reflète la performance d’une seule entreprise, avec un risque propre beaucoup plus élevé. L’écart est estimé directement, mais les deux alphas ne mesurent pas la même chose.</p>`,
+    question: `<strong>Did ${h(a.label)} and ${h(b.label)} deliver different factor-adjusted returns?</strong>`,
+    method: `<p>A fund alpha is net of fees and relates to a diversified portfolio; a stock alpha reflects the performance of a single company, with much higher specific risk. The gap is estimated directly, but the two alphas do not measure the same thing.</p>`,
   };
 }
 
@@ -378,23 +378,23 @@ function renderCompare(): void {
   if (versusCache?.key !== key) versusCache = { key, cmp: compareAssets(data!, state, state.pair) };
   const cmp = versusCache.cmp;
   const [na, nb] = state.pair.map((x) => ASSET_INFO[x].label);
-  $('vs-title').textContent = `${na} et ${nb}`;
+  $('vs-title').textContent = `${na} and ${nb}`;
   const intro = compareIntro(state.pair);
   $('vs-question').innerHTML = intro.question;
   $('vs-method').innerHTML = intro.method;
   $<HTMLAnchorElement>('vs-report').hidden = !(state.pair.includes('BCV') && state.pair.includes('FUND'));
   const blocks = ['vs-perf-table', 'vs-alpha-table', 'vs-mf-table', 'vs-reading'];
   if (!cmp.ok) {
-    $('vs-sample').innerHTML = alertHtml('error', 'Comparaison impossible.', ` ${h(cmp.error ?? '')}`);
+    $('vs-sample').innerHTML = alertHtml('error', 'Comparison not possible.', ` ${h(cmp.error ?? '')}`);
     blocks.forEach((b) => ($(b).innerHTML = ''));
     ['chart-vs-perf', 'chart-vs-alpha', 'chart-vs-sim-a', 'chart-vs-sim-b'].forEach((c) => ($(c).innerHTML = ''));
     return;
   }
-  $('vs-sample').innerHTML = `<div class="strip"><span><b>Échantillon identique</b> pour les deux actifs : ${cmp.dates.length} mois, ${cmp.dates[0]} → ${cmp.dates[cmp.dates.length - 1]}</span><span>Facteurs : ${{ SPI: 'SPI TR', EUROPE: 'européens Fama-French (CHF)', SWISS: 'SPI TR et facteurs suisses JKP (CHF)' }[state.universe]}</span><span>${h(COV_LABELS[state.cov])}</span></div>`;
+  $('vs-sample').innerHTML = `<div class="strip"><span><b>Identical sample</b> for both assets: ${cmp.dates.length} months, ${cmp.dates[0]} → ${cmp.dates[cmp.dates.length - 1]}</span><span>Factors: ${{ SPI: 'SPI TR', EUROPE: 'European Fama-French (CHF)', SWISS: 'SPI TR and Swiss JKP factors (CHF)' }[state.universe]}</span><span>${h(COV_LABELS[state.cov])}</span></div>`;
   plotPerformance($('chart-vs-perf'), cmp, t);
   $('vs-perf-table').innerHTML = perfTable(cmp);
   const sel = cmp.models.find((m) => m.model === state.model)!;
-  $('vs-alpha-title').textContent = `B. Alphas comparés — ${MODEL_SHORT[state.model]}`;
+  $('vs-alpha-title').textContent = `B. Alphas compared — ${MODEL_SHORT[state.model]}`;
   $('vs-alpha-table').innerHTML = alphaPairTable(sel, cmp.pair, [feeInfo(data!, cmp.pair[0]), feeInfo(data!, cmp.pair[1])]);
   plotAlphaPair($('chart-vs-alpha'), cmp, t);
   const pair = singleIndexPair(data!, state, cmp);
@@ -411,33 +411,33 @@ function renderCompare(): void {
 function versusReading(cmp: AssetComparison, m: AssetComparison['models'][number], fees: [FeeInfo | null, FeeInfo | null]): string {
   const out: string[] = [];
   const [pa, pb] = [cmp.perf[0], cmp.perf[1]];
-  const name: Record<SingleAsset, string> = { BCV: 'l’action BCV', FUND: 'le fonds BCV', RAIF: 'le fonds Raiffeisen' };
+  const name: Record<SingleAsset, string> = { BCV: 'the BCV stock', FUND: 'the BCV fund', RAIF: 'the Raiffeisen fund' };
   const [na, nb] = cmp.pair.map((x) => name[x]);
   out.push(
-    `Sur ces ${cmp.dates.length} mois, ${na} a rapporté ${pct(pa.annReturn, 1)} par an et ${nb} ${pct(pb.annReturn, 1)}, ` +
-      `avec une volatilité de ${pct(pa.annVol, 1)} contre ${pct(pb.annVol, 1)}.`,
+    `Over these ${cmp.dates.length} months, ${na} returned ${pct(pa.annReturn, 1)} a year and ${nb} ${pct(pb.annReturn, 1)}, ` +
+      `with volatility of ${pct(pa.annVol, 1)} versus ${pct(pb.annVol, 1)}.`,
   );
   if (m.a.ok && m.b.ok && m.diff.ok) {
     const [ra, rb, rd] = [m.a.result, m.b.result, m.diff.result];
-    const sig = (p: number) => (p < 0.05 ? 'significatif au seuil de 5 %' : 'non significatif au seuil de 5 %');
+    const sig = (p: number) => (p < 0.05 ? 'significant at the 5% level' : 'not significant at the 5% level');
     out.push(
-      `Avec le modèle ${MODEL_SHORT[m.model]}, l’alpha annualisé est de ${pct(12 * ra.beta[0], 1)} pour ${na} (${sig(ra.pvalue[0])}) ` +
-        `et de ${pct(12 * rb.beta[0], 1)} pour ${nb} (${sig(rb.pvalue[0])}). ` +
-        `L’écart de ${pct(12 * rd.beta[0], 1)} par an est ${sig(rd.pvalue[0])} (régression de la différence de rendement, p = ${pval(rd.pvalue[0])}).`,
+      `With the ${MODEL_SHORT[m.model]} model, the annualised alpha is ${pct(12 * ra.beta[0], 1)} for ${na} (${sig(ra.pvalue[0])}) ` +
+        `and ${pct(12 * rb.beta[0], 1)} for ${nb} (${sig(rb.pvalue[0])}). ` +
+        `The gap of ${pct(12 * rd.beta[0], 1)} a year is ${sig(rd.pvalue[0])} (regression of the return difference, p = ${pval(rd.pvalue[0])}).`,
     );
     if (fees[0] || fees[1]) {
       const ta = fees[0]?.ter ?? 0;
       const tb = fees[1]?.ter ?? 0;
       const g = shiftAlpha(m.diff, (ta - tb) / 12);
       out.push(
-        `Avant frais de gestion (α net + TER), l’alpha serait d’environ ${pct(12 * ra.beta[0] + ta, 1)} pour ${na} et ${pct(12 * rb.beta[0] + tb, 1)} pour ${nb} ; ` +
-          `l’écart brut de ${pct(12 * g.alpha, 1)} par an est ${sig(g.pvalue)}. ` +
-          (Math.abs(ta - tb) < 0.002 ? 'Les frais étant proches, l’écart d’alpha ne vient guère des frais.' : `La différence de frais (${pct(ta - tb, 2)} par an) explique une partie de l’écart net.`),
+        `Before management fees (net α + TER), the alpha would be about ${pct(12 * ra.beta[0] + ta, 1)} for ${na} and ${pct(12 * rb.beta[0] + tb, 1)} for ${nb}; ` +
+          `the gross gap of ${pct(12 * g.alpha, 1)} a year is ${sig(g.pvalue)}. ` +
+          (Math.abs(ta - tb) < 0.002 ? 'As the fees are close, the alpha gap hardly comes from fees.' : `The fee difference (${pct(ta - tb, 2)} a year) explains part of the net gap.`),
       );
     }
     out.push(
-      `Bêtas de ${num(ra.beta[1], 2)} et ${num(rb.beta[1], 2)} ; volatilités résiduelles de ${pct(ra.sigma * Math.sqrt(12), 1)} et ${pct(rb.sigma * Math.sqrt(12), 1)} par an. ` +
-        `Plus la volatilité résiduelle est faible, plus l’alpha est estimé précisément.`,
+      `Betas of ${num(ra.beta[1], 2)} and ${num(rb.beta[1], 2)}; residual volatilities of ${pct(ra.sigma * Math.sqrt(12), 1)} and ${pct(rb.sigma * Math.sqrt(12), 1)} a year. ` +
+        `The lower the residual volatility, the more precisely the alpha is estimated.`,
     );
   }
   return out.map((p) => `<p>${p}</p>`).join('');
@@ -542,7 +542,7 @@ function bind(): void {
       const ds = parseCsvDataset(await file.text(), file.name);
       setData(ds, false);
     } catch (err) {
-      $('alerts').innerHTML = alertHtml('error', 'Import CSV refusé.', ` ${h((err as Error).message)}`) + $('alerts').innerHTML;
+      $('alerts').innerHTML = alertHtml('error', 'CSV import rejected.', ` ${h((err as Error).message)}`) + $('alerts').innerHTML;
     }
     input.value = '';
   });
@@ -579,10 +579,10 @@ async function init(): Promise<void> {
     pipelineData = await loadDataset(DATA_URL);
     setData(pipelineData, true);
   } catch (e) {
-    const msg = e instanceof DatasetError ? e.message : `Erreur inattendue : ${(e as Error).message}`;
-    $('data-meta').textContent = 'Aucune donnée chargée';
-    $('alerts').innerHTML = alertHtml('error', 'Données indisponibles.', ` ${h(msg)}`);
-    $('reg-table').innerHTML = '<div class="empty">Aucune estimation : importez un CSV dans « Données et méthode ».</div>';
+    const msg = e instanceof DatasetError ? e.message : `Unexpected error: ${(e as Error).message}`;
+    $('data-meta').textContent = 'No data loaded';
+    $('alerts').innerHTML = alertHtml('error', 'Data unavailable.', ` ${h(msg)}`);
+    $('reg-table').innerHTML = '<div class="empty">No estimation: import a CSV in “Data & method”.</div>';
     state = { ...defaultState({ dates: ['2000-01'], data: {} } as unknown as Dataset), view: 'data' };
     document.querySelectorAll<HTMLElement>('main > .view').forEach((v) => (v.hidden = v.id !== 'view-data'));
   }

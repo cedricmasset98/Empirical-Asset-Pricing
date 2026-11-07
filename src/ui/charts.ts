@@ -94,7 +94,7 @@ export function plotScatter(
       { x: grid.map(P), y: pred.map((p) => P(p.low)), mode: 'lines', line: { width: 0 }, hoverinfo: 'skip', showlegend: false },
       {
         x: grid.map(P), y: pred.map((p) => P(p.high)), mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: t.band,
-        hoverinfo: 'skip', name: `IC ${Math.round(r.level * 100)} % de la droite`,
+        hoverinfo: 'skip', name: `${Math.round(r.level * 100)}% CI of the line`,
       },
     );
   }
@@ -104,20 +104,20 @@ export function plotScatter(
     customdata: custom,
     mode: 'markers',
     type: 'scatter',
-    name: 'Observations mensuelles',
+    name: 'Monthly observations',
     marker: opts.colorByYear
-      ? { size: 7, color: years, colorscale: 'Viridis', showscale: true, colorbar: { title: { text: 'Année' }, thickness: 12, tickfont: { color: t.muted } }, opacity: 0.85, line: { width: 0.5, color: t.halo } }
+      ? { size: 7, color: years, colorscale: 'Viridis', showscale: true, colorbar: { title: { text: 'Year' }, thickness: 12, tickfont: { color: t.muted } }, opacity: 0.85, line: { width: 0.5, color: t.halo } }
       : { size: 7, color: t.points, opacity: 0.7, line: { width: 0.5, color: t.halo } },
     hovertemplate:
-      `<b>%{customdata[0]}</b><br>Rendement excédentaire ${who} : %{customdata[1]:.2f} %<br>` +
-      `Rendement excédentaire ${opts.marketLabel} : %{customdata[2]:.2f} %<br>` +
-      'Rendement prédit : %{customdata[3]:.2f} %<br>Résidu : %{customdata[4]:.2f} %<extra></extra>',
+      `<b>%{customdata[0]}</b><br>Excess return ${who}: %{customdata[1]:.2f}%<br>` +
+      `Excess return ${opts.marketLabel}: %{customdata[2]:.2f}%<br>` +
+      'Fitted return: %{customdata[3]:.2f}%<br>Residual: %{customdata[4]:.2f}%<extra></extra>',
   });
   // halo puis droite : la droite reste lisible au-dessus des points dans les deux thèmes
   traces.push(
     { x: grid.map(P), y: pred.map((p) => P(p.fit)), mode: 'lines', line: { color: t.halo, width: 7 }, hoverinfo: 'skip', showlegend: false },
     {
-      x: grid.map(P), y: pred.map((p) => P(p.fit)), mode: 'lines', line: { color: t.line, width: 3.5 }, name: 'Droite OLS',
+      x: grid.map(P), y: pred.map((p) => P(p.fit)), mode: 'lines', line: { color: t.line, width: 3.5 }, name: 'OLS line',
       hovertemplate: 'Droite OLS<br>x = %{x:.2f} %<br>ŷ = %{y:.2f} %<extra></extra>',
     },
   );
@@ -125,14 +125,14 @@ export function plotScatter(
   const b = r.beta[1];
   const eq = `R̂ᵉ<sub>${ASSET_INFO[fit.asset].sub}</sub> = ${num(P(a), 3)} % ${b >= 0 ? '+' : '−'} ${num(Math.abs(b), 3)} · Rᵉ<sub>M</sub>`;
   const statLabel = r.distribution === 't' ? 't' : 'z';
-  const box = `${eq}<br>α = ${num(P(a), 3)} %/mois · ${statLabel}(α) = ${num(r.stat[0], 2)} · p(α) = ${pval(r.pvalue[0])}<br>β = ${num(b, 3)} · R² = ${num(r.r2, 3)} · N = ${r.n}`;
+  const box = `${eq}<br>α = ${num(P(a), 3)}%/month · ${statLabel}(α) = ${num(r.stat[0], 2)} · p(α) = ${pval(r.pvalue[0])}<br>β = ${num(b, 3)} · R² = ${num(r.r2, 3)} · N = ${r.n}`;
   Plotly.react(
     el,
     traces,
     layout(t, {
       title: opts.compact ? { text: ASSET_INFO[fit.asset].label, font: { size: 14 } } : undefined,
-      xaxis: { title: { text: `Rendement excédentaire ${opts.marketLabel} (%, mensuel)` }, ticksuffix: ' %', range: opts.ranges?.x },
-      yaxis: { title: { text: `Rendement excédentaire ${who} (%, mensuel)` }, ticksuffix: ' %', range: opts.ranges?.y },
+      xaxis: { title: { text: `Excess return ${opts.marketLabel} (%, monthly)` }, ticksuffix: '%', range: opts.ranges?.x },
+      yaxis: { title: { text: `Excess return ${who} (%, monthly)` }, ticksuffix: '%', range: opts.ranges?.y },
       annotations: opts.compact ? [] : [
         {
           xref: 'paper', yref: 'paper', x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', align: 'left', showarrow: false,
@@ -152,10 +152,10 @@ export function plotFitted(el: HTMLElement, fit: FitOk, t: Theme): void {
   Plotly.react(
     el,
     [
-      { x: d, y: fit.sample.y.map(P), mode: 'lines', name: `Observé (${ASSET_INFO[fit.asset].short} − Rf)`, line: { color: t.points, width: 1.5 }, hovertemplate: '%{x|%Y-%m} : %{y:.2f} %<extra>Observé</extra>' },
-      { x: d, y: fit.result.fitted.map(P), mode: 'lines', name: 'Prédit par le modèle', line: { color: t.line, width: 2 }, hovertemplate: '%{x|%Y-%m} : %{y:.2f} %<extra>Prédit</extra>' },
+      { x: d, y: fit.sample.y.map(P), mode: 'lines', name: `Observed (${ASSET_INFO[fit.asset].short} − Rf)`, line: { color: t.points, width: 1.5 }, hovertemplate: '%{x|%Y-%m}: %{y:.2f}%<extra>Observed</extra>' },
+      { x: d, y: fit.result.fitted.map(P), mode: 'lines', name: 'Fitted by the model', line: { color: t.line, width: 2 }, hovertemplate: '%{x|%Y-%m}: %{y:.2f}%<extra>Fitted</extra>' },
     ],
-    layout(t, { yaxis: { title: { text: 'Rendement excédentaire (%, mensuel)' }, ticksuffix: ' %' }, xaxis: { type: 'date' } }),
+    layout(t, { yaxis: { title: { text: 'Excess return (%, monthly)' }, ticksuffix: '%' }, xaxis: { type: 'date' } }),
     CONFIG,
   );
 }
@@ -168,10 +168,10 @@ export function plotFittedScatter(el: HTMLElement, fit: FitOk, t: Theme): void {
   Plotly.react(
     el,
     [
-      { x: f, y, text: fit.sample.dates, mode: 'markers', marker: { color: t.points, size: 6, opacity: 0.7 }, name: 'Observations', hovertemplate: '%{text}<br>prédit %{x:.2f} % · observé %{y:.2f} %<extra></extra>' },
+      { x: f, y, text: fit.sample.dates, mode: 'markers', marker: { color: t.points, size: 6, opacity: 0.7 }, name: 'Observations', hovertemplate: '%{text}<br>fitted %{x:.2f}% · observed %{y:.2f}%<extra></extra>' },
       { x: [lo, hi], y: [lo, hi], mode: 'lines', line: { color: t.muted, dash: 'dash', width: 1.5 }, name: '45°', hoverinfo: 'skip' },
     ],
-    layout(t, { xaxis: { title: { text: 'Prédit (%)' } }, yaxis: { title: { text: 'Observé (%)' } }, showlegend: false }),
+    layout(t, { xaxis: { title: { text: 'Fitted (%)' } }, yaxis: { title: { text: 'Observed (%)' } }, showlegend: false }),
     CONFIG,
   );
 }
@@ -184,11 +184,11 @@ export function plotDiagnostics(els: { time: HTMLElement; hist: HTMLElement; qq:
   Plotly.react(
     els.time,
     [
-      { x: fit.sample.dates, y: e, type: 'bar', marker: { color: t.points }, name: 'Résidu', hovertemplate: '%{x|%Y-%m} : %{y:.2f} %<extra></extra>' },
+      { x: fit.sample.dates, y: e, type: 'bar', marker: { color: t.points }, name: 'Residual', hovertemplate: '%{x|%Y-%m}: %{y:.2f}%<extra></extra>' },
       { x: [fit.sample.dates[0], fit.sample.dates.at(-1)], y: [2 * s, 2 * s], mode: 'lines', line: { color: t.muted, dash: 'dot' }, name: '±2s', hoverinfo: 'skip' },
       { x: [fit.sample.dates[0], fit.sample.dates.at(-1)], y: [-2 * s, -2 * s], mode: 'lines', line: { color: t.muted, dash: 'dot' }, showlegend: false, hoverinfo: 'skip' },
     ],
-    layout(t, { title: { text: 'Résidus dans le temps', font: { size: 13 } }, yaxis: { ticksuffix: ' %' }, xaxis: { type: 'date' }, showlegend: false, margin: { l: 55, r: 10, t: 36, b: 40 } }),
+    layout(t, { title: { text: 'Residuals over time', font: { size: 13 } }, yaxis: { ticksuffix: '%' }, xaxis: { type: 'date' }, showlegend: false, margin: { l: 55, r: 10, t: 36, b: 40 } }),
     CONFIG,
   );
   const lo = Math.min(...e);
@@ -199,10 +199,10 @@ export function plotDiagnostics(els: { time: HTMLElement; hist: HTMLElement; qq:
   Plotly.react(
     els.hist,
     [
-      { x: e, type: 'histogram', xbins: { start: lo, end: hi + 1e-9, size: width }, marker: { color: t.points, opacity: 0.75 }, name: 'Résidus' },
-      { x: gx, y: gx.map((v) => (e.length * width * normPdf(v / s)) / s), mode: 'lines', line: { color: t.line, width: 2 }, name: 'Densité normale N(0, s²)' },
+      { x: e, type: 'histogram', xbins: { start: lo, end: hi + 1e-9, size: width }, marker: { color: t.points, opacity: 0.75 }, name: 'Residuals' },
+      { x: gx, y: gx.map((v) => (e.length * width * normPdf(v / s)) / s), mode: 'lines', line: { color: t.line, width: 2 }, name: 'Normal density N(0, s²)' },
     ],
-    layout(t, { title: { text: 'Histogramme des résidus', font: { size: 13 } }, xaxis: { ticksuffix: ' %' }, bargap: 0.04, showlegend: false, margin: { l: 45, r: 10, t: 36, b: 40 } }),
+    layout(t, { title: { text: 'Histogram of residuals', font: { size: 13 } }, xaxis: { ticksuffix: '%' }, bargap: 0.04, showlegend: false, margin: { l: 45, r: 10, t: 36, b: 40 } }),
     CONFIG,
   );
   const q = d.qq;
@@ -211,21 +211,21 @@ export function plotDiagnostics(els: { time: HTMLElement; hist: HTMLElement; qq:
   Plotly.react(
     els.qq,
     [
-      { x: q.theoretical, y: q.sample, mode: 'markers', marker: { color: t.points, size: 5 }, name: 'Résidus standardisés', hovertemplate: 'théorique %{x:.2f} · empirique %{y:.2f}<extra></extra>' },
-      { x: [qlo, qhi], y: [qlo, qhi], mode: 'lines', line: { color: t.line, width: 2 }, name: 'Loi normale', hoverinfo: 'skip' },
+      { x: q.theoretical, y: q.sample, mode: 'markers', marker: { color: t.points, size: 5 }, name: 'Standardised residuals', hovertemplate: 'theoretical %{x:.2f} · empirical %{y:.2f}<extra></extra>' },
+      { x: [qlo, qhi], y: [qlo, qhi], mode: 'lines', line: { color: t.line, width: 2 }, name: 'Normal distribution', hoverinfo: 'skip' },
     ],
-    layout(t, { title: { text: 'Q-Q plot normal', font: { size: 13 } }, xaxis: { title: { text: 'Quantiles théoriques' } }, yaxis: { title: { text: 'Résidus standardisés (e / s)' } }, showlegend: false, margin: { l: 55, r: 10, t: 36, b: 45 } }),
+    layout(t, { title: { text: 'Normal Q-Q plot', font: { size: 13 } }, xaxis: { title: { text: 'Theoretical quantiles' } }, yaxis: { title: { text: 'Standardised residuals (e / s)' } }, showlegend: false, margin: { l: 55, r: 10, t: 36, b: 45 } }),
     CONFIG,
   );
   const lags = d.acf.map((_, i) => i + 1);
   Plotly.react(
     els.acf,
     [
-      { x: lags, y: d.acf, type: 'bar', marker: { color: t.points }, name: 'ACF', hovertemplate: 'retard %{x} : %{y:.3f}<extra></extra>', width: 0.4 },
-      { x: [0.5, lags.length + 0.5], y: [d.acfBand, d.acfBand], mode: 'lines', line: { color: t.line, dash: 'dash', width: 1.5 }, name: '±1,96/√n', hoverinfo: 'skip' },
+      { x: lags, y: d.acf, type: 'bar', marker: { color: t.points }, name: 'ACF', hovertemplate: 'lag %{x}: %{y:.3f}<extra></extra>', width: 0.4 },
+      { x: [0.5, lags.length + 0.5], y: [d.acfBand, d.acfBand], mode: 'lines', line: { color: t.line, dash: 'dash', width: 1.5 }, name: '±1.96/√n', hoverinfo: 'skip' },
       { x: [0.5, lags.length + 0.5], y: [-d.acfBand, -d.acfBand], mode: 'lines', line: { color: t.line, dash: 'dash', width: 1.5 }, showlegend: false, hoverinfo: 'skip' },
     ],
-    layout(t, { title: { text: 'Autocorrélation des résidus (ACF)', font: { size: 13 } }, xaxis: { title: { text: 'Retard (mois)' }, dtick: 2 }, showlegend: false, margin: { l: 45, r: 10, t: 36, b: 45 } }),
+    layout(t, { title: { text: 'Residual autocorrelation (ACF)', font: { size: 13 } }, xaxis: { title: { text: 'Lag (months)' }, dtick: 2 }, showlegend: false, margin: { l: 45, r: 10, t: 36, b: 45 } }),
     CONFIG,
   );
 }
@@ -233,7 +233,7 @@ export function plotDiagnostics(els: { time: HTMLElement; hist: HTMLElement; qq:
 // ------------------------------------------------------------------ D. Rolling
 
 export function coefLabel(name: string): string {
-  if (name === 'const') return 'α (% par mois)';
+  if (name === 'const') return 'α (% per month)';
   return FACTOR_LABELS[name as FactorId] ?? name;
 }
 
@@ -251,7 +251,7 @@ export function plotRolling(container: HTMLElement, roll: RollingResult, t: Them
     if (showBand) {
       traces.push(
         { x: roll.dates, y: roll.low[j].map(scale), mode: 'lines', line: { width: 0 }, hoverinfo: 'skip', showlegend: false },
-        { x: roll.dates, y: roll.high[j].map(scale), mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: withAlpha(color, 0.18), name: 'IC 95 %', hoverinfo: 'skip' },
+        { x: roll.dates, y: roll.high[j].map(scale), mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: withAlpha(color, 0.18), name: '95% CI', hoverinfo: 'skip' },
       );
     }
     traces.push({
@@ -269,7 +269,7 @@ export function plotRolling(container: HTMLElement, roll: RollingResult, t: Them
       div,
       traces,
       layout(t, {
-        title: { text: `${coefLabel(name)} — fenêtre glissante de ${roll.window} mois`, font: { size: 13 } },
+        title: { text: `${coefLabel(name)} — ${roll.window}-month rolling window`, font: { size: 13 } },
         xaxis: { type: 'date' },
         showlegend: false,
         margin: { l: 55, r: 15, t: 36, b: 35 },
@@ -302,9 +302,9 @@ export function plotComparison(el: HTMLElement, cmp: Comparison, t: Theme): void
       mode: 'markers',
       type: 'scatter',
       marker: { size: 11, color: t.series[ui], symbol: (['circle', 'diamond', 'square'] as const)[ui] },
-      name: u === 'SWISS' ? 'Univers suisse (SPI TR, facteurs JKP ; CAPM = Single Index)' : 'Univers européen Fama-French (comparaison)',
+      name: u === 'SWISS' ? 'Swiss universe (SPI TR, JKP factors; CAPM = Single Index)' : 'European Fama-French universe (comparison)',
       offsetgroup: u,
-      hovertemplate: 'α = %{y:.3f} %/mois<br>stat(α) = %{customdata[0]:.2f} · p = %{customdata[1]:.4f}<br>R² = %{customdata[2]:.3f} · N = %{customdata[3]}<extra>%{fullData.name}</extra>',
+      hovertemplate: 'α = %{y:.3f}%/month<br>stat(α) = %{customdata[0]:.2f} · p = %{customdata[1]:.4f}<br>R² = %{customdata[2]:.3f} · N = %{customdata[3]}<extra>%{fullData.name}</extra>',
     });
   });
   Plotly.react(
@@ -312,8 +312,8 @@ export function plotComparison(el: HTMLElement, cmp: Comparison, t: Theme): void
     traces,
     layout(t, {
       scattermode: 'group',
-      yaxis: { title: { text: 'α estimé (% par mois) et IC 95 %' }, ticksuffix: ' %', zeroline: true, zerolinewidth: 2 },
-      xaxis: { title: { text: 'Modèle' } },
+      yaxis: { title: { text: 'Estimated α (% per month) and 95% CI' }, ticksuffix: '%', zeroline: true, zerolinewidth: 2 },
+      xaxis: { title: { text: 'Model' } },
       legend: { orientation: 'h', y: -0.25, font: { color: t.fg } },
       margin: { l: 70, r: 20, t: 20, b: 90 },
     }),
@@ -352,7 +352,7 @@ export function plotPerformance(el: HTMLElement, cmp: AssetComparison, t: Theme)
     })),
     layout(t, {
       xaxis: { type: 'date' },
-      yaxis: { title: { text: 'Valeur de 100 CHF investis (CHF)' } },
+      yaxis: { title: { text: 'Value of CHF 100 invested (CHF)' } },
       legend: { orientation: 'h', y: -0.15, font: { color: t.fg } },
     }),
     CONFIG,
@@ -382,7 +382,7 @@ export function plotAlphaPair(el: HTMLElement, cmp: AssetComparison, t: Theme): 
       offsetgroup: k,
       marker: { size: 11, color, symbol: i === 0 ? 'circle' : 'diamond' },
       name: ASSET_INFO[cmp.pair[i]].label,
-      hovertemplate: 'α = %{y:.2f} % par an<br>stat = %{customdata[0]:.2f} · p = %{customdata[1]:.4f} · N = %{customdata[2]}<extra>%{fullData.name}</extra>',
+      hovertemplate: 'α = %{y:.2f}% a year<br>stat = %{customdata[0]:.2f} · p = %{customdata[1]:.4f} · N = %{customdata[2]}<extra>%{fullData.name}</extra>',
     };
   });
   Plotly.react(
@@ -390,8 +390,8 @@ export function plotAlphaPair(el: HTMLElement, cmp: AssetComparison, t: Theme): 
     traces,
     layout(t, {
       scattermode: 'group',
-      yaxis: { title: { text: 'α annualisé (12 × mensuel) et IC 95 %' }, ticksuffix: ' %', zeroline: true, zerolinewidth: 2.5, zerolinecolor: t.fg },
-      xaxis: { title: { text: 'Modèle' } },
+      yaxis: { title: { text: 'Annualised α (12 × monthly) and 95% CI' }, ticksuffix: '%', zeroline: true, zerolinewidth: 2.5, zerolinecolor: t.fg },
+      xaxis: { title: { text: 'Model' } },
       shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0, y1: 0, line: { color: t.fg, width: 2 } }],
       annotations: [{ xref: 'paper', x: 1, y: 0, yanchor: 'bottom', xanchor: 'right', text: 'α = 0', showarrow: false, font: { size: 11, color: t.fg } }],
       legend: { orientation: 'h', y: -0.22, font: { color: t.fg } },

@@ -84,16 +84,16 @@ export function neweyWestAutoLags(n: number): number {
  */
 export function ols(y: Vector, x: Matrix, names: string[], options: FitOptions): OLSResult {
   const n = y.length;
-  if (x.length !== n) throw new Error('Dimensions incompatibles entre y et X.');
+  if (x.length !== n) throw new Error('Incompatible dimensions between y and X.');
   if (n === 0) throw new InsufficientDataError('Aucune observation disponible.');
   const k = x[0].length;
-  if (names.length !== k) throw new Error('Nombre de noms de variables incorrect.');
+  if (names.length !== k) throw new Error('Incorrect number of variable names.');
   if (n <= k) {
-    throw new InsufficientDataError(`Observations insuffisantes : n = ${n} pour k = ${k} paramètres.`);
+    throw new InsufficientDataError(`Insufficient observations: n = ${n} for k = ${k} parameters.`);
   }
   for (let t = 0; t < n; t++) {
     if (!Number.isFinite(y[t]) || x[t].some((v) => !Number.isFinite(v))) {
-      throw new Error(`Valeur manquante ou non finie à l'observation ${t}.`);
+      throw new Error(`Missing or non-finite value at observation ${t}.`);
     }
   }
   const level = options.level ?? 0.95;
@@ -125,8 +125,8 @@ export function ols(y: Vector, x: Matrix, names: string[], options: FitOptions):
     covParams = sandwich(xtxInv, meatDiag(x, omega));
   } else {
     hacLags = options.hacLags ?? neweyWestAutoLags(n);
-    if (!Number.isInteger(hacLags) || hacLags < 0) throw new Error('Nombre de retards HAC invalide.');
-    if (hacLags >= n) throw new InsufficientDataError('Nombre de retards HAC supérieur au nombre d’observations.');
+    if (!Number.isInteger(hacLags) || hacLags < 0) throw new Error('Invalid number of HAC lags.');
+    if (hacLags >= n) throw new InsufficientDataError('Number of HAC lags exceeds the number of observations.');
     covParams = sandwich(xtxInv, meatHAC(x, resid, hacLags));
     if (options.hacSmallSampleCorrection) {
       const f = n / dfResid;

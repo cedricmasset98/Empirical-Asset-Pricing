@@ -23,10 +23,10 @@ export const DEFAULT_PAIR: Pair = ['BCV', 'FUND'];
 
 /** sub : indice de R dans les formules ; fund : fonds de placement (rendements nets de frais, distributions réinvesties). */
 export const ASSET_INFO: Record<AssetId, { label: string; short: string; detail: string; sub: string; fund: boolean; column: SeriesKey }> = {
-  BCV: { label: 'Action BCV', short: 'Action BCV', detail: 'BCVN.SW · ISIN CH0531751755', sub: 'BCV', fund: false, column: 'bcv_ret' },
-  FUND: { label: 'Fonds BCV Swiss Equity A', short: 'Fonds BCV', detail: 'ISIN CH0006018706 · gestion active · BCV Asset Management', sub: 'fonds', fund: true, column: 'fund_ret' },
-  RAIF: { label: 'Fonds Raiffeisen Futura - Swiss Stock A', short: 'Fonds Raiffeisen', detail: 'ISIN CH0011980981 · gestion active · Vontobel Asset Management pour Raiffeisen', sub: 'Raiffeisen', fund: true, column: 'raif_ret' },
-  DIFF: { label: 'Différence A − B', short: 'Différence', detail: 'Portefeuille long A, court B', sub: 'A − B', fund: false, column: 'bcv_ret' },
+  BCV: { label: 'BCV stock', short: 'BCV stock', detail: 'BCVN.SW · ISIN CH0531751755', sub: 'BCV', fund: false, column: 'bcv_ret' },
+  FUND: { label: 'BCV Swiss Equity A fund', short: 'BCV fund', detail: 'ISIN CH0006018706 · active management · BCV Asset Management', sub: 'fund', fund: true, column: 'fund_ret' },
+  RAIF: { label: 'Raiffeisen Futura - Swiss Stock A fund', short: 'Raiffeisen fund', detail: 'ISIN CH0011980981 · active management · Vontobel Asset Management for Raiffeisen', sub: 'Raiffeisen', fund: true, column: 'raif_ret' },
+  DIFF: { label: 'Difference A − B', short: 'Difference', detail: 'Long A, short B portfolio', sub: 'A − B', fund: false, column: 'bcv_ret' },
 };
 
 function assetColumns(asset: AssetId, pair: Pair = DEFAULT_PAIR): SeriesKey[] {
@@ -56,26 +56,26 @@ export const MODEL_FACTORS: Record<ModelId, FactorId[]> = {
 
 export const MODEL_LABELS: Record<ModelId, string> = {
   CAPM: 'CAPM / Single Index',
-  FF3: 'Fama-French 3 facteurs',
-  CARHART: 'Carhart 4 facteurs',
-  FF5: 'Fama-French 5 facteurs',
+  FF3: 'Fama-French 3-factor',
+  CARHART: 'Carhart 4-factor',
+  FF5: 'Fama-French 5-factor',
 };
 
 export const MODEL_SHORT: Record<ModelId, string> = { CAPM: 'CAPM', FF3: 'FF3', CARHART: 'Carhart', FF5: 'FF5' };
 
 export const UNIVERSE_LABELS: Record<Universe, string> = {
-  SPI: 'Marché suisse : SPI TR (CHF)',
-  EUROPE: 'Marché européen Fama-French (converti en CHF)',
-  SWISS: 'Marché suisse : SPI TR et facteurs suisses JKP (CHF)',
+  SPI: 'Swiss market: SPI TR (CHF)',
+  EUROPE: 'European Fama-French market (converted to CHF)',
+  SWISS: 'Swiss market: SPI TR and Swiss JKP factors (CHF)',
 };
 
 export const FACTOR_LABELS: Record<FactorId, string> = {
-  MKT: 'MKT (marché − Rf)',
-  SMB: 'SMB (taille)',
-  HML: 'HML (valeur)',
+  MKT: 'MKT (market − Rf)',
+  SMB: 'SMB (size)',
+  HML: 'HML (value)',
   MOM: 'MOM / WML (momentum)',
-  RMW: 'RMW (rentabilité)',
-  CMA: 'CMA (investissement)',
+  RMW: 'RMW (profitability)',
+  CMA: 'CMA (investment)',
 };
 
 /** Coefficient associé à chaque facteur dans les équations. */
@@ -130,10 +130,10 @@ export function coherence(model: ModelId, universe: Universe): Coherence {
 
 export function specLabel(model: ModelId, universe: Universe): string {
   const c = coherence(model, universe);
-  if (universe === 'SWISS' && model !== 'CAPM') return `${MODEL_LABELS[model]} — univers suisse (SPI + facteurs JKP)`;
+  if (universe === 'SWISS' && model !== 'CAPM') return `${MODEL_LABELS[model]} — Swiss universe (SPI + JKP factors)`;
   if (c === 'swiss') return 'Single Index Model (SPI TR)';
-  if (c === 'european') return `${MODEL_LABELS[model]} — univers européen`;
-  return `${MODEL_LABELS[model]} — variante hybride (SPI + facteurs européens)`;
+  if (c === 'european') return `${MODEL_LABELS[model]} — European universe`;
+  return `${MODEL_LABELS[model]} — hybrid variant (SPI + European factors)`;
 }
 
 export interface DateRange {
@@ -198,7 +198,7 @@ export function assertColumns(ds: Dataset, columns: SeriesKey[]): void {
   const missing = columns.filter((c) => !(ds.data[c] ?? []).some(isNum));
   if (missing.length) {
     throw new DataUnavailableError(
-      `Séries indisponibles dans le jeu de données : ${missing.join(', ')}. Aucune estimation n'est produite pour ce modèle.`,
+      `Series unavailable in the dataset: ${missing.join(', ')}. No estimate is produced for this model.`,
       missing,
     );
   }

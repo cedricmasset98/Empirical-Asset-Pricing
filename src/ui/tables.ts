@@ -10,9 +10,9 @@ import { escapeHtml as h, num, pct, pval, stars } from './format.ts';
 import { coefLabel } from './charts.ts';
 
 export const COV_LABELS = {
-  classical: 'OLS classique (Student)',
-  HC3: 'Robuste HC3 (asymptotique normale)',
-  HAC: 'Newey-West HAC (asymptotique normale)',
+  classical: 'Classical OLS (Student)',
+  HC3: 'Robust HC3 (asymptotic normal)',
+  HAC: 'Newey-West HAC (asymptotic normal)',
 } as const;
 
 export function tip(text: string): string {
@@ -21,32 +21,32 @@ export function tip(text: string): string {
 
 export function statCards(fit: FitOk, gross: GrossAlpha | null = null): string {
   const r = fit.result;
-  const who = { BCV: 'de BCV', FUND: 'du fonds', RAIF: 'du fonds Raiffeisen', DIFF: 'de la différence' }[fit.asset];
+  const who = { BCV: 'of BCV', FUND: 'of the fund', RAIF: 'of the Raiffeisen fund', DIFF: 'of the difference' }[fit.asset];
   const z = r.distribution === 't' ? 't' : 'z';
   const mktIdx = r.names.indexOf('MKT');
   const card = (label: string, value: string, sub: string, help: string, cls = '') =>
     `<div class="card ${cls}"><div class="card-label">${label} ${tip(help)}</div><div class="card-value">${value}</div><div class="card-sub">${sub}</div></div>`;
   const sig = r.pvalue[0] < 0.05 ? 'sig' : '';
   return [
-    card('α mensuel', pct(r.beta[0], 3), `IC 95 % [${pct(r.ciLow[0], 3)} ; ${pct(r.ciHigh[0], 3)}]`,
-      'Constante de la régression des rendements excédentaires mensuels : rendement moyen non expliqué par les facteurs, en % par mois.', sig),
-    card(gross ? 'α net annualisé' : 'α annualisé', pct(12 * r.beta[0], 2), `= 12 × α mensuel · IC [${pct(12 * r.ciLow[0], 2)} ; ${pct(12 * r.ciHigh[0], 2)}]`,
+    card('Monthly α', pct(r.beta[0], 3), `95% CI [${pct(r.ciLow[0], 3)}; ${pct(r.ciHigh[0], 3)}]`,
+      'Constant of the regression of monthly excess returns: average return not explained by the factors, in % per month.', sig),
+    card(gross ? 'Annualised net α' : 'Annualised α', pct(12 * r.beta[0], 2), `= 12 × monthly α · CI [${pct(12 * r.ciLow[0], 2)}; ${pct(12 * r.ciHigh[0], 2)}]`,
       gross
-        ? 'Alpha après frais de gestion : les rendements du fonds sont nets des frais incorporés dans la VNI. Annualisation arithmétique : 12 × α mensuel.'
-        : 'Annualisation arithmétique : 12 × α mensuel (les statistiques de test sont inchangées).', sig),
+        ? 'Alpha after management fees: fund returns are net of the fees embedded in the NAV. Arithmetic annualisation: 12 × monthly α.'
+        : 'Arithmetic annualisation: 12 × monthly α (test statistics are unchanged).', sig),
     ...(gross
-      ? [card('α brut annualisé', pct(12 * gross.gross, 2), `≈ α net + TER ${pct(gross.ter, 2)} · ${z} = ${num(gross.stat, 2)} · p = ${pval(gross.pvalue)} ${stars(gross.pvalue)}`,
-          `Alpha avant frais de gestion : α net + TER publié (${gross.terDate}). Ajouter TER/12 à chaque rendement mensuel déplace la constante sans changer les pentes ni l’erreur standard. Approximation : TER actuel supposé constant sur la période ; les frais de transaction, non compris dans le TER, restent déduits.`,
+      ? [card('Annualised gross α', pct(12 * gross.gross, 2), `≈ net α + TER ${pct(gross.ter, 2)} · ${z} = ${num(gross.stat, 2)} · p = ${pval(gross.pvalue)} ${stars(gross.pvalue)}`,
+          `Alpha before management fees: net α + published TER (${gross.terDate}). Adding TER/12 to each monthly return shifts the constant without changing the slopes or the standard error. Approximation: current TER assumed constant over the period; transaction costs, not included in the TER, remain deducted.`,
           gross.pvalue < 0.05 ? 'sig' : '')]
       : []),
-    card(`${z}-stat (α)`, num(r.stat[0], 2), `p-value bilatérale ${pval(r.pvalue[0])} ${stars(r.pvalue[0])}`,
-      r.distribution === 't' ? `Statistique de Student à ${r.dfResid} degrés de liberté.` : 'Statistique z (inférence asymptotique normale, erreurs standards robustes).', sig),
-    card('β marché', mktIdx >= 0 ? num(r.beta[mktIdx], 3) : '—', mktIdx >= 0 ? `se ${num(r.se[mktIdx], 3)} · IC [${num(r.ciLow[mktIdx], 3)} ; ${num(r.ciHigh[mktIdx], 3)}]` : '',
-      `Sensibilité du rendement excédentaire ${who} au rendement excédentaire du marché.`),
-    card('R² / R² ajusté', `${num(r.r2, 3)}`, `ajusté ${num(r.r2adj, 3)}`, `Part de la variance des rendements excédentaires ${who} expliquée par le modèle.`),
-    card('Observations', String(r.n), `${fit.sample.dates[0]} → ${fit.sample.dates.at(-1)}`, 'Nombre de mois complets utilisés (toutes séries disponibles).'),
-    card('σ résidus', pct(r.sigma, 2), `par mois · ${pct(r.sigma * Math.sqrt(12), 1)} annualisé (×√12)`,
-      'Écart-type des résidus s = √(SSR/(n−k)) : variabilité mensuelle non expliquée par les facteurs.'),
+    card(`${z}-stat (α)`, num(r.stat[0], 2), `two-sided p-value ${pval(r.pvalue[0])} ${stars(r.pvalue[0])}`,
+      r.distribution === 't' ? `Student statistic with ${r.dfResid} degrees of freedom.` : 'z statistic (asymptotic normal inference, robust standard errors).', sig),
+    card('Market β', mktIdx >= 0 ? num(r.beta[mktIdx], 3) : '—', mktIdx >= 0 ? `se ${num(r.se[mktIdx], 3)} · CI [${num(r.ciLow[mktIdx], 3)}; ${num(r.ciHigh[mktIdx], 3)}]` : '',
+      `Sensitivity of the excess return ${who} to the market excess return.`),
+    card('R² / adjusted R²', `${num(r.r2, 3)}`, `adjusted ${num(r.r2adj, 3)}`, `Share of the variance of excess returns ${who} explained by the model.`),
+    card('Observations', String(r.n), `${fit.sample.dates[0]} → ${fit.sample.dates.at(-1)}`, 'Number of complete months used (all series available).'),
+    card('Residual σ', pct(r.sigma, 2), `per month · ${pct(r.sigma * Math.sqrt(12), 1)} annualised (×√12)`,
+      'Residual standard deviation s = √(SSR/(n−k)): monthly variability not explained by the factors.'),
   ].join('');
 }
 
@@ -57,46 +57,46 @@ export function regressionTable(fit: FitOk): string {
   const rows = r.names.map((name, i) => {
     const isConst = name === 'const';
     const f = (x: number) => (isConst ? num(x * 100, 4) : num(x, 4));
-    const label = isConst ? 'α — constante (% par mois)' : `${FACTOR_COEF[name as FactorId]} — ${coefLabel(name)}`;
-    return `<tr${isConst ? ' class="row-alpha"' : ''}><th scope="row">${label}</th><td>${f(r.beta[i])}<sup>${stars(r.pvalue[i])}</sup></td><td>${f(r.se[i])}</td><td>${num(r.stat[i], 3)}</td><td>${pval(r.pvalue[i])}</td><td>[${f(r.ciLow[i])} ; ${f(r.ciHigh[i])}]</td></tr>`;
+    const label = isConst ? 'α — constant (% per month)' : `${FACTOR_COEF[name as FactorId]} — ${coefLabel(name)}`;
+    return `<tr${isConst ? ' class="row-alpha"' : ''}><th scope="row">${label}</th><td>${f(r.beta[i])}<sup>${stars(r.pvalue[i])}</sup></td><td>${f(r.se[i])}</td><td>${num(r.stat[i], 3)}</td><td>${pval(r.pvalue[i])}</td><td>[${f(r.ciLow[i])}; ${f(r.ciHigh[i])}]</td></tr>`;
   });
   const j = r.joint;
   const jointRow = j
-    ? `<tr><th>${j.kind === 'F' ? 'Statistique F' : 'Test de Wald (robuste)'} ${tip(j.kind === 'F' ? 'Test classique de nullité jointe de toutes les pentes, loi F(k−1, n−k).' : 'Test de nullité jointe des pentes avec la covariance robuste choisie : W = b′V⁻¹b ~ χ²(k−1). Une statistique F classique ne serait pas valide sous hétéroscédasticité/autocorrélation.')}</th><td>${j.label} = ${num(j.stat, 3)}</td><th>p-value</th><td>${pval(j.pvalue)}</td></tr>`
+    ? `<tr><th>${j.kind === 'F' ? 'F statistic' : 'Wald test (robust)'} ${tip(j.kind === 'F' ? 'Classical test that all slopes are jointly zero, F(k−1, n−k) distribution.' : 'Test that the slopes are jointly zero with the chosen robust covariance: W = b′V⁻¹b ~ χ²(k−1). A classical F statistic would not be valid under heteroskedasticity/autocorrelation.')}</th><td>${j.label} = ${num(j.stat, 3)}</td><th>p-value</th><td>${pval(j.pvalue)}</td></tr>`
     : '';
-  const method = `${COV_LABELS[r.cov]}${r.cov === 'HAC' ? ` · ${r.hacLags} retards (noyau de Bartlett)` : ''}`;
+  const method = `${COV_LABELS[r.cov]}${r.cov === 'HAC' ? ` · ${r.hacLags} lags (Bartlett kernel)` : ''}`;
   return `
   <table class="reg">
-    <caption>${h(ASSET_INFO[fit.asset].label)} · ${h(fit.label)} — variable dépendante : R<sub>${ASSET_INFO[fit.asset].sub}</sub> − R<sub>f</sub> (SARON), mensuel</caption>
-    <thead><tr><th scope="col">Variable</th><th scope="col">Coefficient</th><th scope="col">Std. Error</th><th scope="col">${z}</th><th scope="col">p-value</th><th scope="col">IC ${lvl} %</th></tr></thead>
+    <caption>${h(ASSET_INFO[fit.asset].label)} · ${h(fit.label)} — dependent variable: R<sub>${ASSET_INFO[fit.asset].sub}</sub> − R<sub>f</sub> (SARON), monthly</caption>
+    <thead><tr><th scope="col">Variable</th><th scope="col">Coefficient</th><th scope="col">Std. Error</th><th scope="col">${z}</th><th scope="col">p-value</th><th scope="col">${lvl}% CI</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>
   <table class="reg-stats">
     <tbody>
-      <tr><th>R²</th><td>${num(r.r2, 4)}</td><th>R² ajusté</th><td>${num(r.r2adj, 4)}</td></tr>
+      <tr><th>R²</th><td>${num(r.r2, 4)}</td><th>Adjusted R²</th><td>${num(r.r2adj, 4)}</td></tr>
       ${jointRow}
-      <tr><th>N</th><td>${r.n}</td><th>Degrés de liberté résiduels</th><td>${r.dfResid}</td></tr>
-      <tr><th>Écart-type des résidus</th><td>${num(r.sigma * 100, 4)} % / mois</td><th>Inférence</th><td>${h(method)}</td></tr>
-      <tr><th>Période</th><td>${fit.sample.dates[0]} → ${fit.sample.dates.at(-1)}</td><th>Valeur critique (${lvl} %)</th><td>${num(r.crit, 4)} (${r.distribution === 't' ? `Student, ${r.dfResid} ddl` : 'normale'})</td></tr>
+      <tr><th>N</th><td>${r.n}</td><th>Residual degrees of freedom</th><td>${r.dfResid}</td></tr>
+      <tr><th>Residual standard deviation</th><td>${num(r.sigma * 100, 4)}% / month</td><th>Inference</th><td>${h(method)}</td></tr>
+      <tr><th>Period</th><td>${fit.sample.dates[0]} → ${fit.sample.dates.at(-1)}</td><th>Critical value (${lvl}%)</th><td>${num(r.crit, 4)} (${r.distribution === 't' ? `Student, ${r.dfResid} df` : 'normal'})</td></tr>
     </tbody>
   </table>
-  <p class="table-note">*** p &lt; 0,01 · ** p &lt; 0,05 · * p &lt; 0,1. La constante et ses bornes sont exprimées en % par mois ; α annualisé = 12 × α mensuel. Les coefficients sont identiques quelle que soit la méthode d’inférence.</p>`;
+  <p class="table-note">*** p &lt; 0.01 · ** p &lt; 0.05 · * p &lt; 0.1. The constant and its bounds are in % per month; annualised α = 12 × monthly α. Coefficients are identical whatever the inference method.</p>`;
 }
 
 export function testsTable(d: Diagnostics): string {
   const rows = d.tests
     .map((t) => {
       const reject = t.pvalue < 0.05;
-      return `<tr><th scope="row">${h(t.name)}</th><td>${num(t.stat, 3)}</td><td>χ²(${t.df})</td><td>${pval(t.pvalue)}</td><td>${h(t.h0)}</td><td class="${reject ? 'reject' : 'accept'}">${reject ? 'H₀ rejetée à 5 %' : 'H₀ non rejetée à 5 %'}</td></tr>`;
+      return `<tr><th scope="row">${h(t.name)}</th><td>${num(t.stat, 3)}</td><td>χ²(${t.df})</td><td>${pval(t.pvalue)}</td><td>${h(t.h0)}</td><td class="${reject ? 'reject' : 'accept'}">${reject ? 'H₀ rejected at 5%' : 'H₀ not rejected at 5%'}</td></tr>`;
     })
     .join('');
-  return `<table class="reg"><thead><tr><th>Test</th><th>Statistique</th><th>Loi sous H₀</th><th>p-value</th><th>H₀</th><th>Conclusion</th></tr></thead><tbody>${rows}</tbody></table>
-  <p class="table-note">Asymétrie ${num(d.skewness, 3)} · kurtosis ${num(d.kurtosis, 3)} (normale : 0 et 3). Breusch-Pagan : version studentisée de Koenker (n·R² de la régression de e² sur les régresseurs). Les tests portent sur les résidus OLS et ne dépendent pas de la méthode d’inférence choisie.</p>`;
+  return `<table class="reg"><thead><tr><th>Test</th><th>Statistic</th><th>Distribution under H₀</th><th>p-value</th><th>H₀</th><th>Conclusion</th></tr></thead><tbody>${rows}</tbody></table>
+  <p class="table-note">Skewness ${num(d.skewness, 3)} · kurtosis ${num(d.kurtosis, 3)} (normal: 0 and 3). Breusch-Pagan: Koenker’s studentised version (n·R² of the regression of e² on the regressors). The tests use the OLS residuals and do not depend on the chosen inference method.</p>`;
 }
 
 export function comparisonTable(cmp: Comparison): string {
   const rows: string[] = [];
-  const groups = { SWISS: 'Univers suisse : SPI TR et facteurs suisses JKP (CHF)', EUROPE: 'Univers européen Fama-French, converti en CHF (comparaison)' } as const;
+  const groups = { SWISS: 'Swiss universe: SPI TR and Swiss JKP factors (CHF)', EUROPE: 'European Fama-French universe, converted to CHF (comparison)' } as const;
   for (const u of ['SWISS', 'EUROPE'] as const) {
     rows.push(`<tr class="group"><th colspan="9">${groups[u]}</th></tr>`);
     for (const m of MODEL_IDS) {
@@ -112,11 +112,11 @@ export function comparisonTable(cmp: Comparison): string {
       );
     }
   }
-  return `<table class="reg"><thead><tr><th>Modèle</th><th>α mensuel</th><th>α annualisé</th><th>stat(α)</th><th>p(α)</th><th>β marché</th><th>R²</th><th>R² ajusté</th><th>N</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  return `<table class="reg"><thead><tr><th>Model</th><th>Monthly α</th><th>Annualised α</th><th>stat(α)</th><th>p(α)</th><th>Market β</th><th>R²</th><th>Adjusted R²</th><th>N</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 
 export function sourcesTable(ds: Dataset): string {
-  const st = { ok: 'OK', error: 'ERREUR', manual: 'manuel' } as const;
+  const st = { ok: 'OK', error: 'ERROR', manual: 'manual' } as const;
   const rows = ds.sources
     .map(
       (s) =>
@@ -128,8 +128,8 @@ export function sourcesTable(ds: Dataset): string {
   const checks = ds.checks
     .map((c) => `<li class="check check-${c.status}"><span class="status status-${c.status}">${c.status}</span> ${h(c.message)}</li>`)
     .join('');
-  return `<table class="reg sources"><thead><tr><th>Série</th><th>Statut</th><th>Couverture</th><th>Détails et licence</th></tr></thead><tbody>${rows}</tbody></table>
-  ${checks ? `<h3>Contrôles automatiques du pipeline</h3><ul class="checks">${checks}</ul>` : ''}
+  return `<table class="reg sources"><thead><tr><th>Series</th><th>Status</th><th>Coverage</th><th>Details and licence</th></tr></thead><tbody>${rows}</tbody></table>
+  ${checks ? `<h3>Automatic pipeline checks</h3><ul class="checks">${checks}</ul>` : ''}
   ${(ds.notes ?? []).map((n) => `<p class="muted small">${h(n)}</p>`).join('')}`;
 }
 
@@ -142,8 +142,8 @@ export function perfTable(cmp: AssetComparison): string {
         `<tr><th scope="row">${h(p.label)}</th><td>${num(p.path[p.path.length - 1], 0)} CHF</td><td>${pct(p.annReturn, 2)}</td><td>${p.key === 'rf' ? '—' : pct(p.annVol, 1)}</td><td>${p.key === 'rf' ? '—' : pct(p.maxDrawdown, 1)}</td></tr>`,
     )
     .join('');
-  return `<table class="reg"><thead><tr><th>Série (rendement total)</th><th>Valeur finale de 100 CHF</th><th>Rendement annualisé</th><th>Volatilité annualisée</th><th>Perte maximale (fin de mois)</th></tr></thead><tbody>${rows}</tbody></table>
-  <p class="table-note">Mêmes ${cmp.dates.length} mois pour toutes les séries (${cmp.dates[0]} → ${cmp.dates[cmp.dates.length - 1]}). Rendement annualisé géométrique ; volatilité = écart-type mensuel × √12 ; perte maximale mesurée sur les valeurs de fin de mois (les pertes intra-mensuelles peuvent être plus fortes).</p>`;
+  return `<table class="reg"><thead><tr><th>Series (total return)</th><th>Final value of CHF 100</th><th>Annualised return</th><th>Annualised volatility</th><th>Maximum drawdown (month-end)</th></tr></thead><tbody>${rows}</tbody></table>
+  <p class="table-note">Same ${cmp.dates.length} months for all series (${cmp.dates[0]} → ${cmp.dates[cmp.dates.length - 1]}). Geometric annualised return; volatility = monthly standard deviation × √12; maximum drawdown measured on month-end values (intra-month losses can be larger).</p>`;
 }
 
 function cell(f: Fit, fn: (r: FitOk['result']) => string): string {
@@ -156,14 +156,14 @@ export function alphaPairTable(m: AssetComparison['models'][number], pair: Asset
   const terB = fees[1]?.ter ?? 0;
   const grossCell = (f: Fit, ter: number, fee: FeeInfo | null) => {
     if (!f.ok) return '';
-    if (!fee) return '<span class="muted small">sans frais de gestion</span>';
+    if (!fee) return '<span class="muted small">no management fee</span>';
     const g = shiftAlpha(f, ter / 12);
     return `${pct(12 * g.alpha, 2)}<sup>${stars(g.pvalue)}</sup><br><span class="muted small">TER ${pct(ter, 2)} · p = ${pval(g.pvalue)}</span>`;
   };
   let grossRow = '';
   if (fees[0] || fees[1]) {
     const gd = diff.ok ? shiftAlpha(diff, (terA - terB) / 12) : null;
-    grossRow = `<tr class="row-alpha"><th scope="row">α brut annualisé (≈ net + TER) ${tip('Alpha avant frais de gestion : alpha net + TER publié actuel, supposé constant sur la période. Les pentes et erreurs standards ne changent pas ; les frais de transaction restent déduits. Pour l’écart, le décalage est la différence des TER.')}</th><td>${grossCell(a, terA, fees[0])}</td><td>${grossCell(b, terB, fees[1])}</td><td>${gd ? `${pct(12 * gd.alpha, 2)}<br><span class="muted small">p = ${pval(gd.pvalue)}</span>` : ''}</td></tr>`;
+    grossRow = `<tr class="row-alpha"><th scope="row">Annualised gross α (≈ net + TER) ${tip('Alpha before management fees: net alpha + current published TER, assumed constant over the period. Slopes and standard errors do not change; transaction costs remain deducted. For the gap, the shift is the difference in TERs.')}</th><td>${grossCell(a, terA, fees[0])}</td><td>${grossCell(b, terB, fees[1])}</td><td>${gd ? `${pct(12 * gd.alpha, 2)}<br><span class="muted small">p = ${pval(gd.pvalue)}</span>` : ''}</td></tr>`;
   }
   const [na, nb] = [ASSET_INFO[pair[0]].short, ASSET_INFO[pair[1]].short];
   const z = a.ok && a.result.distribution === 't' ? 't' : 'z';
@@ -172,16 +172,16 @@ export function alphaPairTable(m: AssetComparison['models'][number], pair: Asset
   const dRow = diff.ok
     ? `${pct(12 * diff.result.beta[0], 2)}<br><span class="muted small">${z} = ${num(diff.result.stat[0], 2)} · p = ${pval(diff.result.pvalue[0])}</span>`
     : '';
-  return `<table class="reg pair"><thead><tr><th>Indicateur — ${h(MODEL_SHORT[m.model])}</th><th>${h(na)}</th><th>${h(nb)}</th><th>Écart (A − B) ${tip("Régression du rendement de A moins celui de B sur les mêmes facteurs : son alpha est exactement α_A − α_B, et son erreur standard tient compte de la corrélation entre les deux actifs.")}</th></tr></thead><tbody>
-    ${row(fees[0] || fees[1] ? 'α net annualisé (12 × mensuel)' : 'α annualisé (12 × mensuel)', (r) => `${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup>`, dRow)}
+  return `<table class="reg pair"><thead><tr><th>Indicator — ${h(MODEL_SHORT[m.model])}</th><th>${h(na)}</th><th>${h(nb)}</th><th>Gap (A − B) ${tip("Regression of the return of A minus that of B on the same factors: its alpha is exactly α_A − α_B, and its standard error accounts for the correlation between the two assets.")}</th></tr></thead><tbody>
+    ${row(fees[0] || fees[1] ? 'Annualised net α (12 × monthly)' : 'Annualised α (12 × monthly)', (r) => `${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup>`, dRow)}
     ${grossRow}
-    ${row('IC 95 % de l’α annualisé', (r) => `[${pct(12 * r.ciLow[0], 1)} ; ${pct(12 * r.ciHigh[0], 1)}]`, diff.ok ? `[${pct(12 * diff.result.ciLow[0], 1)} ; ${pct(12 * diff.result.ciHigh[0], 1)}]` : '')}
-    ${row(`${z}-stat de l’α`, (r) => num(r.stat[0], 2))}
-    ${row('p-value de l’α', (r) => pval(r.pvalue[0]))}
-    ${row('β de marché', (r) => `${num(r.beta[1], 3)} <span class="muted small">[${num(r.ciLow[1], 2)} ; ${num(r.ciHigh[1], 2)}]</span>`, diff.ok ? num(diff.result.beta[1], 3) : '')}
+    ${row('95% CI of annualised α', (r) => `[${pct(12 * r.ciLow[0], 1)}; ${pct(12 * r.ciHigh[0], 1)}]`, diff.ok ? `[${pct(12 * diff.result.ciLow[0], 1)}; ${pct(12 * diff.result.ciHigh[0], 1)}]` : '')}
+    ${row(`${z}-stat of α`, (r) => num(r.stat[0], 2))}
+    ${row('p-value of α', (r) => pval(r.pvalue[0]))}
+    ${row('Market β', (r) => `${num(r.beta[1], 3)} <span class="muted small">[${num(r.ciLow[1], 2)}; ${num(r.ciHigh[1], 2)}]</span>`, diff.ok ? num(diff.result.beta[1], 3) : '')}
     ${row('R²', (r) => num(r.r2, 3))}
-    ${row('Volatilité résiduelle annualisée', (r) => pct(r.sigma * Math.sqrt(12), 1))}
-    ${row('N (mois)', (r) => String(r.n))}
+    ${row('Annualised residual volatility', (r) => pct(r.sigma * Math.sqrt(12), 1))}
+    ${row('N (months)', (r) => String(r.n))}
   </tbody></table>`;
 }
 
@@ -193,22 +193,22 @@ export function multiFactorPairTable(cmp: AssetComparison): string {
       return `<tr><th scope="row">${h(MODEL_SHORT[model])}</th><td>${a(bcv)}</td><td>${a(fund)}</td><td>${a(diff)}</td><td>${bcv.ok ? num(bcv.result.r2, 3) : '—'} / ${fund.ok ? num(fund.result.r2, 3) : '—'}</td></tr>`;
     })
     .join('');
-  return `<table class="reg"><thead><tr><th>Modèle</th><th>α ${h(na)}</th><th>α ${h(nb)}</th><th>Écart (A − B)</th><th>R² A / B</th></tr></thead><tbody>${rows}</tbody></table>
-  <p class="table-note">α annualisé (12 × mensuel). *** p &lt; 0,01 · ** p &lt; 0,05 · * p &lt; 0,1. Toutes les estimations utilisent exactement les mêmes mois.</p>`;
+  return `<table class="reg"><thead><tr><th>Model</th><th>α ${h(na)}</th><th>α ${h(nb)}</th><th>Gap (A − B)</th><th>R² A / B</th></tr></thead><tbody>${rows}</tbody></table>
+  <p class="table-note">Annualised α (12 × monthly). *** p &lt; 0.01 · ** p &lt; 0.05 · * p &lt; 0.1. All estimates use exactly the same months.</p>`;
 }
 
 /** Encadré « Frais » sous le tableau de régression d'un fonds. */
 export function feesBlock(fit: FitOk, gross: GrossAlpha): string {
   const r = fit.result;
   const z = r.distribution === 't' ? 't' : 'z';
-  const verdict = (p: number) => (p < 0.05 ? 'significatif à 5 %' : 'non significatif à 5 %');
+  const verdict = (p: number) => (p < 0.05 ? 'significant at 5%' : 'not significant at 5%');
   return `<div class="fees">
-    <h3>Frais : alpha net et alpha brut</h3>
-    <table class="reg"><thead><tr><th></th><th>α annualisé</th><th>IC 95 %</th><th>${z}-stat</th><th>p-value</th></tr></thead><tbody>
-      <tr><th scope="row">α net (après frais de gestion)</th><td>${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup></td><td>[${pct(12 * r.ciLow[0], 2)} ; ${pct(12 * r.ciHigh[0], 2)}]</td><td>${num(r.stat[0], 2)}</td><td>${pval(r.pvalue[0])}</td></tr>
-      <tr><th scope="row">+ TER publié (${h(gross.terDate)})</th><td>${pct(gross.ter, 2)}</td><td colspan="3" class="muted small">${h(gross.source)}</td></tr>
-      <tr class="row-alpha"><th scope="row">≈ α brut (avant frais de gestion)</th><td>${pct(12 * gross.gross, 2)}<sup>${stars(gross.pvalue)}</sup></td><td>[${pct(12 * gross.ciLow, 2)} ; ${pct(12 * gross.ciHigh, 2)}]</td><td>${num(gross.stat, 2)}</td><td>${pval(gross.pvalue)}</td></tr>
+    <h3>Fees: net alpha and gross alpha</h3>
+    <table class="reg"><thead><tr><th></th><th>Annualised α</th><th>95% CI</th><th>${z}-stat</th><th>p-value</th></tr></thead><tbody>
+      <tr><th scope="row">Net α (after management fees)</th><td>${pct(12 * r.beta[0], 2)}<sup>${stars(r.pvalue[0])}</sup></td><td>[${pct(12 * r.ciLow[0], 2)}; ${pct(12 * r.ciHigh[0], 2)}]</td><td>${num(r.stat[0], 2)}</td><td>${pval(r.pvalue[0])}</td></tr>
+      <tr><th scope="row">+ published TER (${h(gross.terDate)})</th><td>${pct(gross.ter, 2)}</td><td colspan="3" class="muted small">${h(gross.source)}</td></tr>
+      <tr class="row-alpha"><th scope="row">≈ gross α (before management fees)</th><td>${pct(12 * gross.gross, 2)}<sup>${stars(gross.pvalue)}</sup></td><td>[${pct(12 * gross.ciLow, 2)}; ${pct(12 * gross.ciHigh, 2)}]</td><td>${num(gross.stat, 2)}</td><td>${pval(gross.pvalue)}</td></tr>
     </tbody></table>
-    <p class="table-note">L’α net mesure ce que les porteurs de parts ont obtenu au-delà des facteurs ; l’α brut, ${verdict(gross.pvalue)}, approche ce que la gestion a produit avant ses frais. Ajouter TER/12 à chaque rendement mensuel déplace la constante de TER/12 sans changer les pentes ni l’erreur standard : le test de l’α brut est celui de α<sub>net</sub> = −TER/12. Limites : seul le TER actuel est connu (frais supposés constants sur la période) ; les frais de transaction ne font pas partie du TER et restent déduits.</p>
+    <p class="table-note">The net α measures what unitholders earned beyond the factors; the gross α, ${verdict(gross.pvalue)}, approximates what the management produced before its fees. Adding TER/12 to each monthly return shifts the constant by TER/12 without changing the slopes or the standard error: testing the gross α amounts to testing α<sub>net</sub> = −TER/12. Limits: only the current TER is known (fees assumed constant over the period); transaction costs are not part of the TER and remain deducted.</p>
   </div>`;
 }

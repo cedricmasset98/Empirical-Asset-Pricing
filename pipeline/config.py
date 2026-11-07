@@ -60,7 +60,7 @@ FUND = {
     # récent est connu : il est appliqué à toute la période (approximation).
     "ter": 0.0111,
     "ter_date": "2026-03-31",
-    "ter_source": "Fiche mensuelle du fonds (données au 31.07.2026), TER au 31.03.2026",
+    "ter_source": "Monthly fund factsheet (data as of 31.07.2026), TER as of 31.03.2026",
 }
 GERIFONDS_FUND_URL = "https://www.gerifonds.ch/fr/iframe/CH0006018706?period=6"
 
@@ -82,7 +82,7 @@ RAIF = {
     "inception": "2001-06-08",
     "ter": 0.0120,
     "ter_date": "2026-06-30",
-    "ter_source": "Fiche mensuelle Raiffeisen (données au 30.09.2026) et Swiss Fund Data, TER au 30.06.2026",
+    "ter_source": "Raiffeisen monthly factsheet (data as of 30.09.2026) and Swiss Fund Data, TER as of 30.06.2026",
 }
 SFD_FUND_ID = 16291  # identifiant interne Swiss Fund Data de la classe A
 SFD_BASE = "https://www.swissfunddata.ch/sfdpub"
@@ -102,11 +102,11 @@ JKP_REGION = "che"
 JKP_WEIGHTING = "vw_cap"
 # Facteur du site -> caractéristique JKP la plus proche de la définition Fama-French
 JKP_FACTORS = {
-    "SMB": ("market_equity", "capitalisation boursière (petites − grandes)"),
-    "HML": ("be_me", "valeur comptable / capitalisation (valeur − croissance)"),
-    "RMW": ("ope_be", "bénéfice d'exploitation / fonds propres (rentables − peu rentables)"),
-    "CMA": ("at_gr1", "croissance annuelle du total des actifs (conservatrices − agressives)"),
-    "MOM": ("ret_12_1", "rendement de t−12 à t−1 (gagnantes − perdantes)"),
+    "SMB": ("market_equity", "market capitalisation (small − big)"),
+    "HML": ("be_me", "book equity / market equity (value − growth)"),
+    "RMW": ("ope_be", "operating profit / book equity (robust − weak)"),
+    "CMA": ("at_gr1", "annual growth in total assets (conservative − aggressive)"),
+    "MOM": ("ret_12_1", "return from t−12 to t−1 (winners − losers)"),
 }
 JKP_MIN_STOCKS = 30  # en dessous, le facteur repose sur trop peu de titres par jambe
 FRENCH_FILES = {
@@ -125,12 +125,12 @@ MAX_MONTH_END_GAP_DAYS = 5
 HTTP_HEADERS = {"User-Agent": "empirical-asset-pricing-pipeline/1.0 (academic research)"}
 
 LICENSES = {
-    "yahoo": "Yahoo Finance — conditions d'utilisation restrictives (usage personnel). Seuls des rendements mensuels dérivés sont publiés ; vérifier la conformité avant diffusion publique.",
-    "six": "Données d'indices SIX (SPI, SARON) — propriété de SIX Index AG ; la diffusion publique de données d'indices peut nécessiter une licence. À vérifier.",
-    "snb": "Portail de données BNS (data.snb.ch) — données publiques, citer la source.",
-    "french": "Kenneth R. French Data Library — usage libre avec citation.",
-    "jkp": "Global Factor Data (jkpfactors.com), Jensen, Kelly et Pedersen (2023) — données académiques gratuites, usage non commercial, citation requise.",
-    "fred": "FRED, Federal Reserve Bank of St. Louis (H.10) — citer la source.",
-    "swissfunddata": "Swiss Fund Data (SIX Financial Information AG / AMAS), données publiques soumises aux conditions du site — seuls des rendements mensuels dérivés sont publiés ; vérifier les conditions d'utilisation avant diffusion publique.",
-    "gerifonds": "Gérifonds SA (filiale de la BCV), page publique du fonds — seuls des rendements mensuels dérivés sont publiés ; vérifier les conditions d'utilisation avant diffusion publique.",
+    "yahoo": "Yahoo Finance — restrictive terms of use (personal use). Only derived monthly returns are published; check compliance before public distribution.",
+    "six": "SIX index data (SPI, SARON) — property of SIX Index AG; public distribution of index data may require a licence. To be checked.",
+    "snb": "SNB data portal (data.snb.ch) — public data, cite the source.",
+    "french": "Kenneth R. French Data Library — free use with citation.",
+    "jkp": "Global Factor Data (jkpfactors.com), Jensen, Kelly and Pedersen (2023) — free academic data, non-commercial use, citation required.",
+    "fred": "FRED, Federal Reserve Bank of St. Louis (H.10) — cite the source.",
+    "swissfunddata": "Swiss Fund Data (SIX Financial Information AG / AMAS), public data subject to the site's terms — only derived monthly returns are published; check the terms of use before public distribution.",
+    "gerifonds": "Gérifonds SA (BCV subsidiary), public fund page — only derived monthly returns are published; check the terms of use before public distribution.",
 }
