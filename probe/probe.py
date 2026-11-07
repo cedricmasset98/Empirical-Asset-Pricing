@@ -1,38 +1,39 @@
-"""Sonde 3 : swissfunddata.ch, accès investisseur privé, fiche du fonds et historique."""
-import re
-import requests
+"""Sonde 4 : swissfunddata.ch fiche 16291, export Excel et données du graphique."""
+import io, re
+import pandas as pd, requests
 
 H = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"}
 s = requests.Session(); s.headers.update(H)
 B = "https://www.swissfunddata.ch"
+r = s.get(B + "/sfdpub/sfd-eingang/private?url=%2Fde%2Ffunds%2Fshow%2F16291", timeout=40)
+s.post(B + "/sfdpub/sfd-eingang/private?url=%2Fde%2Ffunds%2Fshow%2F16291", data={"_action_set": "einverstanden"}, timeout=40)
 
-def links(t, pat):
-    return sorted(set(a for a in re.findall(r'(?:href|src|data-url|action)="([^"]+)"', t) if re.search(pat, a, re.I)))
+x = s.get(B + "/sfdpub/de/funds/excelData/16291", timeout=60)
+print("excel", x.status_code, x.headers.get("content-type"), x.headers.get("content-disposition"), len(x.content))
+print(x.content[:300])
+for eng in (None, "openpyxl", "xlrd"):
+    try:
+        df = pd.read_excel(io.BytesIO(x.content), engine=eng, header=None)
+        print("read_excel", eng, df.shape); print(df.head(15).to_string()); print(df.tail(8).to_string()); break
+    except Exception as e:
+        print("read_excel", eng, "erreur", e)
+try:
+    df = pd.read_csv(io.BytesIO(x.content), sep=None, engine="python", header=None, encoding="latin-1")
+    print("csv", df.shape); print(df.head(15).to_string()); print(df.tail(8).to_string())
+except Exception as e:
+    print("csv erreur", e)
 
-r = s.get(B + "/sfdpub/sfd-eingang/private?url=%2Fde%2Ffunds%2Fsearch%3Ftext%3DCH0011980981", timeout=40)
-print("status", r.status_code, r.url, len(r.text))
-for _ in range(3):
-    forms = re.findall(r"<form[^>]*action=\"([^\"]+)\"[^>]*>(.*?)</form>", r.text, flags=re.S | re.I)
-    acc = [(a, b) for a, b in forms if "_action_set" in b]
-    if not acc:
-        break
-    a, b = acc[0]
-    data = dict(re.findall(r'<input[^>]*type="hidden"[^>]*name="([^"]+)"[^>]*value="([^"]*)"', b))
-    data["_action_set"] = re.search(r'name="_action_set" value="([^"]+)"', b).group(1)
-    print("POST", a, data)
-    r = s.post(B + a.replace("&amp;", "&"), data=data, timeout=40)
-    print("status", r.status_code, r.url, len(r.text))
-r = s.get(B + "/sfdpub/de/funds/overview", params={"text": "CH0011980981", "search": "Suchen"}, timeout=40)
-print("overview", r.status_code, r.url, len(r.text))
-L = links(r.text, r"funds/")
-print("liens fonds:", L[:40])
-txt = re.sub(r"<[^>]+>", " ", r.text); txt = re.sub(r"\s+", " ", txt)
-i = txt.find("Swiss Stock"); print("extrait:", txt[max(0, i - 300): i + 600])
-cand = [a for a in L if re.search(r"/funds/(show|detail|view|\\d)", a)]
-for a in cand[:4]:
-    u = a if a.startswith("http") else B + a
-    p = s.get(u, timeout=40); print("\n== fiche", u, p.status_code, len(p.text))
-    t2 = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", p.text))
-    print(t2[:1500])
-    for x in links(p.text, r"price|preis|kurs|export|excel|csv|xls|histor|chart|json|nav|distribution|ausschuett"):
-        print("  lien:", x)
+p = s.get(B + "/sfdpub/de/funds/show/16291", timeout=60)
+t = p.text
+print("show", p.status_code, len(t))
+for m in re.finditer(r"(data|series)\s*:\s*\[\s*\[", t):
+    print("série à", m.start(), t[m.start():m.start() + 300])
+for kw in ["Ausschüttung", "Ausschuettung", "Ex-Datum", "Ex-Date", "Inventarwert", "NAV", "TER", "Benchmark", "Lancierung"]:
+    for m in list(re.finditer(kw, t))[:2]:
+        print(kw, "→", re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t[m.start() - 100:m.start() + 400])))
+c = s.get(B + "/sfdpub/de/funds/chart/16291", timeout=60)
+print("chart", c.status_code, len(c.text))
+for m in re.finditer(r"(data|series)\s*:\s*\[", c.text):
+    print("chart série", c.text[m.start():m.start() + 300])
+for u in re.findall(r'["\'](/sfdpub/[^"\']*(?:json|data|chart)[^"\']*)["\']', c.text)[:30]:
+    print(" url:", u)
