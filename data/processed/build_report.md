@@ -1,6 +1,6 @@
 # Rapport de construction des données
 
-Généré le 2026-11-07T09:04:15Z
+Généré le 2026-11-07T17:21:47Z
 
 ## Sources
 
@@ -15,6 +15,7 @@ Généré le 2026-11-07T09:04:15Z
 | European Fama-French 3 Factors (mensuel, USD, RF = T-bill US 1 mois) | ok | 1990-07 → 2026-09 | Colonnes : Mkt-RF, SMB, HML, RF. |
 | European Fama-French 5 Factors (mensuel, USD, RF = T-bill US 1 mois) | ok | 1990-07 → 2026-09 | Colonnes : Mkt-RF, SMB, HML, RMW, CMA, RF. |
 | European Momentum Factor (mensuel, USD, RF = T-bill US 1 mois) | ok | 1990-11 → 2026-09 | Colonnes : WML. |
+| Facteurs suisses Global Factor Data (JKP) : taille, valeur, rentabilité, investissement, momentum — mensuels, USD | ok | 1986-01 → 2025-12 | Caractéristiques : SMB = market_equity, HML = be_me, RMW = ope_be, CMA = at_gr1, MOM = ret_12_1 ; pondération vw_cap ; dernier mois publié 2025-12. |
 
 ## Contrôles
 
@@ -37,6 +38,8 @@ Généré le 2026-11-07T09:04:15Z
 - **pass** — Plausibilité « total return » du SPI : rendement moyen SPI − SMI (indice de prix) = +2.09% par an sur 431 mois. Indicateur seulement (compositions différentes) ; la nature TR repose sur la définition SIX du SPI.
 - **pass** — SARON quotidien disponible du 2009-08-24 au 2026-10-30 ; rendement mensuel = capitalisation ACT/360.
 - **pass** — Cohérence Mkt−RF et RF entre fichiers FF3 et FF5 : écarts max 0.00e+00 et 0.00e+00.
+- **pass** — Facteurs suisses JKP du 1993-07 au 2025-12 (mois retenus : au moins 30 titres par facteur), convertis en CHF par F_USD(1+s). Publication annuelle : les derniers mois de l'échantillon peuvent manquer.
+- **pass** — Corrélation facteurs suisses JKP / européens Fama-French (USD) : SMB 0.58, HML 0.64, RMW 0.40, CMA 0.34, MOM 0.78. Corrélations modérées attendues : marchés et méthodes différents.
 - **pass** — Facteurs Fama-French européens convertis en CHF : marché = (1+Mkt−RF+RF_US)(1+s)−1, facteurs long-short = F_USD(1+s). Le rendement excédentaire du marché est calculé avec le SARON, jamais avec le RF américain.
 
 ## Couverture des colonnes
@@ -66,3 +69,8 @@ Généré le 2026-11-07T09:04:15Z
 | cma5_chf | 1990-07 | 2026-09 | 435 |
 | wml_usd | 1990-11 | 2026-09 | 431 |
 | wml_chf | 1990-11 | 2026-09 | 431 |
+| smb_ch | 1989-03 | 2025-12 | 442 |
+| hml_ch | 1991-07 | 2025-12 | 414 |
+| rmw_ch | 1993-07 | 2025-12 | 390 |
+| cma_ch | 1992-05 | 2025-12 | 404 |
+| mom_ch | 1990-03 | 2025-12 | 430 |
