@@ -1,6 +1,6 @@
 # Rapport de construction des données
 
-Généré le 2026-11-07T07:22:14Z
+Généré le 2026-11-07T09:04:15Z
 
 ## Sources
 
@@ -8,6 +8,7 @@ Généré le 2026-11-07T07:22:14Z
 |---|---|---|---|
 | BCV (BCVN.SW) — cours ajustés dividendes et opérations sur titres | ok | 2002-12-06 → 2026-11-06 |  |
 | BCV Swiss Equity A (CH0006018706) — performance officielle, distributions réinvesties | ok | 1997-12-31 → 2026-11-05 | 7325 valeurs quotidiennes ; 28 distributions publiées. |
+| Raiffeisen Futura - Swiss Stock A (CH0011980981) — rendement total, distributions réinvesties | ok | 2009-11-23 → 2026-11-05 | 4261 valeurs quotidiennes (VNI et rendement total). |
 | SPI — Swiss Performance Index (SXGE), indice de performance (TR), CHF | ok | 1988-01-04 → 2026-11-06 |  |
 | SARON — fixing quotidien (taux overnight annualisé, %) | ok | 2009-08-24 → 2026-10-30 | Série BNS D0(SARON) « SARON fixing at the close of the trading day » |
 | USD/CHF (CHF par USD), cours de fin de mois | ok | 1980-01-31 → 2026-10-31 | Série BNS devkum D0(M1),D1(USD1) |
@@ -26,6 +27,11 @@ Généré le 2026-11-07T07:22:14Z
 - **pass** — Fonds : 100.00% des 7323 rendements quotidiens de la série officielle retrouvés à partir des VNI et des distributions brutes (tolérance 5e-05) ; VNI des infobulles décalées d'un jour à partir de 2021-09-28 environ, décalage corrigé dans le contrôle.
 - **pass** — Fonds : les 28 distributions publiées sont incluses une et une seule fois, au montant brut (dernière : 2026-07-21, 5.70 CHF).
 - **pass** — Fonds : performance YTD recalculée 15.56% contre 15.56% publiée par Gérifonds au 2026-11-05.
+- **warn** — Fonds Raiffeisen : 1 mois écartés (dernière observation à plus de 5 jours de la fin du mois) : 2026-11
+- **pass** — Fonds Raiffeisen : « Chart Price » identique à la VNI publiée.
+- **pass** — Fonds Raiffeisen : hors distributions, rendement total = rendement de la VNI pour 100.00% des 4260 jours.
+- **pass** — Fonds Raiffeisen : 14 distributions implicites (dernières : 2021-06-24 : 3.80, 2022-11-04 : 3.70, 2023-11-06 : 5.20, 2024-11-07 : 4.50, 2025-11-05 : 4.50, 2026-09-02 : 4.60).
+- **pass** — Fonds Raiffeisen : TER publié 1.20% au 2026-06-30.
 - **pass** — SPI : historique data/history/spi_tr_history.csv raccordé à ^SSHI après contrôle de concordance — 3061 séances communes (2013-03-05 → 2025-05-16) ; ratio médian 1.00000, dérive +0.000%, jours divergents 0.03%
 - **warn** — SPI : 1 mois écartés (dernière observation à plus de 5 jours de la fin du mois) : 2026-11
 - **pass** — Plausibilité « total return » du SPI : rendement moyen SPI − SMI (indice de prix) = +2.09% par an sur 431 mois. Indicateur seulement (compositions différentes) ; la nature TR repose sur la définition SIX du SPI.
@@ -39,6 +45,7 @@ Généré le 2026-11-07T07:22:14Z
 |---|---|---|---|
 | bcv_ret | 2003-01 | 2026-10 | 286 |
 | fund_ret | 1998-01 | 2026-10 | 346 |
+| raif_ret | 2009-12 | 2026-10 | 203 |
 | spi_ret | 1988-02 | 2026-10 | 465 |
 | rf_saron | 2009-09 | 2026-10 | 206 |
 | fx_usdchf_ret | 1988-02 | 2026-10 | 465 |
