@@ -30,7 +30,7 @@ class TestReport(unittest.TestCase):
         # chaque macro utilisée par le gabarit est définie
         import re
         used = set(re.findall(r"\\([A-Z][A-Za-z]+)", (ROOT / "report" / "rapport.tex").read_text()))
-        self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE"}), [])
+        self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE", "Rightarrow"}), [])
 
     def test_fund_and_pair_templates(self):
         import re
@@ -49,7 +49,7 @@ class TestReport(unittest.TestCase):
         self.assertTrue({"fig_pair_perf.pdf", "fig_pair_nuages.pdf", "fig_pair_alphas.pdf", "tab_pair_models.tex", "tab_sources.tex"} <= names)
         for tpl, m in (("rapport_fonds.tex", m_fund), ("rapport_comparaison.tex", m_pair)):
             used = set(re.findall(r"\\([A-Z][A-Za-z]+)", (ROOT / "report" / tpl).read_text()))
-            self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE"}), [], tpl)
+            self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE", "Rightarrow"}), [], tpl)
         # l'écart d'alpha de la comparaison = différence des alphas
         r = report_pair.compute_pair(ds)
         F = r["fits"]
@@ -70,7 +70,7 @@ class TestReport(unittest.TestCase):
         self.assertEqual(m["ExV"], "150")
         self.assertEqual(m["ExReImpl"], "12,5~\\%")
         used = set(re.findall(r"\\([A-Z][A-Za-z]+)", (ROOT / "report" / "rapport_valorisation.tex").read_text()))
-        self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE"}), [])
+        self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE", "Rightarrow"}), [])
 
     def test_formatting(self):
         self.assertEqual(report.num(-0.0012, 2), "0,00")

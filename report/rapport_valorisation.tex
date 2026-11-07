@@ -1,8 +1,8 @@
 % =============================================================================
-% Empirical Asset Pricing — rapport de synthèse sur l'action BCV
+% Empirical Asset Pricing — note sur le processus de gestion actions suisses de la BCV
 % Gabarit : seul le texte est écrit ici. Tous les nombres proviennent de
-% generated/macros.tex et des tableaux/figures produits par pipeline/report.py.
-% Compilation : latexmk -xelatex rapport.tex
+% generated/macros.tex et des tableaux/figures produits par pipeline/report_valuation.py.
+% Compilation : latexmk -xelatex rapport_valorisation.tex
 % =============================================================================
 \documentclass[11pt,a4paper]{article}
 
@@ -39,6 +39,8 @@
   fonttitle=\bfseries,title=L'essentiel}
 \newtcolorbox{attention}[1]{colback=orange!5,colframe=orange,boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
   fonttitle=\bfseries,title=#1}
+\newtcolorbox{source}{colback=gray!6,colframe=gray!60,boxrule=0.5pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
+  fonttitle=\bfseries\color{black},title=D'où vient cette description ?}
 \newtcolorbox{lexique}{colback=gray!6,colframe=gray!60,boxrule=0.5pt,arc=2pt,left=8pt,right=8pt,top=5pt,bottom=5pt,
   fonttitle=\bfseries\color{black},title=Lexique}
 
@@ -46,19 +48,19 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small\color{gris} Empirical Asset Pricing — Processus de sélection des actions}
+\fancyhead[L]{\small\color{gris} Empirical Asset Pricing — Processus de gestion actions suisses}
 \fancyhead[R]{\small\color{gris} \DateRapport}
 \fancyfoot[C]{\small\thepage}
 \renewcommand{\headrulewidth}{0.3pt}
 
-\hypersetup{pdftitle={Comment les gérants de la BCV choisissent-ils leurs actions ?},pdfauthor={Empirical Asset Pricing},pdflang=fr}
+\hypersetup{pdftitle={Comment la BCV gère-t-elle ses fonds en actions suisses ?},pdfauthor={Empirical Asset Pricing},pdflang=fr}
 
 \begin{document}
 
 \begin{center}
   {\small\color{gris} EMPIRICAL ASSET PRICING · NOTE PÉDAGOGIQUE}\\[6pt]
-  {\LARGE\bfseries Comment les gérants de la BCV choisissent-ils leurs actions ?}\\[4pt]
-  {\large Multiples, modèle Edwards-Bell-Ohlson et ce qu'en dit la performance du fonds}\\[8pt]
+  {\LARGE\bfseries Comment la BCV gère-t-elle ses fonds en actions suisses ?}\\[4pt]
+  {\large Scénario macroéconomique, trois analyses, gestion du risque\\et ce qu'en dit la performance du fonds BCV Swiss Equity}\\[8pt]
   {\small Fonds BCV Swiss Equity A (CH0006018706) · résultats empiriques \PeriodeDebut{} – \PeriodeFin{}}\\[2pt]
   {\small\color{gris} Note générée automatiquement le \DateRapport{} à partir des données du \DateDonnees{} · version \texttt{\Commit}}
 \end{center}
@@ -67,30 +69,74 @@
 
 \begin{essentiel}
 \begin{enumerate}[leftmargin=*,label=\textbf{\arabic*.}]
-  \item \textbf{La démarche.} Les gérants passent d'abord au crible plus de 200 actions à l'aide de multiples (P/E, P/B, EV/EBITDA, rendement du dividende). Ils estiment ensuite une valeur intrinsèque avec le modèle Edwards-Bell-Ohlson (EBO). Enfin, ils comparent cette valeur au prix de marché pour décider des surpondérations.
-  \item \textbf{L'idée clé du modèle EBO.} Une entreprise crée de la valeur lorsque ses bénéfices dépassent le rendement que ses actionnaires exigent sur leurs fonds propres.
-  \item \textbf{Un outil sensible.} La valeur obtenue dépend fortement des hypothèses, en particulier du rendement exigé. Un écart entre prix et valeur n'est pas une certitude de gain.
-  \item \textbf{Ce que montre le fonds.} Face au SPI, le fonds a un bêta de \FdsBeta{}, un $R^2$ de \FdsRDeuxPct{} et un alpha net de frais de \FdsAlphaA{} par an. Le processus produit un portefeuille très proche de son indice.
-  \item \textbf{La question ouverte.} Si l'analyse fondamentale identifie des actions mal évaluées, pourquoi le rendement ajusté du risque, après frais, n'est-il pas supérieur à celui du marché ? Plusieurs explications sont plausibles, et l'analyse empirique ne permet pas de trancher entre elles.
+  \item \textbf{Une démarche en plusieurs étages.} La BCV part de son scénario macroéconomique pour orienter l'allocation par secteur, par taille d'entreprise et par thème. Trois analyses alimentent ensuite le choix des titres : qualitative (rencontres avec les dirigeants), fondamentale (ratios de valorisation et modèle Edwards-Bell-Ohlson) et comportementale (tendances de cours). Les poids sont enfin fixés sous contrôle du risque par rapport au SPI.
+  \item \textbf{La valorisation.} Le modèle Edwards-Bell-Ohlson (EBO) estime un prix théorique : une entreprise vaut plus que ses fonds propres si elle gagne davantage que le rendement exigé par ses actionnaires. Cette valeur est très sensible aux hypothèses.
+  \item \textbf{Une gestion « relative ».} L'objectif est de battre le SPI à long terme en maîtrisant en permanence les écarts par rapport à cet indice.
+  \item \textbf{Ce que montre le fonds.} Face au SPI, le fonds a un bêta de \FdsBeta{}, un $R^2$ de \FdsRDeuxPct{} et un alpha net de frais de \FdsAlphaA{} par an. Le portefeuille est très proche de l'indice, \MomCourt{}.
+  \item \textbf{La question ouverte.} Pourquoi ce processus riche ne se traduit-il pas par un rendement ajusté du risque supérieur à celui du marché, après frais ? Plusieurs explications sont plausibles ; l'analyse empirique ne permet pas de trancher entre elles.
 \end{enumerate}
 \end{essentiel}
+
+\begin{source}\small
+Cette note s'appuie sur une brochure commerciale de la BCV, « Gestion actions suisses — Investir sur le marché suisse avec les fonds BCV » (janvier 2021). Elle décrit l'approche de gestion développée par l'équipe Asset Management de la BCV pour sa clientèle institutionnelle et utilisée par ses trois fonds en actions suisses : BCV Swiss Equity, BCV Swiss Equity Dividend Select et BCV Swiss Small \& Mid Caps Equity. Il s'agit donc d'une méthodologie \emph{générale} de la banque, et non d'une description détaillée propre au fonds étudié ; elle a pu évoluer depuis 2021. La brochure ne précise ni les ratios exacts utilisés, ni les paramètres du modèle de valorisation, ni la formule de pondération. Les exemples chiffrés de cette note sont \textbf{fictifs} : ils illustrent les méthodes et ne décrivent aucune entreprise réelle.
+\end{source}
 
 % -----------------------------------------------------------------------------
 \section{Le problème du gérant}
 
-Un fonds actions géré activement cherche à faire mieux que son indice de référence, ici le SPI. Il ne peut y parvenir qu'en s'écartant de l'indice : il détient davantage les actions qu'il juge sous-évaluées et moins celles qu'il juge surévaluées. Tout le travail consiste donc à repérer les écarts entre le \emph{prix} d'une action, fixé par le marché, et sa \emph{valeur}, estimée par l'analyste.
+Un fonds actions géré activement cherche à faire mieux que son indice de référence, ici le SPI (Swiss Performance Index, plus de 200 sociétés). Il ne peut y parvenir qu'en s'écartant de l'indice : il détient davantage les secteurs et les actions qu'il juge prometteurs, et moins ceux qu'il juge peu attractifs.
 
-D'après la description de leur processus, les gestionnaires de la BCV combinent pour cela deux approches complémentaires : une comparaison de multiples, rapide et applicable à tout l'univers, puis une valorisation intrinsèque plus approfondie fondée sur le modèle Edwards-Bell-Ohlson. Les exemples chiffrés ci-dessous sont \textbf{fictifs} : ils illustrent la méthode et ne décrivent aucune entreprise réelle.
+La BCV qualifie sa gestion de \textbf{« relative »} : les gérants partent de l'indice et décident quels secteurs et quelles entreprises sur- ou sous-pondérer. L'objectif affiché est une surperformance à long terme, en privilégiant la performance ajustée du risque et en surveillant en permanence les écarts d'allocation par rapport à l'indice.
 
 % -----------------------------------------------------------------------------
-\section{Première étape : passer plus de 200 actions au crible}
+\section{Vue d'ensemble du processus}
 
-Un multiple rapporte le prix d'une action à une grandeur comptable. Il permet de comparer rapidement des entreprises de tailles différentes.
+\begin{center}
+\begin{tikzpicture}[node distance=5mm and 4mm,
+  box/.style={draw=bleu, fill=bleu!6, rounded corners=2pt, text width=3.9cm, align=center, minimum height=2.05cm, font=\small},
+  wide/.style={draw=bleu, fill=bleu!14, rounded corners=2pt, text width=12.6cm, align=center, minimum height=1.0cm, font=\small},
+  arr/.style={-{Stealth[length=2.2mm]}, thick, color=gris}]
+  \node[wide] (macro) {\textbf{Scénario macroéconomique}\\[1pt]croissance, inflation, taux de change, taux d'intérêt $\Rightarrow$ allocation par secteur, taille et thème};
+  \node[box, below=of macro] (fond) {\textbf{Analyse fondamentale}\\[1pt]ratios de valorisation, prix théorique (modèle EBO)};
+  \node[box, left=of fond] (qual) {\textbf{Analyse qualitative}\\[1pt]visites, dirigeants, stratégie, position concurrentielle};
+  \node[box, right=of fond] (comp) {\textbf{Analyse comportementale}\\[1pt]tendances de cours, signaux d'achat et de vente};
+  \node[wide, below=of fond] (risk) {\textbf{Gestion du risque et construction du portefeuille}\\[1pt]poids fixés selon le risque (écart à l'indice) et la performance attendue};
+  \draw[arr] (macro) -- (qual); \draw[arr] (macro) -- (fond); \draw[arr] (macro) -- (comp);
+  \draw[arr] (qual) -- (risk); \draw[arr] (fond) -- (risk); \draw[arr] (comp) -- (risk);
+\end{tikzpicture}
+\end{center}
+
+Les sections suivantes présentent chaque bloc. L'analyse fondamentale, qui repose sur un modèle de valorisation explicite, est développée plus en détail.
+
+% -----------------------------------------------------------------------------
+\section{Le scénario macroéconomique}
+
+Le processus débute par le scénario macroéconomique de la BCV : croissance, inflation, taux de change et taux d'intérêt. Il sert à définir l'allocation par \emph{secteur d'activité}, par \emph{capitalisation} (grandes ou petites entreprises) et par \emph{thème}, selon la phase du cycle économique. Par exemple, une phase de reprise peut favoriser les secteurs cycliques comme l'industrie, une phase de ralentissement les secteurs défensifs comme la santé ou l'alimentation.
+
+Ces décisions d'allocation forment une première source possible de surperformance, distincte du choix des titres à l'intérieur de chaque secteur.
+
+% -----------------------------------------------------------------------------
+\section{L'analyse qualitative : choisir les meilleurs modèles d'affaires}
+
+Les gérants rencontrent fréquemment les dirigeants des entreprises (directeurs généraux et financiers) : la brochure mentionne plus de 100 rencontres par an. Ils évaluent notamment :
+\begin{itemize}[leftmargin=*]
+  \item la stratégie de la société et la qualité de sa direction ;
+  \item les conditions-cadres, les barrières à l'entrée, le risque technologique et l'innovation dans le secteur et dans l'entreprise ;
+  \item les positions de marché, la comparaison avec les concurrents et la probabilité d'une fusion ou d'un rachat.
+\end{itemize}
+Cette analyse ne produit pas de chiffre : elle sert à juger la solidité d'une entreprise et à générer des idées d'investissement. Elle nourrit aussi les hypothèses de l'analyse fondamentale (croissance des bénéfices, durée de l'avantage concurrentiel).
+
+% -----------------------------------------------------------------------------
+\section{L'analyse fondamentale : estimer la valeur}
+
+\subsection{Passer plus de 200 actions au crible}
+
+L'analyse fondamentale commence par un examen quantitatif de toutes les actions de l'univers d'investissement, plus de 200 titres, à l'aide de ratios de valorisation. Un ratio de ce type (un \emph{multiple}) rapporte le prix d'une action à une grandeur comptable. La brochure ne précise pas lesquels sont utilisés ; le tableau présente les plus courants.
 
 \begin{center}\small
 \begin{tabularx}{\textwidth}{@{}lX@{}}
 \toprule
-Ratio & Ce qu'il mesure \\
+Ratio usuel & Ce qu'il mesure \\
 \midrule
 P/E (cours / bénéfice) & Combien les investisseurs paient pour 1~CHF de bénéfice annuel \\
 P/B (cours / valeur comptable) & Combien ils paient pour 1~CHF de fonds propres comptables \\
@@ -100,22 +146,21 @@ Rendement du dividende & Dividende annuel rapporté au cours de l'action \\
 \end{tabularx}
 \end{center}
 
-Les gérants procèdent ensuite à deux comparaisons. Prenons une entreprise fictive, \emph{Entreprise~A}, qui se négocie à un P/E de 17 :
+Deux comparaisons permettent ensuite d'établir une valorisation \emph{relative} et une valorisation \emph{absolue}. Prenons une entreprise fictive, \emph{Entreprise~A}, qui se négocie à un P/E de 17 :
 \begin{itemize}[leftmargin=*]
   \item \textbf{comparaison historique} : si sa moyenne historique est de 22, l'action paraît bon marché par rapport à son passé ;
-  \item \textbf{comparaison sectorielle} : si des entreprises comparables se négocient à 21, elle paraît aussi bon marché par rapport à ses concurrentes.
+  \item \textbf{comparaison intrasectorielle} : si des entreprises comparables du même secteur se négocient à 21, elle paraît aussi bon marché par rapport à ses concurrentes.
 \end{itemize}
 
-Ces signaux ne suffisent pas à conclure à une sous-évaluation. Un multiple plus bas peut être parfaitement justifié par une croissance plus faible, une rentabilité moindre ou un risque plus élevé. Le marché peut avoir raison. C'est pourquoi les multiples servent surtout à \emph{repérer} des candidats, qui sont ensuite analysés en profondeur.
+Ces signaux ne suffisent pas à conclure à une sous-évaluation. Un multiple plus bas peut être justifié par une croissance plus faible, une rentabilité moindre ou un risque plus élevé. Le marché peut avoir raison. C'est pourquoi la valeur de l'entreprise est aussi estimée avec un modèle.
 
-% -----------------------------------------------------------------------------
-\section{Deuxième étape : estimer la valeur intrinsèque avec le modèle EBO}
+\subsection{Le modèle Edwards-Bell-Ohlson}
 
-Le modèle Edwards-Bell-Ohlson, aussi appelé modèle du \emph{bénéfice résiduel} (\emph{residual income}), part des fonds propres comptables de l'entreprise et y ajoute la valeur des bénéfices « en excès » attendus :
+La BCV compare la valeur actuelle de chaque société à un prix théorique calculé avec le modèle Edwards-Bell-Ohlson, aussi appelé modèle du \emph{bénéfice résiduel} (\emph{residual income}). Il part des fonds propres comptables de l'entreprise et y ajoute la valeur des bénéfices « en excès » attendus :
 \[
   \boxed{\;V_0 \;=\; B_0 \;+\; \sum_{t=1}^{\infty} \frac{\mathbb{E}\big[\,NI_t - r_e\,B_{t-1}\,\big]}{(1+r_e)^t}\;}
 \]
-où $V_0$ est la valeur intrinsèque par action aujourd'hui, $B_0$ la valeur comptable des fonds propres, $NI_t$ le bénéfice net de l'année $t$, $r_e$ le rendement exigé par les actionnaires et $NI_t - r_e B_{t-1}$ le \textbf{bénéfice résiduel}.
+où $V_0$ est la valeur intrinsèque par action aujourd'hui, $B_0$ la valeur comptable des fonds propres, $NI_t$ le bénéfice net de l'année $t$, $r_e$ le rendement exigé par les actionnaires et $NI_t - r_e B_{t-1}$ le \textbf{bénéfice résiduel}. C'est la forme standard du modèle ; la brochure n'en détaille pas la mise en œuvre.
 
 \paragraph{L'intuition.} Les actionnaires ont confié $B_{t-1}$ francs à l'entreprise et en attendent un rendement $r_e$. Le bénéfice résiduel est ce que l'entreprise gagne \emph{au-delà} de ce rendement attendu. Une entreprise qui gagne exactement $r_e$ sur ses fonds propres ne crée aucune valeur supplémentaire : elle vaut sa valeur comptable. Une entreprise qui gagne davantage vaut plus que ses fonds propres. Une entreprise qui gagne moins vaut moins.
 
@@ -135,8 +180,7 @@ où $V_0$ est la valeur intrinsèque par action aujourd'hui, $B_0$ la valeur com
   \label{fig:sens}
 \end{figure}
 
-% -----------------------------------------------------------------------------
-\section{Troisième étape : comparer le prix à la valeur}
+\subsection{Comparer le prix à la valeur}
 
 Supposons que l'action de l'entreprise fictive cote \ExPrix{}~CHF :
 
@@ -144,37 +188,57 @@ Supposons que l'action de l'entreprise fictive cote \ExPrix{}~CHF :
 \begin{tabular}{@{}lr@{}}
 \toprule
 Prix de marché & \ExPrix~CHF \\
-Valeur intrinsèque EBO (r = \ExRe) & \ExV~CHF \\
+Prix théorique EBO (r = \ExRe) & \ExV~CHF \\
 Potentiel estimé & +\ExPotentiel \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-Le gérant pourrait considérer l'action comme sous-évaluée, sous réserve de la fiabilité de ses hypothèses et du risque associé. Ce potentiel n'est pas une prévision de rendement annuel : il mesure l'écart entre le prix et la valeur estimée. Rien ne dit quand, ni même si, cet écart se résorbera.
+L'action paraît sous-évaluée, sous réserve de la fiabilité des hypothèses et du risque associé. Ce potentiel n'est pas une prévision de rendement annuel : il mesure l'écart entre le prix et la valeur estimée. Rien ne dit quand, ni même si, cet écart se résorbera.
 
 On peut aussi lire l'écart à l'envers. Le prix de \ExPrix{}~CHF équivaut à un rendement exigé implicite de \ExReImpl{} : le marché n'est peut-être pas « dans l'erreur », il juge simplement l'entreprise plus risquée que l'analyste. Toute la question est de savoir qui a raison.
 
 % -----------------------------------------------------------------------------
-\section{Quatrième étape : de l'analyse à la pondération}
+\section{L'analyse comportementale : suivre les tendances du marché}
 
-La description du processus ne précise pas comment les valorisations se traduisent en poids dans le portefeuille. Une séquence plausible est la suivante :
+Le troisième outil ne regarde pas les comptes des entreprises, mais l'évolution des cours. Un processus automatisé repère les tendances haussières ou baissières. Il fournit des signaux d'achat et de vente à court terme et des tendances à moyen terme pour :
+\begin{itemize}[leftmargin=*]
+  \item les secteurs économiques ;
+  \item les styles d'investissement : grandes ou petites capitalisations, actions à bêta élevé ou faible ;
+  \item les titres individuels.
+\end{itemize}
+Cet outil sert surtout à repérer les retournements de tendance et à choisir le moment d'entrer dans une position ou d'en sortir. Il complète l'analyse fondamentale : une action peut sembler sous-évaluée depuis longtemps sans que son cours ne remonte, et les tendances aident à choisir le moment d'agir.
 
-\begin{center}
-\begin{tikzpicture}[node distance=4mm and 3mm, box/.style={draw=bleu, fill=bleu!6, rounded corners=2pt, text width=2.7cm, align=center, minimum height=1.25cm, font=\small}, arr/.style={-{Stealth[length=2.2mm]}, thick, color=gris}]
-  \node[box] (a) {\textbf{Multiples}\\[1pt]repérer les actions potentiellement attractives};
-  \node[box, right=of a] (b) {\textbf{Valorisation EBO}\\[1pt]estimer une valeur intrinsèque};
-  \node[box, right=of b] (c) {\textbf{Potentiel et risques}\\[1pt]évaluer l'intérêt de chaque titre};
-  \node[box, right=of c] (d) {\textbf{Pondération}\\[1pt]sur- et sous-pondérer par rapport au SPI};
-  \draw[arr] (a) -- (b); \draw[arr] (b) -- (c); \draw[arr] (c) -- (d);
-\end{tikzpicture}
+\paragraph{Le lien avec le facteur momentum.} En finance empirique, la tendance des actions à prolonger leur performance récente s'appelle le \emph{momentum}. Le modèle de Carhart, l'un des modèles du site, mesure l'exposition d'un portefeuille à ce facteur. \MomPhrase{} Sur la période, le facteur momentum utilisé a rapporté environ \CarMomPrime{} par an ; avec un coefficient de \CarMom{}, cette exposition n'a donc ajouté qu'environ \CarMomContrib{} par an au rendement du fonds. Cette mesure est imparfaite : le facteur momentum disponible est européen (converti en francs), et non spécifique au marché suisse.
+
+% -----------------------------------------------------------------------------
+\section{La gestion du risque et la construction du portefeuille}
+
+Les trois analyses se combinent pour choisir les secteurs, titres et styles à privilégier, repérer les retournements de tendance et déterminer les points d'entrée et de sortie. Le \textbf{poids} de chaque titre est ensuite déterminé par deux éléments : son impact sur le risque, mesuré par l'écart par rapport à l'indice, et sa performance attendue.
+
+Le risque d'un fonds géré de manière relative se mesure par l'\emph{écart de suivi} (\emph{tracking error}) : la volatilité de la différence de rendement entre le fonds et son indice. Plus une position s'écarte du poids de l'indice, plus elle augmente cet écart. Le gérant doit donc arbitrer entre conviction et risque relatif : une forte conviction peut justifier un gros écart de poids, une conviction faible seulement un petit. La brochure ne publie pas la formule utilisée pour cet arbitrage.
+
+\noindent\begin{minipage}{\textwidth}
+La brochure décrit également un suivi du risque à plusieurs fréquences :
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Fréquence & Contrôle \\
+\midrule
+Quotidien & Les gérants suivent le portefeuille, analysent la contribution à la performance (allocation sectorielle et sélection de titres) et les indicateurs techniques. \\
+Bimensuel & Revue de performance avec le responsable de la gestion Actions : principaux biais (titres, secteurs) et facteurs de risque. \\
+Mensuel & Rapport de performance et de risque rédigé par une équipe indépendante, destiné au chef du département Asset Management. \\
+Trimestriel & Séance avec Gérifonds, la direction du fonds : performance, risque et respect des exigences réglementaires. \\
+\bottomrule
+\end{tabularx}
 \end{center}
-
-La dernière étape fait généralement intervenir un contrôle du risque par rapport à l'indice, mesuré par l'\emph{écart de suivi} (\emph{tracking error}) : la volatilité de la différence de rendement entre le fonds et son indice. Le recours à une optimisation sous contrainte de tracking error est plausible, mais il n'est pas confirmé par la description du processus.
+\end{minipage}
 
 % -----------------------------------------------------------------------------
 \section{Ce que dit la performance du fonds}
 
-Notre analyse empirique ne juge pas la qualité des valorisations elles-mêmes. Elle mesure le \emph{résultat final} du processus de gestion : le fonds a-t-il obtenu, sur \Annees{} ans (\PeriodeDebut{} – \PeriodeFin), un rendement supérieur à ce que son exposition au marché laissait attendre ?
+Notre analyse empirique ne juge ni la qualité des valorisations ni celle des décisions d'allocation, prises une à une. Elle mesure le \emph{résultat final} de l'ensemble du processus : le fonds a-t-il obtenu, sur \Annees{} ans (\PeriodeDebut{} – \PeriodeFin), un rendement supérieur à ce que son exposition au marché laissait attendre ?
 
 \begin{center}\small
 \begin{tabular}{@{}lr@{}}
@@ -185,11 +249,12 @@ Bêta face au SPI & \FdsBeta \\
 $R^2$ & \FdsRDeuxPct \\
 Écart de suivi approché (volatilité résiduelle annualisée) & \FdsTE \\
 Alpha annualisé, net de frais (Newey-West) & \FdsAlphaA{} \;[\FdsAlphaLo{} ; \FdsAlphaHi] \\
+Exposition au momentum (Carhart) & \CarMom{} \;($z$ = \CarMomZ) \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\TensionPhrase{} : le marché explique \FdsRDeuxPct{} de ses fluctuations mensuelles, et l'écart de suivi n'est que de \FdsTE{} par an. Ce n'est pas contradictoire avec une gestion active. Les gérants peuvent sélectionner des titres et ajuster leurs poids tout en restant très proches de l'indice. Mais leurs convictions ne s'expriment alors que par de petits écarts de pondération.
+\TensionPhrase{} : le marché explique \FdsRDeuxPct{} de ses fluctuations mensuelles, et l'écart de suivi n'est que de \FdsTE{} par an. C'est cohérent avec une gestion relative qui surveille en permanence les écarts par rapport à l'indice : les convictions des gérants s'expriment par de petits écarts de pondération.
 
 \begin{figure}[h]
   \centering
@@ -197,13 +262,14 @@ Alpha annualisé, net de frais (Newey-West) & \FdsAlphaA{} \;[\FdsAlphaLo{} ; \F
   \caption{Performance relative du fonds par rapport au SPI Total Return (base 100) : une courbe montante signifie que le fonds fait mieux que l'indice, frais déduits.}
 \end{figure}
 
-L'alpha net de frais est de \FdsAlphaA{} par an, \FdsVerdict{} ($z$ = \FdsZ, \mbox{$p$~\FdsPEq}). \TERPhrase{} \BrutPhrase
+L'alpha net de frais est de \FdsAlphaA{} par an, \FdsVerdict{} ($z$ = \FdsZ, \mbox{$p$~\FdsPEq}). \TERPhrase{} La brochure de 2021 indiquait une commission forfaitaire de gestion de 1,10~\% par an pour la classe~A. \BrutPhrase{} Avec le modèle de Carhart, qui tient compte du momentum, l'alpha net est de \CarAlphaA{} par an, \CarAlphaVerdict{} : la prise en compte des tendances ne fait pas disparaître l'écart avec l'indice.
 
-\paragraph{Pourquoi l'analyse fondamentale ne se traduit-elle pas davantage dans la performance ?} Plusieurs explications sont compatibles avec ces résultats :
+\paragraph{Pourquoi ce processus ne se traduit-il pas davantage dans la performance ?} Plusieurs explications sont compatibles avec ces résultats :
 \begin{itemize}[leftmargin=*]
   \item \textbf{Des valorisations imprécises.} Comme le montre la figure~\ref{fig:sens}, de petites erreurs d'hypothèses suffisent à transformer une action « sous-évaluée » en action correctement évaluée.
   \item \textbf{Des écarts lents à se résorber.} Le marché peut mettre des années à reconnaître une valeur, et le portefeuille doit en attendant supporter le risque de ces positions.
   \item \textbf{Des contraintes de risque.} Un écart de suivi faible limite mécaniquement l'alpha possible. Même un gérant habile ne peut pas gagner beaucoup en s'écartant peu de l'indice.
+  \item \textbf{Des sources qui peuvent se compenser.} Allocation macroéconomique, sélection de titres et signaux de tendance peuvent produire des gains et des pertes qui s'annulent en partie. Notre régression ne mesure que leur effet total ; seule une attribution de performance, avec les positions du fonds, permettrait de les séparer.
   \item \textbf{Un marché concurrentiel.} Les grandes actions suisses sont suivies par de nombreux analystes qui utilisent des méthodes semblables : les écarts faciles à exploiter sont rares.
   \item \textbf{Les frais.} Une partie du surcroît de rendement éventuel est absorbée par les frais de gestion.
 \end{itemize}
@@ -211,9 +277,9 @@ L'alpha net de frais est de \FdsAlphaA{} par an, \FdsVerdict{} ($z$ = \FdsZ, \mb
 % -----------------------------------------------------------------------------
 \section{En résumé}
 
-La démarche de la BCV est classique et solide sur le plan conceptuel : repérer des candidats avec les multiples, puis estimer leur valeur avec un modèle qui relie la création de valeur à la rentabilité des fonds propres. Ses limites sont celles de toute valorisation : la valeur obtenue dépend d'hypothèses incertaines. Un écart avec le prix est une opinion, pas une certitude.
+L'approche décrite par la BCV est complète et classique : un scénario macroéconomique pour l'allocation, des rencontres avec les dirigeants, une valorisation fondée sur un modèle qui relie la création de valeur à la rentabilité des fonds propres, des signaux de tendance pour le choix du moment, et un contrôle du risque par rapport à l'indice. Ses limites sont celles de toute gestion active : la valeur estimée dépend d'hypothèses incertaines et les tendances peuvent se retourner.
 
-Mesuré par le modèle de marché, le résultat du processus est un portefeuille très proche du SPI, dont le rendement ajusté du risque, après frais, ne dépasse pas celui de l'indice sur la période étudiée. L'analyse empirique ne dit pas si les valorisations sont bonnes ou mauvaises. Elle montre que, dans la manière dont elles sont mises en œuvre, elles n'ont pas produit de surcroît de rendement net mesurable pour les porteurs de parts.
+Mesuré par les modèles factoriels, le résultat est un portefeuille très proche du SPI, \MomCourt{}, dont le rendement ajusté du risque, après frais, ne dépasse pas celui de l'indice sur la période étudiée. L'analyse empirique ne dit pas si les analyses des gérants sont bonnes ou mauvaises. Elle montre que, dans la manière dont elles sont mises en œuvre, elles n'ont pas produit de surcroît de rendement net mesurable pour les porteurs de parts.
 
 Les autres analyses (action BCV, fonds, comparaison) sont disponibles sur le site : \URLSite.
 
@@ -225,9 +291,9 @@ Les autres analyses (action BCV, fonds, comparaison) sont disponibles sur le sit
 
 \paragraph{Exemple : formules utilisées.} Bénéfice résiduel constant $RI = (\mathrm{ROE} - r_e)\,B_0$ ; valeur $V_0 = B_0 + RI/r_e$ ; P/B justifié $= \mathrm{ROE}/r_e$ ; rendement exigé implicite au prix $P$ : $r_e^{*} = \mathrm{ROE}\,B_0/P$.
 
-\paragraph{Mesures du fonds.} Single Index Model du fonds contre le SPI Total Return, rendements mensuels nets de frais et distributions réinvesties (série officielle Gérifonds), taux sans risque SARON, erreurs standards de Newey-West. Écart de suivi approché par la volatilité des résidus ($\times\sqrt{12}$). Alpha avant frais approché par alpha net + TER actuel.
+\paragraph{Mesures du fonds.} Single Index Model du fonds contre le SPI Total Return, rendements mensuels nets de frais et distributions réinvesties (série officielle Gérifonds), taux sans risque SARON, erreurs standards de Newey-West. Écart de suivi approché par la volatilité des résidus ($\times\sqrt{12}$). Alpha avant frais approché par alpha net + TER actuel. Modèle de Carhart : marché SPI et facteurs européens SMB, HML et momentum de Kenneth French convertis en francs, échantillon commun aux modèles du site (\CarN{} mois) ; contribution du momentum = coefficient $\times$ rendement moyen annualisé du facteur.
 
-\paragraph{Sources.} Description du processus de gestion : documentation de la BCV, telle que résumée dans cette note. Données du fonds : Gérifonds (performance, distributions, TER). Les exemples d'entreprises sont fictifs.
+\paragraph{Sources.} Processus de gestion : BCV, Asset Management, « Gestion actions suisses — Investir sur le marché suisse avec les fonds BCV », brochure, janvier 2021 (approche commune aux fonds BCV Swiss Equity, BCV Swiss Equity Dividend Select et BCV Swiss Small \& Mid Caps Equity). Données du fonds : Gérifonds (performance, distributions, TER). Les exemples d'entreprises sont fictifs.
 
 \section{Sources des données}
 

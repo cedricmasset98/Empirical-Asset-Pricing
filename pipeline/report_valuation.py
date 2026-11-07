@@ -1,10 +1,12 @@
-"""Rapport « Comment les gérants de la BCV choisissent-ils leurs actions ? »
+"""Rapport « Comment la BCV gère-t-elle ses fonds en actions suisses ? »
 
-Démarche de valorisation (multiples, modèle Edwards-Bell-Ohlson) expliquée sur
-des exemples FICTIFS, puis confrontée à la performance mesurée du fonds BCV Swiss
-Equity A (Single Index Model contre le SPI, Newey-West). Les chiffres d'exemple
-sont calculés ici ; ceux du fonds proviennent des données, comme dans les autres
-rapports.
+Processus de gestion actions suisses décrit par la BCV (brochure « Gestion actions
+suisses », janvier 2021) : scénario macroéconomique, analyses qualitative,
+fondamentale (modèle Edwards-Bell-Ohlson, illustré sur des exemples FICTIFS) et
+comportementale, gestion du risque. Il est confronté à la performance mesurée du
+fonds BCV Swiss Equity A (Single Index Model contre le SPI, Newey-West ; exposition
+au momentum par le modèle de Carhart). Les chiffres d'exemple sont calculés ici ;
+ceux du fonds proviennent des données, comme dans les autres rapports.
 """
 
 from __future__ import annotations
@@ -31,7 +33,12 @@ def compute_valuation(ds: dict) -> dict:
     # TER lu sur la page Gérifonds lors de la construction des données ; à défaut,
     # valeur documentée dans la configuration.
     info = ds.get("fund_info") or {k: C.FUND[k] for k in ("ter", "ter_date") if k in C.FUND}
-    return {"fund": r, "info": info}
+    car = next((c for c in r["comp"] if c["model"] == "CARHART" and c["universe"] == "SPI"), None)
+    if car is not None:
+        _, Xc, dc, _ = R.sample(ds, "CARHART", "SPI", asset="FUND")
+        keep = set(car["dates"])
+        car = {**car, "mom_mean": float(np.mean([Xc[i, 4] for i, d in enumerate(dc) if d in keep]))}
+    return {"fund": r, "info": info, "carhart": car}
 
 
 def write_valuation(ds: dict, res: dict, gen: Path) -> dict[str, str]:
@@ -90,6 +97,36 @@ def write_valuation(ds: dict, res: dict, gen: Path) -> dict[str, str]:
         m.update({"TER": "—", "TERDate": "", "AlphaBrutA": "—", "AlphaBrutZ": "—", "IRBrut": "—"})
         m["BrutPhrase"] = "Le TER du fonds n'étant pas disponible dans les données, l'alpha avant frais n'est pas estimé."
         m["TERPhrase"] = "Le TER du fonds n'est pas disponible dans les données."
+    car = res.get("carhart")
+    if car is not None:
+        cf = car["fit"]
+        k = 4  # constante, MKT, SMB, HML, MOM
+        mom, p_mom = cf.params[k], cf.pvalue[k]
+        contrib = 12 * mom * car["mom_mean"]
+        m.update({"CarMom": num(mom, 3), "CarMomZ": num(cf.stat[k], 2), "CarMomPEq": peq(p_mom),
+                  "CarAlphaA": pct(12 * cf.params[0], 2), "CarN": str(cf.n),
+                  "CarAlphaVerdict": R.verdict(cf.pvalue[0])})
+        if p_mom < 0.05 and mom > 0:
+            ph = (f"Le modèle de Carhart attribue au fonds une exposition au momentum positive et statistiquement significative "
+                  f"(coefficient {num(mom, 3)}, $z$ = {num(cf.stat[k], 2)}), ce qui va dans le sens d'un suivi des tendances")
+            ph += (", mais elle est très faible : le fonds se comporte comme s'il détenait, en plus du marché, "
+                   f"{num(100 * mom, 1)}~\\% d'un portefeuille momentum." if abs(mom) < 0.1 else ".")
+        elif p_mom < 0.05:
+            ph = (f"Le modèle de Carhart attribue au fonds une exposition au momentum négative et statistiquement significative "
+                  f"(coefficient {num(mom, 3)}, $z$ = {num(cf.stat[k], 2)}) : le portefeuille penche plutôt contre les tendances récentes.")
+        else:
+            ph = (f"Le modèle de Carhart ne détecte pas d'exposition significative au momentum (coefficient {num(mom, 3)}, "
+                  f"$z$ = {num(cf.stat[k], 2)}) : le suivi des tendances ne laisse pas de trace mesurable dans les rendements du fonds.")
+        m["CarMomPrime"] = pct(12 * car["mom_mean"], 1)
+        m["CarMomContrib"] = pct(contrib, 2)
+        m["MomPhrase"] = ph
+        m["MomCourt"] = ("avec une légère exposition au momentum, cohérente avec l'analyse comportementale" if p_mom < 0.05 and mom > 0
+                         else "sans exposition positive mesurable au momentum")
+    else:
+        m.update({"CarMom": "—", "CarMomZ": "—", "CarMomPEq": "—", "CarAlphaA": "—", "CarN": "—", "CarAlphaVerdict": "—",
+                  "CarMomPrime": "—", "CarMomContrib": "—"})
+        m["MomPhrase"] = "Les facteurs nécessaires au modèle de Carhart ne sont pas disponibles : l'exposition au momentum n'est pas estimée."
+        m["MomCourt"] = "son exposition au momentum n'étant pas estimée faute de données"
     m["TensionPhrase"] = (
         "Le fonds se comporte presque exactement comme son indice" if f.r2 >= 0.95
         else "Le fonds s'écarte sensiblement de son indice")
