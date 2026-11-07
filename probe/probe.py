@@ -22,6 +22,14 @@ for _ in range(3):
     print("POST", a, data)
     r = s.post(B + a.replace("&amp;", "&"), data=data, timeout=40)
     print("status", r.status_code, r.url, len(r.text))
+q = s.get(B + "/sfdpub/schnell-fondssuche", timeout=40); print("schnell", q.status_code, q.url, len(q.text))
+for a, b in re.findall(r"<form[^>]*action=\"([^\"]+)\"[^>]*>(.*?)</form>", q.text, flags=re.S | re.I):
+    print("FORM", a, re.findall(r'name="([^"]+)"', b)[:15])
+for u in ["/sfdpub/de/funds/search?searchText=CH0011980981", "/sfdpub/de/funds/quickSearch?query=CH0011980981",
+          "/sfdpub/de/funds?search=CH0011980981", "/sfdpub/de/funds/list?query=CH0011980981"]:
+    t = s.get(B + u, timeout=40); print("try", u, t.status_code, t.url, len(t.text))
+    if t.status_code == 200 and "Swiss Stock" in t.text:
+        r = t; break
 L = links(r.text, r"funds/|fonds/")
 print("liens fonds:", L[:40])
 txt = re.sub(r"<[^>]+>", " ", r.text); txt = re.sub(r"\s+", " ", txt)
