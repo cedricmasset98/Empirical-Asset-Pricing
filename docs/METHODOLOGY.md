@@ -15,7 +15,7 @@ Les rendements ne sont calculés qu'entre mois consécutifs. Un mois manquant re
 
 ## 2. Actifs étudiés
 
-Trois actifs sont proposés : l'action BCV (`bcv_ret`), le fonds BCV Swiss Equity A (`fund_ret`) et le fonds Raiffeisen Futura - Swiss Stock A (`raif_ret`). Ils sont traités par le même moteur : seule la variable dépendante change.
+Les actifs proposés sont l'action BCV (`bcv_ret`), le fonds BCV Swiss Equity A (`fund_ret`) et les fonds lus sur Swiss Fund Data (section 2.3). Ils sont traités par le même moteur : seule la variable dépendante change. La liste des actifs, leurs libellés et leurs frais sont publiés dans `dataset.json` (champ `assets`) ; le site construit ses menus à partir de cette liste.
 
 ### 2.1 Action BCV
 
@@ -35,16 +35,26 @@ Trois actifs sont proposés : l'action BCV (`bcv_ret`), le fonds BCV Swiss Equit
   3. La performance YTD recalculée doit être égale à la performance YTD publiée sur la page.
   4. Le TER lu sur la page est comparé à celui de `pipeline/config.py`.
 
-### 2.3 Fonds Raiffeisen Futura - Swiss Stock A (CH0011980981)
+### 2.3 Fonds lus sur Swiss Fund Data
 
-- **Source.** Swiss Fund Data (SIX Financial Information / AMAS), export quotidien de la fiche du fonds, colonne « Total Return Chart Price » : distributions réinvesties à la date ex, nette de frais, quotidienne depuis novembre 2009. L'accès passe par la page d'avertissement « investisseur privé », acceptée automatiquement par le pipeline.
+| Clé | Fonds | ISIN | Gestion | Historique quotidien |
+|---|---|---|---|---|
+| `RAIF` | Raiffeisen Futura - Swiss Stock A | CH0011980981 | active (Vontobel AM pour Raiffeisen), indice SPI | depuis nov. 2009 |
+| `SWC` | Swisscanto (CH) Equity Fund Responsible Switzerland AA | CH0011792451 | active (Zürcher Kantonalbank), indice SPI, critères de durabilité | depuis avril 2001 |
+| `UBSS` | UBS (CH) Equity Fund – Switzerland Sustainable P | CH0002791769 | active, indice SPI, critères de durabilité | depuis janv. 2000 |
+| `UBS100` | UBS 100 Index-Fund Switzerland P | CH0002788807 | **indicielle** (UBS 100 Index) : témoin passif | depuis janv. 2000 |
+
+- **Source.** Swiss Fund Data (SIX Financial Information / AMAS), export quotidien de la fiche de chaque fonds, colonne « Total Return Chart Price » : distributions réinvesties à la date ex, nette de frais. L'accès passe par la page d'avertissement « investisseur privé », acceptée automatiquement par le pipeline. L'export doit porter l'ISIN attendu.
+- **Ajouter un fonds** : une entrée dans `SFD_FUNDS` (`pipeline/config.py`) suffit ; aucune modification du site n'est nécessaire.
+- **Témoin passif.** Pour le fonds indiciel, l'alpha net attendu est proche de −TER (et l'alpha brut proche de zéro), à l'écart de suivi près entre l'UBS 100 et le SPI : c'est un contrôle de bout en bout du site.
+- **Durabilité.** Les fonds Swisscanto et UBS Sustainable appliquent des critères de durabilité, dont l'introduction a pu modifier leur gestion au cours de la période.
 - **Contrôles** :
   1. « Chart Price » = VNI publiée ;
   2. hors distributions, rendement total = rendement de la VNI (au moins 99,5 % des jours) ;
   3. chaque saut est une distribution implicite plausible, $D = \mathrm{VNI}_{t-1}(1 + R^{TR}_t) - \mathrm{VNI}_t$ : montant positif et inférieur à 5 % de la VNI, au plus deux par an ;
-  4. TER publié sur la fiche = TER de la configuration.
+  4. TER publié sur la fiche = TER de la configuration (lorsqu'un TER de référence est configuré).
 
-  Les rendements annuels ont été vérifiés contre la fiche mensuelle officielle (2023 : 6,6 % ; 2024 : 5,9 % ; 2025 : 11,0 %).
+  Pour le fonds Raiffeisen, les rendements annuels ont été vérifiés contre la fiche mensuelle officielle (2023 : 6,6 % ; 2024 : 5,9 % ; 2025 : 11,0 %).
 
 ### 2.4 Rendements des fonds
 
@@ -171,7 +181,7 @@ On estime y = Xb + e par OLS avec constante, où y = R_actif − R_f et X contie
 - Les rendements des fonds étant nets des frais incorporés dans la VNI, la constante estimée est un **alpha net**.
 - L'**alpha brut** (avant frais de gestion) ajoute le TER publié : α_brut = α_net + TER/12 par mois.
 - Ajouter TER/12 à chaque rendement mensuel décale la constante de TER/12 sans changer les pentes, les résidus ni les erreurs standards. L'intervalle de confiance est décalé d'autant, et le test de l'alpha brut est celui de H0 : α_net = −TER/12, avec la même loi (Student ou normale) que l'estimation.
-- TER utilisés : celui lu par le pipeline (page Gérifonds pour le fonds BCV, fiche Swiss Fund Data pour le fonds Raiffeisen), avec sa date et sa source, publiés dans `fund_info` et `raif_info` du jeu de données. Sans TER lu, aucun alpha brut n'est affiché.
+- TER utilisés : celui lu par le pipeline (page Gérifonds pour le fonds BCV, fiche Swiss Fund Data pour les autres fonds), avec sa date et sa source, publiés dans `fund_info` et `raif_info` du jeu de données. Sans TER lu, aucun alpha brut n'est affiché.
 - Approximations : TER actuel supposé constant sur toute la période ; les frais de transaction, qui ne font pas partie du TER, restent déduits.
 - L'action BCV n'a pas d'alpha brut.
 
@@ -223,7 +233,7 @@ Tolérance relative : 10⁻⁸ à 10⁻⁹.
 ## 11. Limites connues
 
 - Les ajustements de Yahoo Finance peuvent contenir des erreurs. Les contrôles automatiques en détectent une partie seulement. En cas de doute, utilisez l'import manuel.
-- Le SPI TR remonte à 1988 et le taux sans risque prolongé à février 1994 (section 4.1). Les échantillons sont désormais limités par les actifs eux-mêmes : action BCV depuis 2003 (historique Yahoo), fonds BCV depuis 1998, fonds Raiffeisen depuis décembre 2009, et, dans l'univers suisse, par la disponibilité des facteurs JKP.
+- Le SPI TR remonte à 1988 et le taux sans risque prolongé à février 1994 (section 4.1). Les échantillons sont désormais limités par les actifs eux-mêmes : action BCV depuis 2003 (historique Yahoo), fonds BCV depuis 1998, fonds UBS depuis 2000, fonds Swisscanto depuis 2001, fonds Raiffeisen depuis décembre 2009, et, dans l'univers suisse, par la disponibilité des facteurs JKP.
 - Les facteurs suisses JKP sont publiés une fois par an : les derniers mois manquent jusqu'à la mise à jour suivante. Ils ne reproduisent pas exactement la construction Fama-French (terciles par caractéristique, pas de tri double).
 - Les rendements French et JKP sont révisés occasionnellement par leurs auteurs : les résultats peuvent changer légèrement d'une mise à jour à l'autre.
 - Le facteur momentum européen démarre plus tard que les fichiers 3 et 5 facteurs. Dans l'univers européen, l'échantillon commun commence donc à cette date au plus tôt.

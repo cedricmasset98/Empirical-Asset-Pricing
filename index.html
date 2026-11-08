@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Empirical Asset Pricing — BCV stock, BCV fund and Raiffeisen fund against Swiss factors</title>
+    <title>Empirical Asset Pricing — BCV stock and Swiss equity funds against Swiss factors</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%231d4f91%22/%3E%3Cpath d=%22M6 24 L26 9%22 stroke=%22%23ff8a3d%22 stroke-width=%223%22/%3E%3Ccircle cx=%2210%22 cy=%2218%22 r=%222%22 fill=%22white%22/%3E%3Ccircle cx=%2217%22 cy=%2217%22 r=%222%22 fill=%22white%22/%3E%3Ccircle cx=%2222%22 cy=%2210%22 r=%222%22 fill=%22white%22/%3E%3C/svg%3E" />
-    <meta name="description" content="Single Index Model and Fama-French / Carhart models (Swiss and European factors) for the BCV stock, the BCV Swiss Equity A fund and the Raiffeisen Futura - Swiss Stock A fund, in CHF with SARON as the risk-free rate." />
+    <meta name="description" content="Single Index Model and Fama-French / Carhart models (Swiss and European factors) for the BCV stock and Swiss equity funds (BCV, Raiffeisen, Swisscanto, UBS), in CHF with SARON as the risk-free rate." />
     <script>
       (function () {
         var t = null;
@@ -36,23 +36,14 @@
         <legend>Asset and period</legend>
         <label id="asset-wrap">Asset
           <select id="asset">
-          <option value="BCV">BCV stock — BCVN.SW</option>
-          <option value="FUND">BCV Swiss Equity A fund — CH0006018706</option>
-          <option value="RAIF">Raiffeisen Futura - Swiss Stock A fund — CH0011980981</option>
           </select>
         </label>
         <label id="pair-a-wrap" hidden>Asset A
           <select id="asset-a">
-          <option value="BCV">BCV stock — BCVN.SW</option>
-          <option value="FUND">BCV Swiss Equity A fund — CH0006018706</option>
-          <option value="RAIF">Raiffeisen Futura - Swiss Stock A fund — CH0011980981</option>
           </select>
         </label>
         <label id="pair-b-wrap" hidden>Asset B
           <select id="asset-b">
-          <option value="BCV">BCV stock — BCVN.SW</option>
-          <option value="FUND">BCV Swiss Equity A fund — CH0006018706</option>
-          <option value="RAIF">Raiffeisen Futura - Swiss Stock A fund — CH0011980981</option>
           </select>
         </label>
         <label>Start
@@ -258,7 +249,7 @@
               <div class="actions"><a class="btn btn-primary" href="./report/presentation_fonds.pdf" target="_blank" rel="noopener">Open the presentation ↗</a></div>
             </article>
           </div>
-          <p class="table-note">There is no report yet for the Raiffeisen Futura - Swiss Stock A fund: use “Analyze” or “Compare”.</p>
+          <p class="table-note">There is no report for the other funds (Raiffeisen, Swisscanto, UBS): use “Analyze” or “Compare”.</p>
         </section>
       </section>
 
@@ -279,7 +270,7 @@
           <div class="method">
             <h3>Returns</h3>
             <p>BCV Swiss Equity A fund: Gérifonds’ official “dividends reinvested” performance index (gross distributions reinvested on the ex-date, net of the fees embedded in the NAV), taken at month-end. The pipeline recomputes it from the NAVs and the distribution table: each distribution must be found exactly once, and the year-to-date performance must equal the published one.</p>
-            <p>Raiffeisen Futura - Swiss Stock A fund (CH0011980981, managed by Vontobel Asset Management for Raiffeisen, benchmark SPI): Swiss Fund Data’s “Total Return Chart Price” series (SIX Financial Information / AMAS), distributions reinvested on the ex-date, net of fees, daily since November 2009, taken at month-end. The pipeline checks that, outside distributions, its daily return equals that of the published NAV and that each jump matches a plausible distribution. Calendar-year returns match the fund’s monthly factsheet (2023: 6.6%; 2024: 5.9%; 2025: 11.0%). No summary report is produced for this fund; the “Compare” section lets you set it against the BCV fund.</p>
+            <p>Other funds: Raiffeisen Futura - Swiss Stock A (CH0011980981, managed by Vontobel Asset Management for Raiffeisen), Swisscanto (CH) Equity Fund Responsible Switzerland AA (CH0011792451, Zürcher Kantonalbank), UBS (CH) Equity Fund – Switzerland Sustainable P (CH0002791769), all actively managed against the SPI, and the UBS 100 Index-Fund Switzerland P (CH0002788807), an index fund tracking the UBS 100 Index, which serves as a passive control: its alpha should be close to minus its fees. Source: Swiss Fund Data’s “Total Return Chart Price” series (SIX Financial Information / AMAS), distributions reinvested on the ex-date, net of fees, taken at month-end (daily since November 2009 for Raiffeisen, 2001 for Swisscanto and 2000 for the two UBS funds). The pipeline checks that, outside distributions, each fund’s daily return equals that of its published NAV and that each jump matches a plausible distribution. For Raiffeisen, calendar-year returns match the fund’s monthly factsheet (2023: 6.6%; 2024: 5.9%; 2025: 11.0%). No summary report is produced for these funds; the “Compare” section sets any two assets against each other. The list of funds lives in <span class="mono">pipeline/config.py</span> (SFD_FUNDS): adding an entry adds the fund to the menus.</p>
             <p>“Swiss” universe: market = SPI TR; Swiss SMB, HML, RMW, CMA and MOM factors from Global Factor Data (Jensen, Kelly and Pedersen, 2023, <i>Journal of Finance</i>), characteristics <span class="mono">market_equity</span>, <span class="mono">be_me</span>, <span class="mono">ope_be</span>, <span class="mono">at_gr1</span> and <span class="mono">ret_12_1</span>. These are long-short tercile portfolios weighted by capped market capitalisation, not the Fama-French 2×3 sorts; the same SMB and HML are used for FF3 and FF5. Published in USD, they are converted to CHF with F<sub>CHF</sub> = F<sub>USD</sub>(1+s), like the European factors. Months in which a factor relies on fewer than 30 stocks are dropped. As publication is annual, this universe’s sample ends at the last published month, which also shortens the common sample of the model comparison.</p>
             <p>BCV: R<sub>t</sub> = P<sup>adj</sup><sub>t</sub>/P<sup>adj</sup><sub>t−1</sub> − 1 on the last price of each month, P<sup>adj</sup> being adjusted for dividends and corporate actions (including the 10:1 split of May 2020, checked by the pipeline). Swiss market: SPI, a performance index (dividends reinvested), never replaced by a price index. An incomplete or missing month makes the adjacent returns missing: no multi-month return is presented as monthly.</p>
             <h3>Risk-free rate</h3>

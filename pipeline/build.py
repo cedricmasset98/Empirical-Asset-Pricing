@@ -35,7 +35,6 @@ from .transform import (
 COLUMN_INFO = {
     "bcv_ret": ("BCV total return", "BCVN.SW, adjusted price (dividends, splits), month-end to month-end"),
     "fund_ret": ("BCV Swiss Equity A total return", "Official Gérifonds performance index, gross distributions reinvested, net of fund fees"),
-    "raif_ret": ("Raiffeisen Futura - Swiss Stock A total return", "Swiss Fund Data, \"Total Return Chart Price\" (distributions reinvested), net of fund fees"),
     "smb_ch": ("Swiss SMB (JKP, CHF)", "Global Factor Data, Switzerland: size (market_equity), terciles, capped weights; F_USD(1+s)"),
     "hml_ch": ("Swiss HML (JKP, CHF)", "Global Factor Data, Switzerland: book equity / market equity (be_me)"),
     "rmw_ch": ("Swiss RMW (JKP, CHF)", "Global Factor Data, Switzerland: operating profit / book equity (ope_be)"),
@@ -171,25 +170,53 @@ def rf_extension(cols: dict, sources: list, checks: list, last_complete: pd.Peri
     return {"segments": segs}
 
 
-def raif_checks(ser, checks: list[dict]) -> None:
+for _f in C.SFD_FUNDS:
+    COLUMN_INFO[_f["column"]] = (f"{_f['name']} total return", "Swiss Fund Data, \"Total Return Chart Price\" (distributions reinvested), net of fund fees")
+
+
+def sfd_checks(fund: dict, ser, checks: list[dict]) -> None:
     from .raif import check as rcheck
 
     r = rcheck(ser)
-    check(checks, "raif-nav", "pass" if r.chart_eq_nav else "fail",
-          "Raiffeisen fund: \"Chart Price\" " + ("equal to the published NAV." if r.chart_eq_nav else "different from the published NAV."))
-    check(checks, "raif-reconciliation", "pass" if r.share_ok >= 0.995 else "fail",
-          f"Raiffeisen fund: outside distributions, total return = NAV return on {r.share_ok:.2%} of {r.n_days - 1} days"
+    who = fund["short"][0].upper() + fund["short"][1:]
+    k = fund["key"].lower()
+    check(checks, f"{k}-nav", "pass" if r.chart_eq_nav else "fail",
+          f"{who}: \"Chart Price\" " + ("equal to the published NAV." if r.chart_eq_nav else "different from the published NAV."))
+    check(checks, f"{k}-reconciliation", "pass" if r.share_ok >= 0.995 else "fail",
+          f"{who}: outside distributions, total return = NAV return on {r.share_ok:.2%} of {r.n_days - 1} days"
           + (f" (mismatches: {', '.join(r.bad_days[:6])}{'…' if len(r.bad_days) > 6 else ''})." if r.bad_days else "."))
     dl = ", ".join(f"{d}: {a:.2f}" for d, a in r.distributions[-6:])
-    check(checks, "raif-distributions", "warn" if r.anomalies else "pass",
-          f"Raiffeisen fund: {len(r.distributions)} implied distributions (latest: {dl})"
+    check(checks, f"{k}-distributions", "warn" if r.anomalies else "pass",
+          f"{who}: {len(r.distributions)} implied distributions (latest: {dl})"
           + (" ; " + " ; ".join(r.anomalies) if r.anomalies else "") + ".")
-    known = C.RAIF.get("ter")
-    if ser.ter is not None and known is not None:
-        same = abs(known - ser.ter) < 1e-9
-        check(checks, "raif-ter", "pass" if same else "warn",
-              f"Raiffeisen fund: published TER {ser.ter:.2%} as of {ser.ter_date.date()}"
+    known = fund.get("ter")
+    if ser.ter is not None:
+        same = known is None or abs(known - ser.ter) < 1e-9
+        check(checks, f"{k}-ter", "pass" if same else "warn",
+              f"{who}: published TER {ser.ter:.2%} as of {ser.ter_date.date()}"
               + ("." if same else f", different from the configuration ({known:.2%}): update pipeline/config.py."))
+
+
+def asset_list(fund_info: dict, sfd_fees: dict) -> list[dict]:
+    """Métadonnées des actifs lues par le site (menus, libellés, frais)."""
+    out = [
+        {"id": "BCV", "column": "bcv_ret", "label": "BCV stock", "short": "BCV stock", "sub": "BCV", "kind": "stock",
+         "isin": C.ASSET["isin"], "detail": f"ISIN {C.ASSET['isin']} · SIX: {C.ASSET['ticker']} · CHF", "passive": False, "fees": None},
+        {"id": "FUND", "column": "fund_ret", "label": f"{C.FUND['name']} fund", "short": "BCV fund", "sub": "fund", "kind": "fund",
+         "isin": C.FUND["isin"], "detail": f"ISIN {C.FUND['isin']} · active management · {C.FUND['manager']}", "passive": False,
+         "fees": fund_info or None},
+    ]
+    for f in C.SFD_FUNDS:
+        style = "index fund, " + f["benchmark"] if f["passive"] else "active management"
+        out.append({"id": f["key"], "column": f["column"], "label": f["name"] if "fund" in f["name"].lower() else f"{f['name']} fund", "short": f["short"], "sub": f["sub"],
+                    "kind": "fund", "isin": f["isin"], "detail": f"ISIN {f['isin']} · {style} · {f['manager']}",
+                    "passive": f["passive"], "fees": sfd_fees.get(f["key"])})
+    return out
+
+
+def raif_checks(ser, checks: list[dict]) -> None:
+    """Compatibilité (tests) : contrôles du fonds Raiffeisen."""
+    sfd_checks(C.RAIF, ser, checks)
 
 
 def fund_checks(page, checks: list[dict]) -> None:
@@ -259,18 +286,23 @@ def main(argv: list[str] | None = None) -> int:
         if info["status"] == "ok":
             fund_checks(fund_page, checks)
 
-    # --- Fonds Raiffeisen Futura - Swiss Stock A
-    raif_info: dict = {}
-    raif, info = S.fetch_raif()
-    sources.append(info)
-    if raif is not None:
-        lv = month_end_levels(raif.tr, gap, last_complete)
-        cols["raif_ret"] = simple_returns(lv.values)
-        stale_note("Raiffeisen fund", lv.stale, checks)
-        if info["status"] == "ok":
-            raif_checks(raif, checks)
-            if raif.ter is not None:
-                raif_info = {"ter": raif.ter, "ter_date": str(raif.ter_date.date()), "ter_source": "Swiss Fund Data, fund page"}
+    # --- Fonds Swiss Fund Data (C.SFD_FUNDS)
+    sfd_fees: dict[str, dict] = {}
+    for fund in C.SFD_FUNDS:
+        ser, info = S.fetch_sfd(fund)
+        sources.append(info)
+        fees = {"ter": fund["ter"], "ter_date": fund["ter_date"], "ter_source": fund["ter_source"]} if fund.get("ter") is not None else None
+        if ser is not None:
+            lv = month_end_levels(ser.tr, gap, last_complete)
+            cols[fund["column"]] = simple_returns(lv.values)
+            stale_note(fund["short"], lv.stale, checks)
+            if info["status"] == "ok":
+                sfd_checks(fund, ser, checks)
+                if ser.ter is not None:
+                    fees = {"ter": ser.ter, "ter_date": str(ser.ter_date.date()), "ter_source": "Swiss Fund Data, fund page"}
+        if fees:
+            sfd_fees[fund["key"]] = fees
+    raif_info = sfd_fees.get("RAIF", {})
 
     # --- SPI TR
     spi, info = S.fetch_spi_tr()
@@ -380,7 +412,8 @@ def main(argv: list[str] | None = None) -> int:
     # --- assemblage
     # l'index couvre les séries d'analyse ; les séries auxiliaires (change, USD)
     # remontant plus loin ne l'étendent pas
-    analysis = [c for c in cols if c in ("bcv_ret", "fund_ret", "raif_ret", "spi_ret", "rf_saron") or c.endswith("_chf")]
+    fund_cols = tuple(f["column"] for f in C.SFD_FUNDS)
+    analysis = [c for c in cols if c in ("bcv_ret", "fund_ret", "spi_ret", "rf_saron") + fund_cols or c.endswith("_chf")]
     all_idx = sorted(set().union(*[set(cols[c].dropna().index) for c in analysis])) if analysis else []
     all_idx = [p for p in all_idx if p <= last_complete]
     if all_idx:
@@ -414,6 +447,7 @@ def main(argv: list[str] | None = None) -> int:
         "fund_info": fund_info,
         "rf_info": rf_info,
         "raif_info": raif_info,
+        "assets": [a for a in asset_list(fund_info, sfd_fees) if a["column"] in frame.columns],
         "notes": [
             f"Last complete month kept: {last_complete} (run date {today.date()}).",
             "Missing values kept as they are (null): no interpolation.",

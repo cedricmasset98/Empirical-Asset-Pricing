@@ -1,6 +1,6 @@
 # Empirical Asset Pricing — Factor Regression Explorer
 
-Ce site interactif (en anglais) estime des modèles d'évaluation d'actifs pour l'action **Banque Cantonale Vaudoise** (BCVN · SIX, ISIN CH0531751755, Yahoo `BCVN.SW`), le fonds **BCV Swiss Equity A** (ISIN CH0006018706, BCV Asset Management) et le fonds **Raiffeisen Futura - Swiss Stock A** (ISIN CH0011980981), puis compare leurs alphas. Les rendements sont mensuels en CHF, le marché de référence est le **SPI Total Return** et le taux sans risque est le **SARON** capitalisé.
+Ce site interactif (en anglais) estime des modèles d'évaluation d'actifs pour l'action **Banque Cantonale Vaudoise** (BCVN · SIX, ISIN CH0531751755, Yahoo `BCVN.SW`), le fonds **BCV Swiss Equity A** (ISIN CH0006018706, BCV Asset Management) et d'autres fonds d'actions suisses lus sur Swiss Fund Data — **Raiffeisen Futura - Swiss Stock A**, **Swisscanto Responsible Switzerland**, **UBS Switzerland Sustainable** et le fonds indiciel **UBS 100 Index-Fund Switzerland** —, puis compare leurs alphas. La liste des fonds se trouve dans `pipeline/config.py` (`SFD_FUNDS`) ; le site construit ses menus à partir du jeu de données. Les rendements sont mensuels en CHF, le marché de référence est le **SPI Total Return** et le taux sans risque est le **SARON** capitalisé.
 
 | Rubrique | Contenu |
 |---|---|
@@ -22,7 +22,7 @@ Toutes les statistiques sont **recalculées dans le navigateur** à partir de fi
 
 ```
 pipeline/            Python : récupération, transformation, contrôles, références statsmodels
-  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds BCV), Swiss Fund Data (fonds Raiffeisen), BNS (SARON, taux du marché monétaire, USD/CHF), K. French (Europe), Global Factor Data (Suisse)
+  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds BCV), Swiss Fund Data (fonds Raiffeisen, Swisscanto, UBS), BNS (SARON, taux du marché monétaire, USD/CHF), K. French (Europe), Global Factor Data (Suisse)
   fund.py            lecture de la série officielle du fonds et contrôles (VNI + distributions, YTD)
   transform.py       fins de mois, rendements, capitalisation SARON ACT/360, conversion CHF
   build.py           -> public/data/dataset.json, data/processed/monthly.csv, build_report.md
@@ -102,7 +102,7 @@ Le workflow installe LaTeX et régénère le rapport à chaque exécution. L'arc
 | Taux du marché monétaire | BNS data.snb.ch, cube `zimoma` | SARON de fin de mois (depuis 1999) et GMBF à 3 mois (utilisées depuis 1994) : prolongent le taux sans risque avant août 2009, après contrôle de concordance |
 | Facteurs Europe | Kenneth R. French Data Library | 3F, 5F, Momentum ; USD, RF US |
 | Fonds BCV Swiss Equity A | Gérifonds, page publique du fonds : graphique « Évolution de la performance (dividendes réinvestis) », quotidien depuis 1997 | Série officielle, distributions brutes réinvesties, nette de frais. Contrôles automatiques : rendements quotidiens recalculés à partir des VNI et des distributions publiées, chaque distribution retrouvée une seule fois, performance YTD = publiée |
-| Fonds Raiffeisen Futura - Swiss Stock A | Swiss Fund Data (swissfunddata.ch, SIX Financial Information / AMAS), export quotidien de la fiche du fonds, « Total Return Chart Price », depuis novembre 2009 | Distributions réinvesties, nette de frais. Contrôles automatiques : Chart Price = VNI, rendement total = rendement de la VNI hors distributions, distributions implicites plausibles (montant, fréquence), TER publié = configuration. Rendements annuels vérifiés contre la fiche mensuelle officielle |
+| Fonds Raiffeisen, Swisscanto, UBS Sustainable, UBS 100 Index | Swiss Fund Data (swissfunddata.ch, SIX Financial Information / AMAS), export quotidien de la fiche de chaque fonds, « Total Return Chart Price » (depuis 2000-2001, novembre 2009 pour Raiffeisen) | Distributions réinvesties, nette de frais. Contrôles automatiques : Chart Price = VNI, rendement total = rendement de la VNI hors distributions, distributions implicites plausibles (montant, fréquence), TER publié = configuration. Rendements annuels vérifiés contre la fiche mensuelle officielle |
 | Facteurs suisses (univers « Suisse ») | Global Factor Data (jkpfactors.com), Jensen, Kelly et Pedersen (2023), archives publiques S3 `[che]_[facteur]_[monthly]_[vw_cap].zip` | `market_equity` → SMB, `be_me` → HML, `ope_be` → RMW, `at_gr1` → CMA, `ret_12_1` → MOM ; terciles, capitalisation plafonnée, USD convertis en CHF par F(1+s) ; mois à moins de 30 titres écartés ; publication annuelle |
 | USD/CHF | BNS, cube `devkum` (cours de fin de mois) ; replis : FRED `DEXSZUS`, Yahoo `CHF=X` | Fin de mois |
 

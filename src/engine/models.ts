@@ -14,20 +14,69 @@ export type ModelId = 'CAPM' | 'FF3' | 'CARHART' | 'FF5';
  * (mêmes dates, mêmes régresseurs), avec une erreur standard qui tient compte
  * de la corrélation des deux actifs.
  */
-export type SingleAsset = 'BCV' | 'FUND' | 'RAIF';
+export type SingleAsset = string;
 export type AssetId = SingleAsset | 'DIFF';
-export const ASSET_IDS: SingleAsset[] = ['BCV', 'FUND', 'RAIF'];
 /** Paire comparée : [A, B] ; DIFF = R_A − R_B. */
 export type Pair = [SingleAsset, SingleAsset];
 export const DEFAULT_PAIR: Pair = ['BCV', 'FUND'];
 
 /** sub : indice de R dans les formules ; fund : fonds de placement (rendements nets de frais, distributions réinvesties). */
-export const ASSET_INFO: Record<AssetId, { label: string; short: string; detail: string; sub: string; fund: boolean; column: SeriesKey }> = {
+export interface AssetMeta {
+  label: string;
+  short: string;
+  detail: string;
+  sub: string;
+  fund: boolean;
+  /** Fonds indiciel (témoin passif : alpha attendu ≈ −TER). */
+  passive?: boolean;
+  column: SeriesKey;
+}
+
+const DEFAULT_ASSETS: Record<string, AssetMeta> = {
   BCV: { label: 'BCV stock', short: 'BCV stock', detail: 'BCVN.SW · ISIN CH0531751755', sub: 'BCV', fund: false, column: 'bcv_ret' },
   FUND: { label: 'BCV Swiss Equity A fund', short: 'BCV fund', detail: 'ISIN CH0006018706 · active management · BCV Asset Management', sub: 'fund', fund: true, column: 'fund_ret' },
   RAIF: { label: 'Raiffeisen Futura - Swiss Stock A fund', short: 'Raiffeisen fund', detail: 'ISIN CH0011980981 · active management · Vontobel Asset Management for Raiffeisen', sub: 'Raiffeisen', fund: true, column: 'raif_ret' },
-  DIFF: { label: 'Difference A − B', short: 'Difference', detail: 'Long A, short B portfolio', sub: 'A − B', fund: false, column: 'bcv_ret' },
 };
+const DIFF_INFO: AssetMeta = { label: 'Difference A − B', short: 'Difference', detail: 'Long A, short B portfolio', sub: 'A − B', fund: false, column: 'bcv_ret' };
+
+/**
+ * Registre des actifs : rempli à partir de la liste « assets » du jeu de données
+ * (registerAssets). Les trois actifs historiques servent de valeurs par défaut
+ * pour un jeu de données sans cette liste (import CSV, anciens fichiers).
+ */
+export const ASSET_INFO: Record<string, AssetMeta> = { ...DEFAULT_ASSETS, DIFF: DIFF_INFO };
+export const ASSET_IDS: SingleAsset[] = Object.keys(DEFAULT_ASSETS);
+
+const ID_RE = /^[A-Z][A-Z0-9]{1,11}$/;
+
+/** Met le registre à jour d'après le jeu de données ; retourne la liste des actifs disponibles. */
+export function registerAssets(ds: Pick<Dataset, 'assets' | 'data'>): SingleAsset[] {
+  for (const k of Object.keys(ASSET_INFO)) if (k !== 'DIFF' && !(k in DEFAULT_ASSETS)) delete ASSET_INFO[k];
+  Object.assign(ASSET_INFO, DEFAULT_ASSETS);
+  const ids: SingleAsset[] = [];
+  const hasData = (c: SeriesKey) => (ds.data[c] ?? []).some((v) => v !== null && v !== undefined);
+  if (ds.assets?.length) {
+    for (const a of ds.assets) {
+      if (!ID_RE.test(a.id) || a.id === 'DIFF' || !/^[a-z0-9]+_ret$/.test(a.column)) continue;
+      ASSET_INFO[a.id] = { label: a.label, short: a.short, detail: a.detail, sub: a.sub, fund: a.kind === 'fund', passive: !!a.passive, column: a.column };
+      if (hasData(a.column)) ids.push(a.id);
+    }
+  } else {
+    for (const [id, a] of Object.entries(DEFAULT_ASSETS)) if (hasData(a.column)) ids.push(id);
+  }
+  // colonnes « xxx_ret » sans description (import CSV) : actif générique
+  const known = new Set(Object.values(ASSET_INFO).map((a) => a.column));
+  for (const c of Object.keys(ds.data) as SeriesKey[]) {
+    const m = /^([a-z0-9]+)_ret$/.exec(c);
+    if (!m || c === 'spi_ret' || c === 'fx_usdchf_ret' || known.has(c) || !hasData(c)) continue;
+    const id = m[1].toUpperCase();
+    if (!ID_RE.test(id) || id in ASSET_INFO) continue;
+    ASSET_INFO[id] = { label: `${id} (imported column ${c})`, short: id, detail: `Column ${c}`, sub: id, fund: true, column: c };
+    ids.push(id);
+  }
+  ASSET_IDS.splice(0, ASSET_IDS.length, ...ids);
+  return ids;
+}
 
 function assetColumns(asset: AssetId, pair: Pair = DEFAULT_PAIR): SeriesKey[] {
   if (asset === 'DIFF') return [ASSET_INFO[pair[0]].column, ASSET_INFO[pair[1]].column];

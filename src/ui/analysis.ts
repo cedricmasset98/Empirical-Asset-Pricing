@@ -264,7 +264,8 @@ export function singleIndexPair(ds: Dataset, st: Settings, cmp: AssetComparison)
 
 /** TER publié d'un fonds (null pour l'action ou si le pipeline ne l'a pas lu). */
 export function feeInfo(ds: Dataset, asset: AssetId): FeeInfo | null {
-  const f = asset === 'FUND' ? ds.fund_info : asset === 'RAIF' ? ds.raif_info : undefined;
+  const entry = ds.assets?.find((a) => a.id === asset);
+  const f = entry ? entry.fees ?? undefined : asset === 'FUND' ? ds.fund_info : asset === 'RAIF' ? ds.raif_info : undefined;
   return f && Number.isFinite(f.ter) && f.ter >= 0 && f.ter < 0.1 ? f : null;
 }
 

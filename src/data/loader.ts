@@ -84,12 +84,12 @@ export function parseCsvDataset(text: string, fileName: string): Dataset {
   const sep = lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',';
   const header = splitCsvLine(lines[0], sep).map((h) => h.toLowerCase());
   if (header[0] !== 'date') throw new DatasetError('The first column must be named “date”.');
-  const unknown = header.slice(1).filter((h) => !KNOWN_KEYS.includes(h as SeriesKey));
-  if (unknown.length) throw new DatasetError(`Unknown columns: ${unknown.join(', ')}. Accepted columns: ${KNOWN_KEYS.join(', ')}.`);
+  const unknown = header.slice(1).filter((h) => !KNOWN_KEYS.includes(h as SeriesKey) && !/^[a-z0-9]+_ret$/.test(h));
+  if (unknown.length) throw new DatasetError(`Unknown columns: ${unknown.join(', ')}. Accepted columns: ${KNOWN_KEYS.join(', ')}, or any asset return column named <name>_ret.`);
   const keys = header.slice(1) as SeriesKey[];
   if (!keys.includes('rf_saron')) throw new DatasetError('Missing required column: rf_saron.');
-  if (!keys.includes('bcv_ret') && !keys.includes('fund_ret') && !keys.includes('raif_ret')) {
-    throw new DatasetError('Missing required column: bcv_ret (stock), fund_ret (BCV fund) or raif_ret (Raiffeisen fund).');
+  if (!keys.some((k) => /_ret$/.test(k) && k !== 'spi_ret' && k !== 'fx_usdchf_ret')) {
+    throw new DatasetError('Missing asset column: at least one return column such as bcv_ret, fund_ret or raif_ret.');
   }
   const rows: { date: string; vals: (number | null)[] }[] = [];
   for (let li = 1; li < lines.length; li++) {

@@ -41,6 +41,8 @@ class TestBuildOffline(unittest.TestCase):
             pd.DataFrame({"date": mm_months.astype(str), "saron_eom": 0.25, "tbill_3m": 0.2}).to_csv(manual / "money_market_monthly.csv", index=False)
             pd.DataFrame({"date": days.date, "tr_index": px * 1.7}).to_csv(manual / "fund_tr_daily.csv", index=False)
             pd.DataFrame({"date": days.date, "tr_index": px * 2.3}).to_csv(manual / "raif_tr_daily.csv", index=False)
+            for k, mult in (("swc", 3.1), ("ubss", 4.2), ("ubs100", 5.3)):
+                pd.DataFrame({"date": days.date, "tr_index": px * mult}).to_csv(manual / f"{k}_tr_daily.csv", index=False)
             pd.DataFrame({"date": days.date, "chf_per_usd": 1.0 + 0.0001 * np.arange(len(days))}).to_csv(manual / "usdchf_daily.csv", index=False)
             months = pd.period_range("2009-12", "2012-05", freq="M")
             (manual / "Europe_3_Factors.csv").write_text(french_text(["Mkt-RF", "SMB", "HML", "RF"], months, rng))
@@ -65,6 +67,15 @@ class TestBuildOffline(unittest.TestCase):
             i = ds["dates"].index("2011-03")
             self.assertAlmostEqual(ds["data"]["fund_ret"][i], ds["data"]["bcv_ret"][i], places=10)
             self.assertAlmostEqual(ds["data"]["raif_ret"][i], ds["data"]["bcv_ret"][i], places=10)
+            for col in ("swc_ret", "ubss_ret", "ubs100_ret"):
+                self.assertAlmostEqual(ds["data"][col][i], ds["data"]["bcv_ret"][i], places=10)
+            ids = [a["id"] for a in ds["assets"]]
+            self.assertEqual(ids, ["BCV", "FUND", "RAIF", "SWC", "UBSS", "UBS100"])
+            a = {x["id"]: x for x in ds["assets"]}
+            self.assertTrue(a["UBS100"]["passive"])
+            self.assertIsNone(a["UBS100"]["fees"])  # TER lu sur la fiche seulement (absente en import manuel)
+            self.assertAlmostEqual(a["SWC"]["fees"]["ter"], 0.014)
+            self.assertEqual(ds["columns"]["swc_ret"]["unit"], "monthly return, decimal")
             for col in ("bcv_ret", "fund_ret", "raif_ret", "spi_ret", "rf_saron", "mkt_eu_chf", "smb3_chf", "wml_chf", "cma5_chf"):
                 self.assertIsNotNone(ds["data"][col][i], col)
             # cohérence : rendement BCV = rendement SPI (même chemin de prix × 0,9)

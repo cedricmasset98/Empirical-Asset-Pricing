@@ -27,7 +27,7 @@ from statsmodels.tsa.stattools import acf
 
 from . import config as C
 
-from .validate_common import ASSETS, MODELS, UNIVERSES, design, has_data, required, rows_for  # noqa: E402
+from .validate_common import ASSETS, MODELS, UNIVERSES, design, has_data, register_assets, required, rows_for  # noqa: E402
 
 
 def nw_lags(n: int) -> int:
@@ -100,7 +100,7 @@ def reference(ds: dict, label: str, source_path: str) -> dict:
         return y, X, dates
 
     commons = {}
-    for asset in ("BCV", "FUND", "RAIF"):
+    for asset in register_assets(ds):
         available = [(m, u) for m, u in specs if has_data(ds, required(m, u, asset))]
         skipped += [{"asset": asset, "model": m, "universe": u, "reason": "séries indisponibles"} for m, u in specs if (m, u) not in available]
         if not available:

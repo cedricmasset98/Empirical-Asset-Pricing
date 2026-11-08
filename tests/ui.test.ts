@@ -168,3 +168,37 @@ test('alpha brut = alpha d’une régression sur R + TER/12 (pentes et erreurs s
     assert.ok(Math.abs(r2.beta[1] - f.result.beta[1]) < 1e-12 && Math.abs(r2.se[0] - f.result.se[0]) < 1e-14);
   }
 });
+
+test('registre des actifs : liste « assets » du jeu de données, menus et frais', async () => {
+  const { registerAssets, ASSET_INFO, ASSET_IDS } = await import('../src/engine/models.ts');
+  const { feeInfo } = await import('../src/ui/analysis.ts');
+  const extra: Dataset = {
+    ...ds,
+    data: { ...ds.data, swc_ret: ds.data.raif_ret, zzz_ret: ds.data.fund_ret },
+    assets: [
+      { id: 'BCV', column: 'bcv_ret', label: 'BCV stock', short: 'BCV stock', sub: 'BCV', kind: 'stock', detail: 'x', fees: null },
+      { id: 'SWC', column: 'swc_ret', label: 'Swisscanto fund', short: 'Swisscanto fund', sub: 'Swisscanto', kind: 'fund', detail: 'ISIN CH0011792451', passive: false, fees: { ter: 0.014, ter_date: '2025-09-30' } },
+      { id: 'IDX', column: 'idx_ret', label: 'Index fund', short: 'index fund', sub: 'idx', kind: 'fund', detail: 'y', passive: true, fees: null },
+    ],
+  };
+  try {
+    const ids = registerAssets(extra);
+    // IDX sans données exclu ; colonne zzz_ret non décrite ajoutée comme actif générique
+    assert.deepEqual(ids, ['BCV', 'SWC', 'ZZZ']);
+    assert.deepEqual(ASSET_IDS, ids);
+    assert.equal(ASSET_INFO.SWC.column, 'swc_ret');
+    assert.equal(ASSET_INFO.IDX.passive, true);
+    assert.equal(feeInfo(extra, 'SWC')!.ter, 0.014);
+    assert.equal(feeInfo(extra, 'BCV'), null);
+    const f = fitModel(extra, 'CAPM', 'SPI', { ...st, asset: 'SWC' });
+    const g = fitModel(ds, 'CAPM', 'SPI', { ...st, asset: 'RAIF' });
+    if (!f.ok || !g.ok) throw new Error('fit');
+    assert.deepEqual(f.result.beta, g.result.beta);
+    const cmp = compareAssets(extra, st, ['SWC', 'BCV']);
+    assert.ok(cmp.ok);
+  } finally {
+    registerAssets(ds);
+  }
+  assert.deepEqual(ASSET_IDS, ['BCV', 'FUND', 'RAIF']);
+  assert.equal(ASSET_INFO.SWC, undefined);
+});

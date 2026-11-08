@@ -80,31 +80,60 @@ FUND = {
 }
 GERIFONDS_FUND_URL = "https://www.gerifonds.ch/fr/iframe/CH0006018706?period=6"
 
-# Fonds Raiffeisen Futura - Swiss Stock A (CH0011980981), gestion active déléguée à
-# Vontobel Asset Management (direction : Vontobel Fonds Services AG), indice de
-# référence SPI TR. Série : export quotidien de Swiss Fund Data (SIX Financial
-# Information / AMAS), « Total Return Chart Price » (distributions réinvesties, net
-# des frais), depuis le 23.11.2009. L'accès passe par la page d'avertissement du
-# site (profil « investisseur privé »). Repli : data/manual/raif_tr_daily.csv
-# (date,tr_index).
-RAIF = {
-    "name": "Raiffeisen Futura - Swiss Stock A",
-    "isin": "CH0011980981",
-    "valor": "1198098",
-    "manager": "Vontobel Asset Management AG (mandat de Raiffeisen Suisse)",
-    "fund_management": "Vontobel Fonds Services AG",
-    "currency": "CHF",
-    "benchmark": "SPI",
-    "inception": "2001-06-08",
-    "ter": 0.0120,
-    "ter_date": "2026-06-30",
-    "ter_source": "Raiffeisen monthly factsheet (data as of 30.09.2026) and Swiss Fund Data, TER as of 30.06.2026",
-}
-SFD_FUND_ID = 16291  # identifiant interne Swiss Fund Data de la classe A
+# Fonds lus sur Swiss Fund Data (SIX Financial Information / AMAS) : export quotidien
+# « Total Return Chart Price » (distributions réinvesties, net des frais). L'accès
+# passe par la page d'avertissement du site (profil « investisseur privé »).
+# Pour ajouter un fonds : une entrée ci-dessous suffit (le site lit la liste dans
+# dataset.json). Champs :
+#   key      identifiant court, utilisé dans l'URL du site (lettres et chiffres)
+#   column   colonne du jeu de données (<key en minuscules>_ret)
+#   sfd_id   identifiant interne Swiss Fund Data (…/funds/show/<sfd_id>)
+#   ter      TER de référence (décimal) ; le pipeline lit aussi celui de la fiche
+#            et signale un écart. None : TER de la fiche seulement.
+#   passive  True pour un fonds indiciel (témoin : alpha attendu ≈ −TER)
+# Repli manuel : data/manual/<key en minuscules>_tr_daily.csv (date,tr_index).
+SFD_FUNDS = [
+    {
+        "key": "RAIF", "column": "raif_ret", "sfd_id": 16291,
+        "name": "Raiffeisen Futura - Swiss Stock A", "short": "Raiffeisen fund", "sub": "Raiffeisen",
+        "isin": "CH0011980981", "manager": "Vontobel Asset Management for Raiffeisen",
+        "benchmark": "SPI", "passive": False, "since": "2001",
+        "ter": 0.0120, "ter_date": "2026-06-30",
+        "ter_source": "Raiffeisen monthly factsheet (data as of 30.09.2026) and Swiss Fund Data, TER as of 30.06.2026",
+    },
+    {
+        "key": "SWC", "column": "swc_ret", "sfd_id": 16018,
+        "name": "Swisscanto (CH) Equity Fund Responsible Switzerland AA", "short": "Swisscanto fund", "sub": "Swisscanto",
+        "isin": "CH0011792451", "manager": "Swisscanto Fondsleitung AG (Zürcher Kantonalbank)",
+        "benchmark": "SPI", "passive": False, "since": "2001",
+        "ter": 0.0140, "ter_date": "2025-09-30", "ter_source": "Swiss Fund Data, fund page",
+    },
+    {
+        "key": "UBSS", "column": "ubss_ret", "sfd_id": 11512,
+        "name": "UBS (CH) Equity Fund - Switzerland Sustainable (CHF) P", "short": "UBS Sustainable fund", "sub": "UBS Sust.",
+        "isin": "CH0002791769", "manager": "UBS Fund Management (Switzerland) AG",
+        "benchmark": "SPI", "passive": False, "since": "1949",
+        "ter": 0.0095, "ter_date": "2025-10-31", "ter_source": "Swiss Fund Data, fund page",
+    },
+    {
+        "key": "UBS100", "column": "ubs100_ret", "sfd_id": 11489,
+        "name": "UBS 100 Index-Fund Switzerland (CHF) P", "short": "UBS 100 index fund", "sub": "UBS 100",
+        "isin": "CH0002788807", "manager": "UBS Fund Management (Switzerland) AG",
+        "benchmark": "UBS 100 Index", "passive": True, "since": "1989",
+        "ter": None, "ter_date": None, "ter_source": "Swiss Fund Data, fund page",
+    },
+]
+SFD_BY_KEY = {f["key"]: f for f in SFD_FUNDS}
+RAIF = SFD_BY_KEY["RAIF"]
 SFD_BASE = "https://www.swissfunddata.ch/sfdpub"
-SFD_ENTRY_URL = f"{SFD_BASE}/sfd-eingang/private?url=%2Fde%2Ffunds%2Fshow%2F{SFD_FUND_ID}"
-SFD_SHOW_URL = f"{SFD_BASE}/de/funds/show/{SFD_FUND_ID}"
-SFD_CSV_URL = f"{SFD_BASE}/de/funds/excelData/{SFD_FUND_ID}"
+
+
+def sfd_urls(sfd_id: int) -> dict[str, str]:
+    return {
+        "entry": f"{SFD_BASE}/sfd-eingang/private?url=%2Fde%2Ffunds%2Fshow%2F{sfd_id}",
+        "show": f"{SFD_BASE}/de/funds/show/{sfd_id}",
+        "csv": f"{SFD_BASE}/de/funds/excelData/{sfd_id}",
+    }
 
 FRENCH_BASE = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
 

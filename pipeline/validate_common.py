@@ -17,7 +17,17 @@ UNIVERSES = ["SPI", "EUROPE", "SWISS"]
 # univers repris dans les rapports PDF (inchangés)
 REPORT_UNIVERSES = ["SPI", "EUROPE"]
 # 'DIFF' : portefeuille long action / court fonds, y = R_BCV − R_fonds (α_DIFF = α_BCV − α_fonds)
-ASSETS = {"BCV": ["bcv_ret"], "FUND": ["fund_ret"], "RAIF": ["raif_ret"], "DIFF": ["bcv_ret", "fund_ret"]}
+ASSETS = {"BCV": ["bcv_ret"], "FUND": ["fund_ret"], "DIFF": ["bcv_ret", "fund_ret"]}
+
+
+def register_assets(ds: dict) -> list[str]:
+    """Ajoute à ASSETS les actifs décrits dans le jeu de données (fonds Swiss Fund
+    Data compris) et retourne la liste des actifs simples à valider."""
+    for a in ds.get("assets") or []:
+        ASSETS[a["id"]] = [a["column"]]
+    if "raif_ret" in ds.get("data", {}) and "RAIF" not in ASSETS:
+        ASSETS["RAIF"] = ["raif_ret"]
+    return [k for k in ASSETS if k != "DIFF"]
 
 
 def factor_col(model: str, f: str, universe: str) -> str:
@@ -50,14 +60,10 @@ def rows_for(ds: dict, cols: list[str]) -> list[int]:
 def design(ds: dict, model: str, universe: str, rows: list[int], asset: str = "BCV") -> tuple[np.ndarray, np.ndarray, list[str]]:
     g = lambda c: np.array([ds["data"][c][i] for i in rows], dtype=float)  # noqa: E731
     rf = g("rf_saron")
-    if asset == "BCV":
-        y = g("bcv_ret") - rf
-    elif asset == "FUND":
-        y = g("fund_ret") - rf
-    elif asset == "RAIF":
-        y = g("raif_ret") - rf
-    else:
+    if asset == "DIFF":
         y = g("bcv_ret") - g("fund_ret")
+    else:
+        y = g(ASSETS[asset][0]) - rf
     cols = [np.ones(len(rows))]
     for f in MODELS[model]:
         v = g(factor_col(model, f, universe))

@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path';
 
 import { ols, type CovType } from '../src/engine/ols.ts';
 import { acf, breuschPagan, defaultLjungBoxLags, jarqueBera, ljungBox } from '../src/engine/diagnostics.ts';
-import { buildSample, commonDates, assertColumns, requiredColumns, MODEL_IDS, UNIVERSES, type AssetId, type ModelId, type Universe } from '../src/engine/models.ts';
+import { buildSample, commonDates, assertColumns, registerAssets, requiredColumns, MODEL_IDS, UNIVERSES, type AssetId, type ModelId, type Universe } from '../src/engine/models.ts';
 import type { Dataset } from '../src/data/types.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -64,7 +64,7 @@ for (const name of ['statsmodels_synthetic.json', 'statsmodels_dataset.json']) {
     continue;
   }
   const common: Record<string, Set<string>> = {};
-  for (const a of ['BCV', 'FUND', 'RAIF'] as AssetId[]) {
+  for (const a of registerAssets(ds) as AssetId[]) {
     const sp = availableSpecs(ds, a);
     if (sp.length) common[a] = commonDates(ds, sp, FULL);
   }

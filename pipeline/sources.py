@@ -408,36 +408,41 @@ def fetch_fund():
 
 # --------------------------------------------------------------------- Fonds Raiffeisen Futura - Swiss Stock A
 
-def fetch_raif():
-    """Série Swiss Fund Data « Total Return Chart Price » du fonds Raiffeisen Futura - Swiss Stock A.
+def fetch_sfd(fund: dict):
+    """Série Swiss Fund Data « Total Return Chart Price » d'un fonds de C.SFD_FUNDS.
 
-    Retourne (SfdSeries | None, info). Repli : data/manual/raif_tr_daily.csv (date,tr_index).
+    Retourne (SfdSeries | None, info). Repli : data/manual/<key>_tr_daily.csv (date,tr_index).
     """
     from .raif import SfdSeries, parse_csv, parse_ter
 
+    urls = C.sfd_urls(fund["sfd_id"])
+    key = fund["key"].lower()
+    manual_name = f"{key}_tr_daily.csv"
     info: Info = {
-        "id": "raif", "name": f"{C.RAIF['name']} ({C.RAIF['isin']}) — total return, distributions reinvested",
+        "id": f"sfd_{key}", "name": f"{fund['name']} ({fund['isin']}) — total return, distributions reinvested",
         "provider": "Swiss Fund Data (SIX Financial Information / AMAS), daily \"Total Return Chart Price\" export",
-        "url": C.SFD_SHOW_URL, "license": C.LICENSES["swissfunddata"],
-        "columns": ["raif_ret"], "retrieved_at": _now(),
+        "url": urls["show"], "license": C.LICENSES["swissfunddata"],
+        "columns": [fund["column"]], "retrieved_at": _now(),
     }
     try:
-        manual = _manual_csv("raif_tr_daily.csv", "tr_index")
+        manual = _manual_csv(manual_name, "tr_index")
         if manual is not None:
-            info.update(status="manual", provider="Manual import data/manual/raif_tr_daily.csv", coverage=_coverage(manual.index))
+            info.update(status="manual", provider=f"Manual import data/manual/{manual_name}", coverage=_coverage(manual.index))
             return SfdSeries(nav=pd.Series(dtype=float), tr=manual), info
 
         def run():
             s = requests.Session()
             s.headers.update(C.HTTP_HEADERS)
-            s.get(C.SFD_ENTRY_URL, timeout=60).raise_for_status()
+            s.get(urls["entry"], timeout=60).raise_for_status()
             # page d'avertissement : accès en tant qu'investisseur privé
-            s.post(C.SFD_ENTRY_URL, data={"_action_set": "einverstanden"}, timeout=60).raise_for_status()
-            csv = s.get(C.SFD_CSV_URL, timeout=120)
+            s.post(urls["entry"], data={"_action_set": "einverstanden"}, timeout=60).raise_for_status()
+            csv = s.get(urls["csv"], timeout=120)
             csv.raise_for_status()
             if "Total Return Chart Price" not in csv.text[:2000]:
                 raise RuntimeError("Unexpected Swiss Fund Data export (disclaimer not accepted or format changed).")
-            show = s.get(C.SFD_SHOW_URL, timeout=120).text
+            if fund["isin"] not in csv.text[:500]:
+                raise RuntimeError(f"Swiss Fund Data export {fund['sfd_id']} is not {fund['isin']}.")
+            show = s.get(urls["show"], timeout=120).text
             return csv.text, show
 
         text, show = _retry(run)
@@ -447,12 +452,17 @@ def fetch_raif():
         t = parse_ter(show)
         if t is not None:
             ser.ter, ser.ter_date = t
-        _save_raw("raif_swissfunddata_daily.csv", pd.DataFrame({"nav": ser.nav, "tr_index": ser.tr}))
+        _save_raw(f"{key}_swissfunddata_daily.csv", pd.DataFrame({"nav": ser.nav, "tr_index": ser.tr}))
         info.update(status="ok", coverage=_coverage(ser.tr.index), message=f"{len(ser.tr)} daily values (NAV and total return).")
         return ser, info
     except Exception as exc:  # noqa: BLE001
         info.update(status="error", message=f"{type(exc).__name__}: {exc}")
         return None, info
+
+
+def fetch_raif():
+    """Compatibilité : fonds Raiffeisen Futura - Swiss Stock A."""
+    return fetch_sfd(C.RAIF)
 
 
 # --------------------------------------------------------------------- Facteurs suisses JKP

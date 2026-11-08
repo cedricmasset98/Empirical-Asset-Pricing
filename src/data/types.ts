@@ -28,7 +28,9 @@ export type SeriesKey =
   | 'smb5_usd'
   | 'hml5_usd'
   | 'rmw5_usd'
-  | 'cma5_usd';
+  | 'cma5_usd'
+  /** rendement d'un fonds de la liste « assets » (ex. swc_ret) */
+  | `${string}_ret`;
 
 export const REQUIRED_BASE_KEYS: SeriesKey[] = ['bcv_ret', 'spi_ret', 'rf_saron'];
 
@@ -80,6 +82,8 @@ export interface Dataset {
   /** Frais publiés des fonds (TER), lus par le pipeline. */
   fund_info?: FeeInfo;
   raif_info?: FeeInfo;
+  /** Actifs étudiés (action, fonds), dans l'ordre des menus. Absent : BCV, FUND, RAIF. */
+  assets?: AssetEntry[];
   /** Segments du taux sans risque (SARON quotidien, puis prolongements). */
   rf_info?: { segments: { start: string; end: string; method: string }[] } | null;
 }
@@ -89,4 +93,17 @@ export interface FeeInfo {
   ter: number;
   ter_date: string;
   ter_source?: string;
+}
+
+export interface AssetEntry {
+  id: string;
+  column: SeriesKey;
+  label: string;
+  short: string;
+  sub: string;
+  kind: 'stock' | 'fund';
+  isin?: string;
+  detail: string;
+  passive?: boolean;
+  fees?: FeeInfo | null;
 }

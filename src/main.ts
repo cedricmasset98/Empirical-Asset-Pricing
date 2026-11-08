@@ -10,7 +10,7 @@ import { alphaPairTable, comparisonTable, feesBlock, multiFactorPairTable, perfT
 import { assetComparisonCsv, comparisonCsv, download, regressionCsv, sampleCsv } from './ui/export.ts';
 import { escapeHtml as h, monthLabel, num, pct, pval } from './ui/format.ts';
 import { neweyWestAutoLags, type CovType } from './engine/ols.ts';
-import { ASSET_IDS, ASSET_INFO, FACTOR_COEF, MODEL_IDS, MODEL_SHORT, UI_UNIVERSES, specLabel, type ModelId, type Pair, type SingleAsset, type Universe } from './engine/models.ts';
+import { ASSET_IDS, ASSET_INFO, FACTOR_COEF, registerAssets, MODEL_IDS, MODEL_SHORT, UI_UNIVERSES, specLabel, type ModelId, type Pair, type SingleAsset, type Universe } from './engine/models.ts';
 
 type View = 'analyze' | 'compare' | 'reports' | 'data';
 type Tab = 'results' | 'fitted' | 'diagnostics' | 'rolling' | 'comparison';
@@ -66,7 +66,7 @@ function clampRange(s: UIState, ds: Dataset): void {
   if (s.range.start > s.range.end) [s.range.start, s.range.end] = [lo, hi];
 }
 
-function defaultState(ds: Dataset, asset: SingleAsset = 'BCV'): UIState {
+function defaultState(ds: Dataset, asset: SingleAsset = ASSET_IDS.includes('BCV') ? 'BCV' : (ASSET_IDS[0] ?? 'BCV')): UIState {
   const col = ASSET_INFO[asset].column;
   const first = ds.dates.find((_, i) => ds.data[col]?.[i] != null && ds.data.rf_saron?.[i] != null) ?? ds.dates[0];
   return {
@@ -79,7 +79,7 @@ function defaultState(ds: Dataset, asset: SingleAsset = 'BCV'): UIState {
     window: 60,
     view: 'analyze',
     tab: 'results',
-    pair: ['BCV', 'FUND'],
+    pair: ASSET_IDS.includes('BCV') && ASSET_IDS.includes('FUND') ? ['BCV', 'FUND'] : [ASSET_IDS[0] ?? 'BCV', ASSET_IDS[1] ?? ASSET_IDS[0] ?? 'FUND'],
     band: true,
     byYear: false,
   };
@@ -172,11 +172,29 @@ function syncControls(): void {
 
 // ------------------------------------------------------------------ rendu
 
-const SUBTITLES: Record<SingleAsset, string> = {
-  BCV: 'Stock <b>Banque Cantonale Vaudoise</b> <span class="mono">(BCVN · SIX)</span> · ISIN CH0531751755 · CHF',
-  FUND: 'Fund <b>BCV Swiss Equity A</b> <span class="mono">(BCV Asset Management)</span> · ISIN CH0006018706 · CHF',
-  RAIF: 'Fund <b>Raiffeisen Futura - Swiss Stock A</b> <span class="mono">(Vontobel Asset Management)</span> · ISIN CH0011980981 · CHF',
-};
+function subtitle(id: SingleAsset): string {
+  const a = ASSET_INFO[id];
+  const kind = a.fund ? (a.passive ? 'Index fund' : 'Fund') : 'Stock';
+  return `${kind} <b>${h(a.label.replace(/ fund$/, ''))}</b> · ${h(a.detail)} · CHF`;
+}
+
+/** Menus des actifs, générés à partir du registre (liste « assets » du jeu de données). */
+function fillAssetMenus(): void {
+  const groups: [string, (id: SingleAsset) => boolean][] = [
+    ['Stock', (id) => !ASSET_INFO[id].fund],
+    ['Active funds', (id) => ASSET_INFO[id].fund && !ASSET_INFO[id].passive],
+    ['Index funds', (id) => ASSET_INFO[id].fund && !!ASSET_INFO[id].passive],
+  ];
+  const html = groups
+    .map(([g, keep]) => {
+      const ids = ASSET_IDS.filter(keep);
+      if (!ids.length) return '';
+      const isin = (id: SingleAsset) => /ISIN (\w+)/.exec(ASSET_INFO[id].detail)?.[1] ?? '';
+      return `<optgroup label="${g}">${ids.map((id) => `<option value="${id}">${h(ASSET_INFO[id].label)}${isin(id) ? ` — ${isin(id)}` : ''}</option>`).join('')}</optgroup>`;
+    })
+    .join('');
+  for (const sel of ['asset', 'asset-a', 'asset-b']) $(sel).innerHTML = html;
+}
 
 function renderHeader(): void {
   const ds = data!;
@@ -189,7 +207,7 @@ function renderHeader(): void {
     else b.removeAttribute('aria-current');
   });
   $('subtitle').innerHTML = {
-    analyze: SUBTITLES[state.asset],
+    analyze: subtitle(state.asset),
     compare: `Comparison: <b>${h(ASSET_INFO[state.pair[0]].label)}</b> and <b>${h(ASSET_INFO[state.pair[1]].label)}</b> · CHF`,
     reports: 'Plain-language reports and notes (PDF)',
     data: 'Sources, checks and methodology',
@@ -432,8 +450,8 @@ function renderCompare(): void {
 function versusReading(cmp: AssetComparison, m: AssetComparison['models'][number], fees: [FeeInfo | null, FeeInfo | null]): string {
   const out: string[] = [];
   const [pa, pb] = [cmp.perf[0], cmp.perf[1]];
-  const name: Record<SingleAsset, string> = { BCV: 'the BCV stock', FUND: 'the BCV fund', RAIF: 'the Raiffeisen fund' };
-  const [na, nb] = cmp.pair.map((x) => name[x]);
+  const name = (id: SingleAsset) => `the ${ASSET_INFO[id].short}`;
+  const [na, nb] = cmp.pair.map(name);
   out.push(
     `Over these ${cmp.dates.length} months, ${na} returned ${pct(pa.annReturn, 1)} a year and ${nb} ${pct(pb.annReturn, 1)}, ` +
       `with volatility of ${pct(pa.annVol, 1)} versus ${pct(pb.annVol, 1)}.`,
@@ -561,6 +579,9 @@ function bind(): void {
     if (!file) return;
     try {
       const ds = parseCsvDataset(await file.text(), file.name);
+      // descriptions des actifs connus (libellés, TER) reprises du jeu de données public
+      const known = pipelineData?.assets?.filter((a) => ds.data[a.column]);
+      if (known?.length) ds.assets = known;
       setData(ds, false);
     } catch (err) {
       $('alerts').innerHTML = alertHtml('error', 'CSV import rejected.', ` ${h((err as Error).message)}`) + $('alerts').innerHTML;
@@ -587,6 +608,8 @@ function bind(): void {
 
 function setData(ds: Dataset, fromHash: boolean): void {
   data = ds;
+  registerAssets(ds);
+  fillAssetMenus();
   comparisonCache = null;
   versusCache = null;
   const base = defaultState(ds);

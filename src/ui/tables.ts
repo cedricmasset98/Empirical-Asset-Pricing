@@ -21,7 +21,7 @@ export function tip(text: string): string {
 
 export function statCards(fit: FitOk, gross: GrossAlpha | null = null): string {
   const r = fit.result;
-  const who = { BCV: 'of BCV', FUND: 'of the fund', RAIF: 'of the Raiffeisen fund', DIFF: 'of the difference' }[fit.asset];
+  const who = fit.asset === 'DIFF' ? 'of the difference' : fit.asset === 'BCV' ? 'of BCV' : `of the ${ASSET_INFO[fit.asset].short}`;
   const z = r.distribution === 't' ? 't' : 'z';
   const mktIdx = r.names.indexOf('MKT');
   const card = (label: string, value: string, sub: string, help: string, cls = '') =>
