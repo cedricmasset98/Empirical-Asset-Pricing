@@ -84,7 +84,7 @@ export function parseCsvDataset(text: string, fileName: string): Dataset {
   const sep = lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',';
   const header = splitCsvLine(lines[0], sep).map((h) => h.toLowerCase());
   if (header[0] !== 'date') throw new DatasetError('The first column must be named “date”.');
-  const unknown = header.slice(1).filter((h) => !KNOWN_KEYS.includes(h as SeriesKey) && !/^[a-z0-9]+_ret$/.test(h));
+  const unknown = header.slice(1).filter((h) => !isAcceptedKey(h));
   if (unknown.length) throw new DatasetError(`Unknown columns: ${unknown.join(', ')}. Accepted columns: ${KNOWN_KEYS.join(', ')}, or any asset return column named <name>_ret.`);
   const keys = header.slice(1) as SeriesKey[];
   if (!keys.includes('rf_saron')) throw new DatasetError('Missing required column: rf_saron.');
@@ -139,8 +139,20 @@ export function parseCsvDataset(text: string, fileName: string): Dataset {
 }
 
 /** Export du jeu de données au format CSV d'import. */
+/** Colonnes acceptées à l'import : liste fixe, plus toute colonne de rendement d'actif « <nom>_ret ». */
+export const ASSET_RETURN_RE = /^[a-z0-9]+_ret$/;
+export function isAcceptedKey(k: string): k is SeriesKey {
+  return KNOWN_KEYS.includes(k as SeriesKey) || ASSET_RETURN_RE.test(k);
+}
+
+/**
+ * Export du jeu mensuel : toutes les colonnes que l'import accepte (liste fixe
+ * dans son ordre, puis les autres rendements d'actifs, fonds personnalisés
+ * compris, dans l'ordre du jeu de données), pour un aller-retour sans perte.
+ */
 export function datasetToCsv(ds: Dataset): string {
-  const keys = KNOWN_KEYS.filter((k) => ds.data[k]);
+  const extra = (Object.keys(ds.data) as SeriesKey[]).filter((k) => !KNOWN_KEYS.includes(k) && ASSET_RETURN_RE.test(k));
+  const keys = [...KNOWN_KEYS, ...extra].filter((k) => ds.data[k]);
   const lines = [['date', ...keys].join(',')];
   ds.dates.forEach((d, i) => lines.push([d, ...keys.map((k) => (ds.data[k]![i] ?? '').toString())].join(',')));
   return lines.join('\n') + '\n';

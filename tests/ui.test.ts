@@ -67,6 +67,13 @@ test('import CSV : aller-retour et refus des pourcentages', () => {
   assert.deepEqual(back.dates, ds.dates);
   assert.deepEqual(back.data.bcv_ret, ds.data.bcv_ret);
   assert.deepEqual(back.data.smb5_chf, ds.data.smb5_chf);
+  // colonnes d'actifs hors liste fixe (fonds du pipeline ou personnalisés) : conservées à l'export
+  const custom = parseCsvDataset('date,myfund_ret,rf_saron,spi_ret\n2020-01,0.01,0.0001,0.02\n2020-02,-0.005,0.0001,-0.01\n', 'c.csv');
+  const out = datasetToCsv(custom);
+  assert.equal(out.split('\n')[0], 'date,spi_ret,rf_saron,myfund_ret');
+  assert.deepEqual(parseCsvDataset(out, 'c2.csv').data.myfund_ret, [0.01, -0.005]);
+  const withFunds = { ...ds, data: { ...ds.data, swc_ret: ds.data.raif_ret } };
+  assert.deepEqual(parseCsvDataset(datasetToCsv(withFunds), 'f.csv').data.swc_ret, ds.data.raif_ret);
   assert.throws(() => parseCsvDataset('date,bcv_ret,rf_saron\n2020-01,1.5,0.001\n', 'p.csv'), DatasetError);
   assert.throws(() => parseCsvDataset('date,bcv_ret\n2020-01,0.01\n', 'p.csv'), /rf_saron/);
   assert.throws(() => parseCsvDataset('date,bcv_ret,rf_saron,foo\n2020-01,0.01,0,1\n', 'p.csv'), /Unknown columns/);
