@@ -1,6 +1,6 @@
 # Data build report
 
-Generated on 2026-11-08T10:16:16Z
+Generated on 2026-11-08T10:24:09Z
 
 ## Sources
 
@@ -9,6 +9,9 @@ Generated on 2026-11-08T10:16:16Z
 | BCV (BCVN.SW) — prices adjusted for dividends and corporate actions | ok | 2002-12-06 → 2026-11-06 |  |
 | BCV Swiss Equity A (CH0006018706) — official performance, distributions reinvested | ok | 1997-12-31 → 2026-11-05 | 7325 daily values; 28 published distributions. |
 | Raiffeisen Futura - Swiss Stock A (CH0011980981) — total return, distributions reinvested | ok | 2009-11-23 → 2026-11-05 | 4261 daily values (NAV and total return). |
+| Swisscanto (CH) Equity Fund Responsible Switzerland AA (CH0011792451) — total return, distributions reinvested | ok | 2007-10-12 → 2026-11-05 | 4778 daily values (NAV and total return). |
+| UBS (CH) Equity Fund - Switzerland Sustainable (CHF) P (CH0002791769) — total return, distributions reinvested | ok | 2000-01-04 → 2026-11-05 | 6755 daily values (NAV and total return). |
+| UBS 100 Index-Fund Switzerland (CHF) P (CH0002788807) — total return, distributions reinvested | ok | 2000-01-04 → 2026-11-05 | 6754 daily values (NAV and total return). |
 | SPI — Swiss Performance Index (SXGE), total return index, CHF | ok | 1988-01-04 → 2026-11-06 |  |
 | SARON — daily fixing (annualised overnight rate, %) | ok | 2009-08-24 → 2026-10-30 | SNB series D0(SARON) "SARON fixing at the close of the trading day" |
 | Swiss money market rates, monthly: month-end SARON and 3-month Confederation money market debt register claims (%) | ok | 1992-01-01 → 2026-10-01 | SNB series D0(SARON,EG3M); saron_eom from 1999-06; tbill_3m from 1992-01. |
@@ -34,6 +37,21 @@ Generated on 2026-11-08T10:16:16Z
 - **pass** — Raiffeisen fund: outside distributions, total return = NAV return on 100.00% of 4260 days.
 - **pass** — Raiffeisen fund: 14 implied distributions (latest: 2021-06-24: 3.80, 2022-11-04: 3.70, 2023-11-06: 5.20, 2024-11-07: 4.50, 2025-11-05: 4.50, 2026-09-02: 4.60).
 - **pass** — Raiffeisen fund: published TER 1.20% as of 2026-06-30.
+- **warn** — Swisscanto fund: 1 months dropped (last observation more than 5 days before month-end): 2026-11
+- **pass** — Swisscanto fund: "Chart Price" equal to the published NAV.
+- **pass** — Swisscanto fund: outside distributions, total return = NAV return on 100.00% of 4777 days.
+- **pass** — Swisscanto fund: 18 implied distributions (latest: 2021-01-19: 21.60, 2022-01-25: 35.80, 2023-01-18: 20.35, 2024-01-23: 23.20, 2025-01-22: 25.65, 2026-01-21: 24.80).
+- **pass** — Swisscanto fund: published TER 1.40% as of 2025-09-30.
+- **warn** — UBS Sustainable fund: 1 months dropped (last observation more than 5 days before month-end): 2026-11
+- **pass** — UBS Sustainable fund: "Chart Price" equal to the published NAV.
+- **pass** — UBS Sustainable fund: outside distributions, total return = NAV return on 100.00% of 6754 days.
+- **pass** — UBS Sustainable fund: 25 implied distributions (latest: 2022-01-12: 26.05, 2023-01-11: 24.81, 2023-05-08: 18.80, 2024-01-10: 9.20, 2025-01-13: 28.63, 2025-05-08: 30.99).
+- **pass** — UBS Sustainable fund: published TER 0.95% as of 2025-10-31.
+- **warn** — UBS 100 index fund: 1 months dropped (last observation more than 5 days before month-end): 2026-11
+- **pass** — UBS 100 index fund: "Chart Price" equal to the published NAV.
+- **pass** — UBS 100 index fund: outside distributions, total return = NAV return on 100.00% of 6753 days.
+- **pass** — UBS 100 index fund: 26 implied distributions (latest: 2021-01-11: 166.31, 2022-01-12: 188.85, 2023-01-11: 199.97, 2024-01-10: 214.70, 2025-01-13: 212.66, 2026-01-14: 219.88).
+- **pass** — UBS 100 index fund: published TER 0.27% as of 2025-10-31.
 - **pass** — SPI: history data/history/spi_tr_history.csv spliced onto ^SSHI after a consistency check — 3061 common trading days (2013-03-05 → 2025-05-16); median ratio 1.00000, drift +0.000%, diverging days 0.03%
 - **warn** — SPI: 1 months dropped (last observation more than 5 days before month-end): 2026-11
 - **pass** — SPI total-return plausibility: mean return SPI − SMI (price index) = +2.09% per year over 431 months. Indicative only (different constituents); the TR nature rests on SIX's definition of the SPI.
@@ -53,6 +71,9 @@ Generated on 2026-11-08T10:16:16Z
 | bcv_ret | 2003-01 | 2026-10 | 286 |
 | fund_ret | 1998-01 | 2026-10 | 346 |
 | raif_ret | 2009-12 | 2026-10 | 203 |
+| swc_ret | 2007-11 | 2026-10 | 228 |
+| ubss_ret | 2000-02 | 2026-10 | 321 |
+| ubs100_ret | 2000-02 | 2026-10 | 321 |
 | spi_ret | 1988-02 | 2026-10 | 465 |
 | rf_saron | 1994-02 | 2026-10 | 393 |
 | fx_usdchf_ret | 1988-02 | 2026-10 | 465 |
