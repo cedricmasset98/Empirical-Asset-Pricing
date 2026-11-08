@@ -79,7 +79,7 @@ Le SARON quotidien du portail BNS commence le 24 août 2009. Pour les mois anté
 |---|---|---|
 | depuis septembre 2009 | — | SARON quotidien capitalisé (ci-dessus) |
 | juillet 1999 – août 2009 | SARON de fin de mois | même taux, mais un seul relevé par mois |
-| 1992 – juin 1999 | Créances comptables à court terme de la Confédération (GMBF) à 3 mois | équivalent suisse des T-bills, rendement de la dernière enchère du mois |
+| février 1994 – juin 1999 | Créances comptables à court terme de la Confédération (GMBF) à 3 mois | équivalent suisse des T-bills, rendement de la dernière enchère du mois ; la série commence en 1992, mais des mois manquent jusqu'à janvier 1994 |
 
 - **Formule** : R_f,m = r_{m−1}/100 × j_m/360, où j_m est le nombre de jours du mois m. Le taux est connu au début du mois (ex ante), comme le T-bill utilisé par K. French, alors que le SARON capitalisé est un rendement réalisé.
 - **Vérification de la convention** : sur 2009-2026, la valeur mensuelle du cube `zimoma` est le fixing du dernier jour du mois (écart maximal 0,005 point avec le fixing quotidien arrondi), et non une moyenne mensuelle.
@@ -223,7 +223,7 @@ Tolérance relative : 10⁻⁸ à 10⁻⁹.
 ## 11. Limites connues
 
 - Les ajustements de Yahoo Finance peuvent contenir des erreurs. Les contrôles automatiques en détectent une partie seulement. En cas de doute, utilisez l'import manuel.
-- Le SPI TR remonte à 1988 et le taux sans risque prolongé à 1992 (section 4.1). Les échantillons sont désormais limités par les actifs eux-mêmes : action BCV depuis 2003 (historique Yahoo), fonds BCV depuis 1998, fonds Raiffeisen depuis décembre 2009, et, dans l'univers suisse, par la disponibilité des facteurs JKP.
+- Le SPI TR remonte à 1988 et le taux sans risque prolongé à février 1994 (section 4.1). Les échantillons sont désormais limités par les actifs eux-mêmes : action BCV depuis 2003 (historique Yahoo), fonds BCV depuis 1998, fonds Raiffeisen depuis décembre 2009, et, dans l'univers suisse, par la disponibilité des facteurs JKP.
 - Les facteurs suisses JKP sont publiés une fois par an : les derniers mois manquent jusqu'à la mise à jour suivante. Ils ne reproduisent pas exactement la construction Fama-French (terciles par caractéristique, pas de tri double).
 - Les rendements French et JKP sont révisés occasionnellement par leurs auteurs : les résultats peuvent changer légèrement d'une mise à jour à l'autre.
 - Le facteur momentum européen démarre plus tard que les fichiers 3 et 5 facteurs. Dans l'univers européen, l'échantillon commun commence donc à cette date au plus tôt.
