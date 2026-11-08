@@ -1,6 +1,6 @@
 # Data build report
 
-Generated on 2026-11-08T10:24:09Z
+Generated on 2026-11-08T10:29:23Z
 
 ## Sources
 
@@ -9,7 +9,7 @@ Generated on 2026-11-08T10:24:09Z
 | BCV (BCVN.SW) — prices adjusted for dividends and corporate actions | ok | 2002-12-06 → 2026-11-06 |  |
 | BCV Swiss Equity A (CH0006018706) — official performance, distributions reinvested | ok | 1997-12-31 → 2026-11-05 | 7325 daily values; 28 published distributions. |
 | Raiffeisen Futura - Swiss Stock A (CH0011980981) — total return, distributions reinvested | ok | 2009-11-23 → 2026-11-05 | 4261 daily values (NAV and total return). |
-| Swisscanto (CH) Equity Fund Responsible Switzerland AA (CH0011792451) — total return, distributions reinvested | ok | 2007-10-12 → 2026-11-05 | 4778 daily values (NAV and total return). |
+| Swisscanto (CH) Equity Fund Responsible Switzerland AA (CH0011792451) — total return, distributions reinvested | ok | 2001-04-19 → 2026-11-05 | 6408 daily values (NAV and total return). |
 | UBS (CH) Equity Fund - Switzerland Sustainable (CHF) P (CH0002791769) — total return, distributions reinvested | ok | 2000-01-04 → 2026-11-05 | 6755 daily values (NAV and total return). |
 | UBS 100 Index-Fund Switzerland (CHF) P (CH0002788807) — total return, distributions reinvested | ok | 2000-01-04 → 2026-11-05 | 6754 daily values (NAV and total return). |
 | SPI — Swiss Performance Index (SXGE), total return index, CHF | ok | 1988-01-04 → 2026-11-06 |  |
@@ -40,6 +40,7 @@ Generated on 2026-11-08T10:24:09Z
 - **warn** — Swisscanto fund: 1 months dropped (last observation more than 5 days before month-end): 2026-11
 - **pass** — Swisscanto fund: "Chart Price" equal to the published NAV.
 - **pass** — Swisscanto fund: outside distributions, total return = NAV return on 100.00% of 4777 days.
+- **warn** — Swisscanto fund: 1630 daily total-return values from 2001-04-19 have no published NAV in the export and cannot be cross-checked; the checks above start on 2007-10-12.
 - **pass** — Swisscanto fund: 18 implied distributions (latest: 2021-01-19: 21.60, 2022-01-25: 35.80, 2023-01-18: 20.35, 2024-01-23: 23.20, 2025-01-22: 25.65, 2026-01-21: 24.80).
 - **pass** — Swisscanto fund: published TER 1.40% as of 2025-09-30.
 - **warn** — UBS Sustainable fund: 1 months dropped (last observation more than 5 days before month-end): 2026-11
@@ -71,7 +72,7 @@ Generated on 2026-11-08T10:24:09Z
 | bcv_ret | 2003-01 | 2026-10 | 286 |
 | fund_ret | 1998-01 | 2026-10 | 346 |
 | raif_ret | 2009-12 | 2026-10 | 203 |
-| swc_ret | 2007-11 | 2026-10 | 228 |
+| swc_ret | 2001-05 | 2026-10 | 306 |
 | ubss_ret | 2000-02 | 2026-10 | 321 |
 | ubs100_ret | 2000-02 | 2026-10 | 321 |
 | spi_ret | 1988-02 | 2026-10 | 465 |
