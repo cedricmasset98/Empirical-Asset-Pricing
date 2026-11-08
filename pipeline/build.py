@@ -185,6 +185,11 @@ def sfd_checks(fund: dict, ser, checks: list[dict]) -> None:
     check(checks, f"{k}-reconciliation", "pass" if r.share_ok >= 0.995 else "fail",
           f"{who}: outside distributions, total return = NAV return on {r.share_ok:.2%} of {r.n_days - 1} days"
           + (f" (mismatches: {', '.join(r.bad_days[:6])}{'…' if len(r.bad_days) > 6 else ''})." if r.bad_days else "."))
+    if r.tr_only_days:
+        first = ser.tr.index.min().date()
+        check(checks, f"{k}-unchecked", "warn",
+              f"{who}: {r.tr_only_days} daily total-return values from {first} have no published NAV in the export and cannot be "
+              f"cross-checked; the checks above start on {r.checked_from}.")
     dl = ", ".join(f"{d}: {a:.2f}" for d, a in r.distributions[-6:])
     check(checks, f"{k}-distributions", "warn" if r.anomalies else "pass",
           f"{who}: {len(r.distributions)} implied distributions (latest: {dl})"

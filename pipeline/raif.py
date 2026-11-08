@@ -61,9 +61,13 @@ def parse_csv(text: str) -> SfdSeries:
     df = df[~df.index.duplicated(keep="last")]
     nav = pd.to_numeric(df["Net Asset Value"], errors="coerce")
     tr = pd.to_numeric(df["Total Return Chart Price"], errors="coerce")
+    # le rendement total peut précéder la VNI dans l'export (Swisscanto : VNI
+    # absente avant octobre 2007) : la série TR est gardée en entier, les
+    # contrôles portent sur les jours où les deux sont disponibles.
     ok = nav.notna() & tr.notna() & (nav > 0) & (tr > 0)
+    tr_ok = tr.notna() & (tr > 0)
     chart = pd.to_numeric(df["Chart Price"], errors="coerce")[ok] if "Chart Price" in df else pd.Series(dtype=float)
-    return SfdSeries(nav=nav[ok], tr=tr[ok], chart=chart)
+    return SfdSeries(nav=nav[ok], tr=tr[tr_ok], chart=chart)
 
 
 def parse_ter(page: str) -> tuple[float, pd.Timestamp] | None:
@@ -83,10 +87,15 @@ class Checks:
     bad_days: list[str]
     distributions: list[tuple[str, float]]  # (date ex, montant implicite)
     anomalies: list[str]
+    # jours de rendement total sans VNI (non contrôlés), premier jour contrôlé
+    tr_only_days: int = 0
+    checked_from: str | None = None
 
 
 def check(s: SfdSeries) -> Checks:
-    nav, tr = s.nav, s.tr
+    nav = s.nav
+    tr = s.tr.reindex(nav.index)
+    tr_only = int(len(s.tr.index.difference(nav.index)))
     chart_eq = bool(len(s.chart) == 0 or np.allclose(s.chart.reindex(nav.index).values, nav.values, atol=1e-9, equal_nan=False))
     r_tr = tr.pct_change().iloc[1:]
     r_nav = nav.pct_change().iloc[1:]
@@ -108,4 +117,4 @@ def check(s: SfdSeries) -> Checks:
     per_year = pd.Series([pd.Timestamp(d).year for d, _ in dists]).value_counts()
     if len(per_year) and per_year.max() > 2:
         anomalies.append(f"more than two implied distributions in {int(per_year.idxmax())}")
-    return Checks(len(nav), chart_eq, share, bad, dists, anomalies)
+    return Checks(len(nav), chart_eq, share, bad, dists, anomalies, tr_only, str(nav.index.min().date()) if len(nav) else None)

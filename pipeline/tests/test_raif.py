@@ -55,6 +55,20 @@ class TestRaif(unittest.TestCase):
         self.assertAlmostEqual(s.nav.iloc[-1], 1460.22)
         self.assertTrue(check(s).chart_eq_nav)
 
+    def test_tr_before_nav(self):
+        """Rendement total publié avant la VNI : série TR complète, contrôles sur la partie commune."""
+        nav = self.nav.copy()
+        text = sfd_csv(nav, self.tr, self.days).splitlines()
+        head, rows = text[:3], text[3:]
+        rows = [";".join(r.split(";")[:7] + [""] + r.split(";")[8:]) if i < 100 else r for i, r in enumerate(rows)]
+        s = parse_csv("\n".join(head + rows) + "\n")
+        self.assertEqual(len(s.tr), len(self.days))
+        self.assertEqual(len(s.nav), len(self.days) - 100)
+        c = check(s)
+        self.assertEqual(c.tr_only_days, 100)
+        self.assertEqual(c.checked_from, str(self.days[100].date()))
+        self.assertGreaterEqual(c.share_ok, 0.995)
+
     def test_missing_header(self):
         with self.assertRaises(ValueError):
             parse_csv("sep=;\nautre chose\n")
