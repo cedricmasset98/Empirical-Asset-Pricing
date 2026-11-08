@@ -59,6 +59,20 @@ function bounds(ds: Dataset, assets: SingleAsset[] = state ? activeAssets(state)
   return months.length ? [months[0], months[months.length - 1]] : [ds.dates[0], ds.dates[ds.dates.length - 1]];
 }
 
+/** Premier mois estimable : rendements de tous les actifs concernés et taux sans risque disponibles. */
+function firstStart(ds: Dataset, assets: SingleAsset[]): string {
+  const i = ds.dates.findIndex((_, k) => ds.data.rf_saron?.[k] != null && assets.every((a) => ds.data[ASSET_INFO[a].column]?.[k] != null));
+  return i >= 0 ? ds.dates[i] : bounds(ds, assets)[0];
+}
+
+/** Changement d'actif : la période repart du premier mois disponible ; la fin est conservée si elle reste valide. */
+function resetStart(): void {
+  const ds = data!;
+  state.range.start = firstStart(ds, activeAssets(state));
+  const hi = bounds(ds, activeAssets(state))[1];
+  if (state.range.end > hi || state.range.end < state.range.start) state.range.end = hi;
+}
+
 function clampRange(s: UIState, ds: Dataset): void {
   const [lo, hi] = bounds(ds, activeAssets(s));
   if (s.range.start < lo || s.range.start > hi) s.range.start = lo;
@@ -67,8 +81,7 @@ function clampRange(s: UIState, ds: Dataset): void {
 }
 
 function defaultState(ds: Dataset, asset: SingleAsset = ASSET_IDS.includes('BCV') ? 'BCV' : (ASSET_IDS[0] ?? 'BCV')): UIState {
-  const col = ASSET_INFO[asset].column;
-  const first = ds.dates.find((_, i) => ds.data[col]?.[i] != null && ds.data.rf_saron?.[i] != null) ?? ds.dates[0];
+  const first = firstStart(ds, [asset]);
   return {
     asset,
     range: { start: first, end: ds.dates[ds.dates.length - 1] },
@@ -518,9 +531,16 @@ function bind(): void {
   on('asset', (el) => {
     state.asset = el.value as SingleAsset;
     comparisonCache = null;
+    resetStart();
   });
-  on('asset-a', (el) => (state.pair = [el.value as SingleAsset, state.pair[1]]));
-  on('asset-b', (el) => (state.pair = [state.pair[0], el.value as SingleAsset]));
+  on('asset-a', (el) => {
+    state.pair = [el.value as SingleAsset, state.pair[1]];
+    resetStart();
+  });
+  on('asset-b', (el) => {
+    state.pair = [state.pair[0], el.value as SingleAsset];
+    resetStart();
+  });
   on('model', (el) => (state.model = el.value as ModelId));
   on('universe', (el) => (state.universe = el.value as Universe));
   on('cov', (el) => (state.cov = el.value as CovType));
