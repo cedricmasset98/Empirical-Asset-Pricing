@@ -50,11 +50,19 @@ class TestReport(unittest.TestCase):
         for tpl, m in (("rapport_fonds.tex", m_fund), ("rapport_comparaison.tex", m_pair)):
             used = set(re.findall(r"\\([A-Z][A-Za-z]+)", (ROOT / "report" / tpl).read_text()))
             self.assertEqual(sorted(u for u in used if u not in m and u not in {"LARGE", "Rightarrow"}), [], tpl)
+        # spécifications : référence du site (univers suisse) puis robustesse
+        rb = report.compute(ds, "BCV")
+        self.assertEqual([(c["group"], c["universe"]) for c in rb["comp"]],
+                         [("ref", "SWISS")] * 4 + [("eu", "EUROPE")] * 4 + [("hyb", "SPI")] * 3)
+        self.assertEqual(len({tuple(c["dates"]) for c in rb["comp"]}), 1)  # même échantillon commun
+        # le Single Index de référence du tableau = CAPM SWISS = CAPM SPI sur le même échantillon
+        sim = next(c for c in rb["comp"] if c["model"] == "CAPM" and c["universe"] == "SWISS")
+        self.assertEqual(sim["fit"].params.shape[0], 2)
         # l'écart d'alpha de la comparaison = différence des alphas
         r = report_pair.compute_pair(ds)
         F = r["fits"]
-        self.assertAlmostEqual(F[("CAPM", "SPI", "DIFF")].params[0],
-                               F[("CAPM", "SPI", "BCV")].params[0] - F[("CAPM", "SPI", "FUND")].params[0], places=12)
+        self.assertAlmostEqual(F[("CAPM", "SWISS", "DIFF")].params[0],
+                               F[("CAPM", "SWISS", "BCV")].params[0] - F[("CAPM", "SWISS", "FUND")].params[0], places=12)
 
     def test_valuation_report(self):
         import re
