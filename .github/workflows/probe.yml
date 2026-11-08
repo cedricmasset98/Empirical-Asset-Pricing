@@ -2,6 +2,8 @@ name: lock
 on:
   push:
     branches: [probe-mm]
+permissions:
+  contents: write
 jobs:
   lock:
     runs-on: ubuntu-latest
@@ -23,9 +25,10 @@ jobs:
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm ci --no-audit --no-fund
           npm ls --depth=0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: locks
-          path: |
-            pipeline/requirements.txt
-            package-lock.json
+      - name: Push locks
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -f pipeline/requirements.txt package-lock.json
+          git commit -m "locks [skip ci]"
+          git push origin HEAD:probe-mm-locks --force
