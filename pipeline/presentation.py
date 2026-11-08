@@ -42,16 +42,17 @@ GREEN = "#2b8a3e"
 # alpha net ≈ −0,8 point par an, alpha brut (frais réajoutés) ≈ +0,1 point.
 FF_NET, FF_GROSS = -0.008, 0.001
 
-# modèles estimés avec le SPI comme marché (les variantes « marché européen »
-# mesurent surtout l'écart entre marchés suisse et européen, pas la gestion)
+# spécifications de référence du site : SPI TR et facteurs suisses JKP (les variantes
+# « marché européen » mesurent surtout l'écart entre marchés suisse et européen)
 MODELS_SPI = ["CAPM", "FF3", "CARHART", "FF5"]
+UNIVERSE = "SWISS"
 MODEL_LABELS = {"CAPM": "Modèle de marché (Single Index)", "FF3": "Fama-French 3 facteurs",
                 "CARHART": "Carhart (4 facteurs)", "FF5": "Fama-French 5 facteurs"}
 
 
 def _fit(ds: dict, model: str, add: float = 0.0):
-    rows = rows_for(ds, required(model, "SPI", "FUND"))
-    y, X, dates = design(ds, model, "SPI", rows, "FUND")
+    rows = rows_for(ds, required(model, UNIVERSE, "FUND"))
+    y, X, dates = design(ds, model, UNIVERSE, rows, "FUND")
     return olsref.fit(y + add, X, "HAC"), y, X, dates
 
 
@@ -232,7 +233,7 @@ def write_table(r: dict) -> None:
     lines = ["\\begin{tabular}{@{}lrrcrr@{}}", "\\toprule",
              " & \\multicolumn{2}{c}{\\textbf{Après frais}} & & \\multicolumn{2}{c}{\\textbf{Avant frais}} \\\\",
              "\\cmidrule{2-3}\\cmidrule{5-6}",
-             "Modèle (marché : SPI) & alpha/an & $t$ & & alpha/an & $t$ \\\\", "\\midrule"]
+             "Modèle (SPI, facteurs suisses) & alpha/an & $t$ & & alpha/an & $t$ \\\\", "\\midrule"]
     for m in r["models"]:
         lines.append(f"{MODEL_LABELS[m['model']]} & {cell(m['net'])} & & {cell(m['gross'])} \\\\")
     lines += ["\\bottomrule", "\\end{tabular}"]

@@ -67,7 +67,7 @@
   \item \textbf{Performance observée.} Sur la période étudiée (\Annees{} ans), BCV \PerfPhrase{} le marché suisse : 100~CHF investis dans l'action, dividendes réinvestis, sont devenus \CroissanceBCV{}, contre \CroissanceSPI{} pour le SPI. Cela correspond à \RendAnnBCV{} par an contre \RendAnnSPI{}.
   \item \textbf{Exposition au marché.} Le bêta de BCV vaut \BetaM{} : l'action est \BetaSens. Cette exposition n'est associée qu'à environ \PartMarchePct{} de son rendement moyen excédentaire.
   \item \textbf{Alpha.} L'écart restant, l'alpha, est estimé à \AlphaA{} par an. Il est \AlphaVerdict{}. Mais il reste très incertain (de \AlphaALo{} à \AlphaAHi{} par an à 95~\%), et la régression n'en identifie pas l'origine économique.
-  \item \textbf{Autres modèles.} \CompEssentiel{} (de \AlphaMinA{} à \AlphaMaxA{} par an). Ces variantes reposent toutefois sur les mêmes données : ce ne sont pas des confirmations indépendantes.
+  \item \textbf{Autres modèles.} \CompEssentiel{} avec les facteurs suisses du site (de \AlphaMinA{} à \AlphaMaxA{} par an), et de \RobAlphaMinA{} à \RobAlphaMaxA{} dans les variantes de robustesse. Ces variantes reposent toutefois sur les mêmes données : ce ne sont pas des confirmations indépendantes.
   \item \textbf{Prudence.} Ce constat porte sur le passé d'une seule action. Il ne permet de conclure ni que BCV continuera de faire mieux que le marché, ni que les marchés sont inefficients (section~\ref{sec:limites}).
 \end{enumerate}
 \end{essentiel}
@@ -180,21 +180,21 @@ Investissement (CMA) & Différence de rendement entre entreprises investissant p
 
 Ces facteurs résument des régularités observées dans les rendements. Leur interprétation économique reste débattue. Il peut s'agir de primes de risque, d'erreurs de valorisation persistantes ou d'autres mécanismes : tous ne correspondent pas nécessairement à un risque rémunéré. Si l'alpha de BCV provenait simplement d'une exposition à l'un d'eux, il devrait diminuer une fois ce facteur ajouté.
 
-On estime ces modèles avec deux définitions du marché : le SPI, ou le marché européen de Fama et French. Les facteurs, publiés en dollars, sont convertis en francs suisses, et le taux sans risque reste le SARON. Toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode), pour que la comparaison soit équitable.
+Les spécifications de référence sont celles du site : le marché est le SPI et les facteurs de style sont les facteurs suisses de Global Factor Data (Jensen, Kelly et Pedersen), convertis en francs ; le taux sans risque reste le SARON. Deux groupes d'analyses de robustesse les complètent : le marché et les facteurs européens de Fama et French, et l'ancienne spécification de ces rapports, qui combinait le SPI et les facteurs européens. Toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode), pour que la comparaison soit équitable ; l'échantillon s'arrête au dernier mois publié des facteurs suisses, mis à jour une fois par an.
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=\textwidth]{generated/fig_alphas.pdf}
-  \caption{Alpha annualisé et intervalle de confiance à 95~\% selon le modèle et la définition du marché. Les intervalles sont larges, même lorsque l'estimation centrale est nettement positive : les rendements d'une seule action fluctuent beaucoup d'un mois à l'autre, ce qui rend leur moyenne difficile à mesurer précisément.}
+  \caption{Alpha annualisé et intervalle de confiance à 95~\% selon le modèle et le groupe de spécifications. Les intervalles sont larges, même lorsque l'estimation centrale est nettement positive : les rendements d'une seule action fluctuent beaucoup d'un mois à l'autre, ce qui rend leur moyenne difficile à mesurer précisément.}
 \end{figure}
 
 \begin{table}[h]
   \centering\small
   \input{generated/tab_comparaison.tex}
-  \caption{Comparaison des modèles (erreurs standards de Newey-West). \textsuperscript{h} Variante hybride : marché suisse et facteurs européens, univers de facteurs non homogène.}
+  \caption{Comparaison des modèles (erreurs standards de Newey-West, échantillon commun). Les spécifications de référence sont celles du site ; les deux autres groupes sont des analyses de robustesse.}
 \end{table}
 
-\FacteursPhrase{} ; selon la spécification, il varie entre \AlphaMinA{} et \AlphaMaxA{} par an. Cette stabilité est intéressante, mais elle doit être lue avec mesure. Les \NbSpecs{} variantes utilisent les mêmes rendements de BCV et des facteurs très proches : ce ne sont pas \NbSpecs{} confirmations indépendantes. \FacteursRDeuxPhrase.
+\FacteursPhrase{} ; l'alpha y varie entre \AlphaMinA{} et \AlphaMaxA{} par an. Dans les \RobNbSpecs{} variantes de robustesse, il varie entre \RobAlphaMinA{} et \RobAlphaMaxA{} par an et est significatif à 5~\% dans \RobNbSig{} cas. \HybrideLecture{} Cette stabilité est intéressante, mais elle doit être lue avec mesure. Les variantes utilisent les mêmes rendements de BCV et des facteurs très proches : ce ne sont pas des confirmations indépendantes. \FacteursRDeuxPhrase.
 
 \subsection{Le résultat est-il stable dans le temps ?}
 
@@ -232,7 +232,7 @@ Les modèles factoriels sont des instruments d'analyse : ils permettent de sépa
 
 \paragraph{4. Des facteurs probablement manquants.} \RDeuxLimite{} Deux facteurs absents sont particulièrement plausibles pour BCV. Le premier est l'anomalie dite \emph{low volatility} ou \emph{betting against beta} : historiquement, les actions à faible bêta ont souvent présenté un alpha positif dans le CAPM, \LowVolPhrase{}. Une partie de l'alpha observé pourrait donc relever de cette régularité connue. Le second est la sensibilité aux \emph{taux d'intérêt}, centrale pour une banque. La période couvre les taux négatifs (2015-2022) puis leur remontée, qui ont fortement affecté les marges bancaires.
 
-\paragraph{5. Des facteurs européens appliqués à une entreprise suisse.} Les facteurs de Fama et French utilisés décrivent l'ensemble du marché européen, dominé par de grandes entreprises de la zone euro et du Royaume-Uni. Leur conversion en francs ajoute un effet de change. La variante « SPI + facteurs européens » mélange deux univers et n'est présentée qu'à titre de comparaison.
+\paragraph{5. Des facteurs construits différemment.} Les facteurs suisses de référence sont calculés sur un petit marché, avec des portefeuilles par terciles et non selon la méthode exacte de Fama et French ; ils sont publiés une fois par an, en dollars, puis convertis en francs. Les facteurs européens décrivent un autre marché, dominé par la zone euro et le Royaume-Uni. La variante « SPI + facteurs européens », utilisée dans les premières versions de ce rapport, mélange deux univers : elle n'est plus présentée qu'à titre de robustesse.
 
 \paragraph{6. Des coefficients qui évoluent.} Le bêta et l'alpha estimés varient selon la période retenue. Environ \Annees{} ans de données mensuelles, c'est peu pour mesurer précisément un rendement moyen. La période ne couvre en outre qu'un seul cycle de taux. Une partie des données provient de Yahoo Finance ; leurs ajustements sont contrôlés automatiquement, mais pas audités.
 
@@ -258,7 +258,7 @@ Le site interactif permet de refaire toutes ces estimations en changeant la pér
 
 \paragraph{Taux sans risque.} Depuis septembre 2009 : indice capitalisé $I_{d_{i+1}} = I_{d_i}\,(1 + r_i\, n_i/360)$, où $r_i$ est le SARON du jour et $n_i$ le nombre de jours calendaires jusqu'au fixing suivant ; rendement du mois $m$ : $I(\text{fin } m)/I(\text{fin } m-1) - 1$. Auparavant, faute de SARON quotidien : $r_{m-1}\, j_m/360$, où $r_{m-1}$ est le SARON de fin de mois précédent (depuis 1999), puis le rendement des créances comptables à court terme de la Confédération à 3 mois (BNS), et $j_m$ le nombre de jours du mois. Chaque raccord n'est retenu que s'il concorde avec la série qu'il prolonge sur leur période commune.
 
-\paragraph{Facteurs en CHF.} Avec $s_t$ la variation du cours USD/CHF : marché européen $R^{\text{CHF}}_M = (1 + \text{Mkt-RF} + \text{RF}_{\text{US}})(1 + s_t) - 1$, puis rendement excédentaire $R^{\text{CHF}}_M - R_f^{\text{SARON}}$ ; facteurs long-short $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$.
+\paragraph{Facteurs en CHF.} Facteurs suisses (référence) : facteurs long-short de Global Factor Data (JKP), publiés en dollars, convertis par $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$. Robustesse, avec $s_t$ la variation du cours USD/CHF : marché européen $R^{\text{CHF}}_M = (1 + \text{Mkt-RF} + \text{RF}_{\text{US}})(1 + s_t) - 1$, puis rendement excédentaire $R^{\text{CHF}}_M - R_f^{\text{SARON}}$ ; facteurs long-short $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$.
 
 \paragraph{Estimation et inférence.} MCO avec constante. Classique : $\hat V = s^2 (X'X)^{-1}$, loi de Student à $n-k$ degrés de liberté. HC3 : $(X'X)^{-1} X' \operatorname{diag}\!\big(e_t^2/(1-h_t)^2\big) X (X'X)^{-1}$. Newey-West : noyau de Bartlett, $L = \lfloor 4 (n/100)^{2/9} \rfloor$ retards. Pour HC3 et Newey-West, approximation normale. Alpha annualisé = $12\,\alpha$. L'intervalle de la droite de la figure~\ref{fig:nuage} est celui de la moyenne conditionnelle $\hat\alpha + \hat\beta x$.
 

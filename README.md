@@ -79,9 +79,9 @@ Le site est organisé en quatre rubriques : **Analyser** (un actif : résultats,
 - l'essentiel en cinq points ;
 - la question posée et un lexique ;
 - les résultats : performance, bêta, alpha et sa décomposition, robustesse de l'inférence, modèles multifactoriels, fenêtres glissantes, diagnostics ;
-- les **limites de l'exercice** : une seule action, sélection a posteriori et tests multiples, alpha ex post, facteurs omis (low-vol, taux), facteurs européens, période courte, significativité statistique contre économique ;
+- les **limites de l'exercice** : une seule action, sélection a posteriori et tests multiples, alpha ex post, facteurs omis (low-vol, taux), construction des facteurs, période courte, significativité statistique contre économique ;
 
-Les rapports n'utilisent pas encore l'univers suisse : leurs modèles multifactoriels reposent sur le SPI avec facteurs européens (ancienne variante hybride) et sur l'univers européen.
+Les rapports utilisent les mêmes spécifications de référence que le site (SPI TR et facteurs suisses JKP) ; le marché et les facteurs européens, ainsi que l'ancienne variante hybride (SPI et facteurs européens), y figurent comme analyses de robustesse, estimées sur le même échantillon commun.
 - des pistes, la méthodologie et les sources.
 
 `report/rapport.tex` ne contient que le texte. Tous les nombres, tableaux et figures sont produits par `pipeline/report.py` à partir des données, sous forme de macros (`\AlphaA`, `\BetaM`…). Les phrases qui dépendent des résultats (significativité, robustesse…) sont elles aussi générées : le texte reste exact quand les données changent. Le rapport porte sur la spécification de référence : Single Index, échantillon maximal, Newey-West.

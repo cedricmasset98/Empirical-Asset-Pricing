@@ -14,8 +14,15 @@ MODELS = {
 }
 # SWISS : marché SPI TR et facteurs long-short suisses de Global Factor Data (JKP)
 UNIVERSES = ["SPI", "EUROPE", "SWISS"]
-# univers repris dans les rapports PDF (inchangés)
-REPORT_UNIVERSES = ["SPI", "EUROPE"]
+# Spécifications des rapports, alignées sur le site : référence = univers suisse
+# (SPI TR + facteurs JKP, CAPM = Single Index) ; robustesse = univers européen et
+# ancienne variante hybride (SPI + facteurs européens, modèles multifactoriels).
+REPORT_SPECS = (
+    [("ref", m, "SWISS") for m in ("CAPM", "FF3", "CARHART", "FF5")]
+    + [("eu", m, "EUROPE") for m in ("CAPM", "FF3", "CARHART", "FF5")]
+    + [("hyb", m, "SPI") for m in ("FF3", "CARHART", "FF5")]
+)
+REPORT_UNIVERSES = ["SWISS", "EUROPE", "SPI"]
 # 'DIFF' : portefeuille long action / court fonds, y = R_BCV − R_fonds (α_DIFF = α_BCV − α_fonds)
 ASSETS = {"BCV": ["bcv_ret"], "FUND": ["fund_ret"], "DIFF": ["bcv_ret", "fund_ret"]}
 

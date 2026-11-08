@@ -18,9 +18,14 @@ from . import olsref
 from . import report as R
 from .validate_common import MODELS, design, has_data, required, rows_for
 
-SPECS = [("CAPM", "SPI")] + [(m, "EUROPE") for m in MODELS]
-SPEC_NAMES = {("CAPM", "SPI"): "Single Index (SPI)", ("CAPM", "EUROPE"): "CAPM (Europe)", ("FF3", "EUROPE"): "Fama-French 3",
-              ("CARHART", "EUROPE"): "Carhart 4", ("FF5", "EUROPE"): "Fama-French 5"}
+# Référence = spécifications du site (SPI TR et facteurs suisses JKP) ;
+# robustesse = marché et facteurs européens de Fama-French (en CHF).
+SPECS = [(m, "SWISS") for m in MODELS]
+ROBUST = [(m, "EUROPE") for m in MODELS]
+ALL_SPECS = SPECS + ROBUST
+SPEC_NAMES = {("CAPM", "SWISS"): "Single Index (SPI)", ("FF3", "SWISS"): "Fama-French 3", ("CARHART", "SWISS"): "Carhart 4",
+              ("FF5", "SWISS"): "Fama-French 5", ("CAPM", "EUROPE"): "CAPM (Europe)", ("FF3", "EUROPE"): "Fama-French 3 (Europe)",
+              ("CARHART", "EUROPE"): "Carhart 4 (Europe)", ("FF5", "EUROPE"): "Fama-French 5 (Europe)"}
 
 
 def _perf(r: np.ndarray) -> dict:
@@ -33,21 +38,21 @@ def _perf(r: np.ndarray) -> dict:
 
 def compute_pair(ds: dict) -> dict:
     for a in ("BCV", "FUND"):
-        for m, u in SPECS:
+        for m, u in ALL_SPECS:
             if not has_data(ds, required(m, u, a)):
                 raise RuntimeError(f"Séries indisponibles pour {a} / {m} / {u} : rapport comparatif impossible.")
-    cols = sorted({c for m, u in SPECS for a in ("BCV", "FUND") for c in required(m, u, a)})
+    cols = sorted({c for m, u in ALL_SPECS for a in ("BCV", "FUND") for c in required(m, u, a)})
     rows = rows_for(ds, cols)
     if len(rows) < 36:
         raise RuntimeError(f"Seulement {len(rows)} mois communs à l'action et au fonds.")
     dates = [ds["dates"][i] for i in rows]
     get = lambda c: np.array([ds["data"][c][i] for i in rows], dtype=float)  # noqa: E731
     fits = {}
-    for m, u in SPECS:
+    for m, u in ALL_SPECS:
         for a in ("BCV", "FUND", "DIFF"):
             y, X, _ = design(ds, m, u, rows, a)
             fits[(m, u, a)] = olsref.fit(y, X, "HAC")
-    sim = {a: design(ds, "CAPM", "SPI", rows, a) for a in ("BCV", "FUND")}
+    sim = {a: design(ds, "CAPM", "SWISS", rows, a) for a in ("BCV", "FUND")}
     perf = {k: _perf(get(c)) for k, c in (("act", "bcv_ret"), ("fds", "fund_ret"), ("spi", "spi_ret"), ("rf", "rf_saron"))}
     return {"dates": dates, "fits": fits, "sim": sim, "perf": perf}
 
@@ -59,7 +64,7 @@ def _verdict(p: float) -> str:
 def write_pair(ds: dict, r: dict, gen: Path) -> dict[str, str]:
     num, pct, pval, peq = R.num, R.pct, R.pval, R.peq
     F = r["fits"]
-    a, f, d = F[("CAPM", "SPI", "BCV")], F[("CAPM", "SPI", "FUND")], F[("CAPM", "SPI", "DIFF")]
+    a, f, d = F[("CAPM", "SWISS", "BCV")], F[("CAPM", "SWISS", "FUND")], F[("CAPM", "SWISS", "DIFF")]
     P = r["perf"]
     n = len(r["dates"])
     nsig = lambda asset: sum(F[(m, u, asset)].pvalue[0] < 0.05 for m, u in SPECS)  # noqa: E731
@@ -100,6 +105,12 @@ def write_pair(ds: dict, r: dict, gen: Path) -> dict[str, str]:
         "FundPhrase": fund_phrase,
         "ActNbSig": str(nsig("BCV")), "FdsNbSig": str(nsig("FUND")), "DifNbSig": str(nsig("DIFF")), "NbSpecs": str(len(SPECS)),
         "FdsAlphaMin": pct(min(fa), 1), "FdsAlphaMax": pct(max(fa), 1),
+        "RobFdsAlphaMin": pct(min(12 * F[(m, u, "FUND")].params[0] for m, u in ROBUST), 1),
+        "RobFdsAlphaMax": pct(max(12 * F[(m, u, "FUND")].params[0] for m, u in ROBUST), 1),
+        "RobActAlphaMin": pct(min(12 * F[(m, u, "BCV")].params[0] for m, u in ROBUST), 1),
+        "RobActAlphaMax": pct(max(12 * F[(m, u, "BCV")].params[0] for m, u in ROBUST), 1),
+        "RobActNbSig": str(sum(F[(m, u, "BCV")].pvalue[0] < 0.05 for m, u in ROBUST)),
+        "RobNbSpecs": str(len(ROBUST)),
         "ActAlphaMin": pct(min(aa), 1), "ActAlphaMax": pct(max(aa), 1),
     }
     for pre, fit in (("Act", a), ("Fds", f), ("Dif", d)):
@@ -165,8 +176,12 @@ def write_pair(ds: dict, r: dict, gen: Path) -> dict[str, str]:
 
     t = ["\\begin{tabular}{@{}lrrrrrr@{}}", "\\toprule",
          "Modèle & $\\alpha$ action & $p$ & $\\alpha$ fonds & $p$ & Écart & $p$ \\\\", "\\midrule"]
-    for mm, u in SPECS:
+    for mm, u in ALL_SPECS:
         fa_, ff_, fd_ = F[(mm, u, "BCV")], F[(mm, u, "FUND")], F[(mm, u, "DIFF")]
+        if (mm, u) == SPECS[0]:
+            t.append("\\multicolumn{7}{@{}l}{\\emph{Référence (comme le site) : SPI TR et facteurs suisses (JKP)}} \\\\")
+        if (mm, u) == ROBUST[0]:
+            t += ["\\midrule", "\\multicolumn{7}{@{}l}{\\emph{Robustesse : marché et facteurs européens (Fama-French, en CHF)}} \\\\"]
         t.append(f"{SPEC_NAMES[(mm, u)]} & {pct(12 * fa_.params[0], 1)} & {pval(fa_.pvalue[0])} & {pct(12 * ff_.params[0], 1)} & {pval(ff_.pvalue[0])} & {pct(12 * fd_.params[0], 1)} & {pval(fd_.pvalue[0])} \\\\")
     t += ["\\bottomrule", "\\end{tabular}"]
     (gen / "tab_pair_models.tex").write_text("\n".join(t) + "\n", encoding="utf-8")
@@ -194,7 +209,7 @@ def write_pair(ds: dict, r: dict, gen: Path) -> dict[str, str]:
     allx = np.concatenate([r["sim"][k][1][:, 1] for k in ("BCV", "FUND")])
     for ax, k, lab, col in ((axes[0], "BCV", "Action BCV", R.ORANGE), (axes[1], "FUND", "Fonds BCV Swiss Equity A", "#2b8a3e")):
         y, X, _ = r["sim"][k]
-        fit = F[("CAPM", "SPI", k)]
+        fit = F[("CAPM", "SWISS", k)]
         grid = np.linspace(allx.min(), allx.max(), 60)
         G = np.column_stack([np.ones_like(grid), grid])
         mm, lo, hi = olsref.mean_ci(fit, G)
@@ -213,15 +228,20 @@ def write_pair(ds: dict, r: dict, gen: Path) -> dict[str, str]:
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(6.2, 2.8))
-    for i, (mm, u) in enumerate(SPECS):
+    for i, (mm, u) in enumerate(ALL_SPECS):
         for j, (k, col, mk) in enumerate((("BCV", R.ORANGE, "o"), ("FUND", "#2b8a3e", "D"))):
             fit = F[(mm, u, k)]
             v = 1200 * fit.params[0]
             ax.errorbar(i + (j - 0.5) * 0.25, v, yerr=[[v - 1200 * fit.ci_low[0]], [1200 * fit.ci_high[0] - v]], fmt=mk, color=col, ms=5, capsize=3, lw=1.3,
                         label=("Action BCV" if k == "BCV" else "Fonds BCV Swiss Equity A") if i == 0 else None)
     ax.axhline(0, color="#111827", lw=1.3, zorder=0)
-    ax.annotate("α = 0", (len(SPECS) - 0.55, 0), xytext=(0, 3), textcoords="offset points", fontsize=8, ha="right", va="bottom")
-    ax.set_xticks(range(len(SPECS)), [SPEC_NAMES[s].replace("Fama-French ", "FF") for s in SPECS], fontsize=8)
+    ax.annotate("α = 0", (len(ALL_SPECS) - 0.55, 0), xytext=(0, 3), textcoords="offset points", fontsize=8, ha="right", va="bottom")
+    short = {"CAPM": "SIM", "FF3": "FF3", "CARHART": "Carhart", "FF5": "FF5"}
+    ax.set_xticks(range(len(ALL_SPECS)), [("CAPM" if (mm, u) == ("CAPM", "EUROPE") else short[mm]) for mm, u in ALL_SPECS], fontsize=8)
+    ax.axvline(len(SPECS) - 0.5, color=R.GREY, lw=0.6, ls=":")
+    top = ax.get_ylim()[1]
+    ax.text((len(SPECS) - 1) / 2, top, "Référence : SPI + facteurs suisses", ha="center", va="bottom", fontsize=7.5, color=R.BLUE)
+    ax.text(len(SPECS) + (len(ROBUST) - 1) / 2, top, "Robustesse : Europe", ha="center", va="bottom", fontsize=7.5, color=R.GREY)
     ax.set_ylabel("α annualisé et IC 95 %")
     R._pct_axis(ax)
     ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=2, fontsize=8)

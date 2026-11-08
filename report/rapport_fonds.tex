@@ -163,21 +163,21 @@ Investissement (CMA) & Différence de rendement entre entreprises investissant p
 \end{tabularx}
 \end{center}
 
-Pour un fonds, ces facteurs permettent de vérifier si un éventuel alpha provient simplement d'un \emph{style} : surpondération des petites entreprises, des actions « valeur », des gagnantes récentes, etc. Leur interprétation économique reste débattue : primes de risque, erreurs de valorisation persistantes ou autres mécanismes. Les facteurs disponibles sont européens et convertis en francs ; toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode).
+Pour un fonds, ces facteurs permettent de vérifier si un éventuel alpha provient simplement d'un \emph{style} : surpondération des petites entreprises, des actions « valeur », des gagnantes récentes, etc. Leur interprétation économique reste débattue : primes de risque, erreurs de valorisation persistantes ou autres mécanismes. Les spécifications de référence sont celles du site : le SPI et les facteurs suisses de Global Factor Data (Jensen, Kelly et Pedersen), convertis en francs. Deux groupes de robustesse les complètent : le marché et les facteurs européens de Fama et French, et l'ancienne spécification de ce rapport (SPI et facteurs européens). Toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode) ; l'échantillon s'arrête au dernier mois publié des facteurs suisses, mis à jour une fois par an.
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=\textwidth]{generated/fig_alphas.pdf}
-  \caption{Alpha annualisé et intervalle de confiance à 95~\% selon le modèle et la définition du marché.}
+  \caption{Alpha annualisé et intervalle de confiance à 95~\% selon le modèle et le groupe de spécifications.}
 \end{figure}
 
 \begin{table}[h]
   \centering\small
   \input{generated/tab_comparaison.tex}
-  \caption{Comparaison des modèles (erreurs standards de Newey-West). \textsuperscript{h} Variante hybride : marché suisse et facteurs européens.}
+  \caption{Comparaison des modèles (erreurs standards de Newey-West, échantillon commun). Les spécifications de référence sont celles du site ; les deux autres groupes sont des analyses de robustesse.}
 \end{table}
 
-\EuropeLecture{} \FacteursRDeuxPhrase. Les variantes reposent sur les mêmes rendements du fonds : ce ne sont pas des confirmations indépendantes.
+\SpiFacteursPhrase. \EuropeLecture{} \HybrideLecture{} \FacteursRDeuxPhrase. Les variantes reposent sur les mêmes rendements du fonds : ce ne sont pas des confirmations indépendantes.
 
 \subsection{Le résultat est-il stable dans le temps ?}
 
@@ -207,7 +207,7 @@ Les modèles factoriels sont des instruments d'analyse. Pour un fonds, ils sépa
 
 \paragraph{1. Un alpha net de frais.} Les rendements utilisés sont ceux que les porteurs de parts ont effectivement obtenus. L'alpha intègre donc les frais du fonds, qui rémunèrent un service (gestion, administration, garde). Un alpha légèrement négatif ne signifie pas que la sélection de titres a détruit de la valeur : il peut simplement refléter ces frais.
 
-\paragraph{2. Le choix de l'indice de référence compte.} Avec le SPI, l'indice officiel du fonds, la comparaison est cohérente. Avec le marché européen, l'alpha mesure surtout la différence entre marchés suisse et européen. Les facteurs de style disponibles sont européens, et non construits sur les seules actions suisses.
+\paragraph{2. Le choix de l'indice de référence compte.} Avec le SPI, l'indice officiel du fonds, la comparaison est cohérente. Avec le marché européen, l'alpha mesure surtout la différence entre marchés suisse et européen. Les facteurs suisses de référence sont construits sur un petit marché, par terciles, et non selon la méthode exacte de Fama et French.
 
 \paragraph{3. Précision ne veut pas dire importance.} Comme le fonds suit de très près le marché, un écart de quelques dixièmes de pour cent par an peut être statistiquement significatif. Sa portée économique reste à apprécier au regard des frais et des alternatives disponibles, par exemple un fonds indiciel.
 
@@ -230,7 +230,7 @@ Le site interactif permet de refaire ces estimations, et de comparer directement
 
 \paragraph{Taux sans risque.} Depuis septembre 2009 : indice capitalisé $I_{d_{i+1}} = I_{d_i}\,(1 + r_i\, n_i/360)$, où $r_i$ est le SARON du jour et $n_i$ le nombre de jours calendaires jusqu'au fixing suivant ; rendement du mois $m$ : $I(\text{fin } m)/I(\text{fin } m-1) - 1$. Auparavant, faute de SARON quotidien : $r_{m-1}\, j_m/360$, où $r_{m-1}$ est le SARON de fin de mois précédent (depuis 1999), puis le rendement des créances comptables à court terme de la Confédération à 3 mois (BNS), et $j_m$ le nombre de jours du mois. Chaque raccord n'est retenu que s'il concorde avec la série qu'il prolonge sur leur période commune.
 
-\paragraph{Facteurs en CHF.} Marché européen $R^{\text{CHF}}_M = (1 + \text{Mkt-RF} + \text{RF}_{\text{US}})(1 + s_t) - 1$, facteurs long-short $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$, $s_t$ variation du cours USD/CHF.
+\paragraph{Facteurs en CHF.} Facteurs suisses (référence) : facteurs long-short de Global Factor Data (JKP), publiés en dollars, convertis par $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$. Robustesse : marché européen $R^{\text{CHF}}_M = (1 + \text{Mkt-RF} + \text{RF}_{\text{US}})(1 + s_t) - 1$, facteurs long-short $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$, $s_t$ variation du cours USD/CHF.
 
 \paragraph{Estimation et inférence.} MCO avec constante ; erreurs standards classiques (Student), HC3 et Newey-West (noyau de Bartlett, $L = \lfloor 4 (n/100)^{2/9} \rfloor$). Alpha annualisé = $12\,\alpha$. Calculs vérifiés automatiquement contre \texttt{statsmodels}.
 

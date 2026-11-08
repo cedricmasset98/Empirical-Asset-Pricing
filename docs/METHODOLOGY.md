@@ -116,7 +116,7 @@ Dans l'univers suisse, le CAPM est le **Single Index Model** contre le SPI TR.
 
 Modèles : FF3 = MKT, SMB, HML ; Carhart = FF3 + MOM ; FF5 = FF3 + RMW + CMA.
 
-**Ancienne variante hybride.** Avant l'ajout des facteurs suisses, les modèles multifactoriels pouvaient combiner le marché SPI et les facteurs européens (univers `SPI` du moteur). Cette variante, non homogène, **n'est plus proposée dans l'interface**. Le moteur la conserve pour deux usages : la validation contre statsmodels, qui couvre les trois univers, et les rapports PDF, qui n'ont pas encore été mis à jour (section 11). Les anciens liens `market=SPI` sont redirigés vers l'univers suisse.
+**Ancienne variante hybride.** Avant l'ajout des facteurs suisses, les modèles multifactoriels pouvaient combiner le marché SPI et les facteurs européens (univers `SPI` du moteur). Cette variante, non homogène, **n'est plus proposée dans l'interface**. Le moteur la conserve pour deux usages : la validation contre statsmodels, qui couvre les trois univers, et les analyses de robustesse des rapports PDF (section 11). Les anciens liens `market=SPI` sont redirigés vers l'univers suisse.
 
 ### 5.2 Facteurs suisses : Global Factor Data (JKP)
 
@@ -237,4 +237,4 @@ Tolérance relative : 10⁻⁸ à 10⁻⁹.
 - Les facteurs suisses JKP sont publiés une fois par an : les derniers mois manquent jusqu'à la mise à jour suivante. Ils ne reproduisent pas exactement la construction Fama-French (terciles par caractéristique, pas de tri double).
 - Les rendements French et JKP sont révisés occasionnellement par leurs auteurs : les résultats peuvent changer légèrement d'une mise à jour à l'autre.
 - Le facteur momentum européen démarre plus tard que les fichiers 3 et 5 facteurs. Dans l'univers européen, l'échantillon commun commence donc à cette date au plus tôt.
-- **Rapports PDF.** Les rapports (`report/`) n'utilisent pas encore l'univers suisse : leurs modèles multifactoriels reposent sur le marché SPI avec facteurs européens (ancienne variante hybride, signalée « h » dans leurs tableaux) et sur l'univers européen. Ils seront alignés sur le site lors de leur prochaine révision.
+- **Rapports PDF.** Les rapports utilisent les mêmes spécifications de référence que le site (SPI TR et facteurs suisses JKP) ; le marché et les facteurs européens, ainsi que l'ancienne variante hybride (SPI et facteurs européens), y figurent comme analyses de robustesse, estimées sur le même échantillon commun. L'échantillon commun des rapports s'arrête au dernier mois publié des facteurs suisses ; le Single Index principal du rapport utilise, lui, toute la période disponible, comme le site. Les alphas de référence d'un rapport sont donc ceux de la comparaison des modèles du site (univers suisse, Newey-West) sur la même période. Les spécifications sont définies dans `REPORT_SPECS` (`pipeline/validate_common.py`).

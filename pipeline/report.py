@@ -32,7 +32,7 @@ import numpy as np
 
 from . import config as C
 from . import olsref
-from .validate_common import MODELS, REPORT_UNIVERSES as UNIVERSES, design, has_data, required, rows_for
+from .validate_common import MODELS, REPORT_SPECS, design, has_data, required, rows_for
 
 TEMPLATE = C.ROOT / "report" / "rapport.tex"
 BUILD = C.ROOT / "report" / "build"
@@ -56,6 +56,12 @@ REPORTS = {
 
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
 MODEL_NAMES = {"CAPM": "CAPM", "FF3": "Fama-French 3", "CARHART": "Carhart 4", "FF5": "Fama-French 5"}
+GROUP_TITLES = {"ref": "Référence (comme le site) : SPI TR et facteurs suisses (JKP)",
+                "eu": "Robustesse : marché et facteurs européens (Fama-French, en CHF)",
+                "hyb": "Robustesse : ancienne spécification, SPI TR et facteurs européens"}
+GROUP_MARKET = {"ref": "SPI TR", "eu": "Europe", "hyb": "SPI TR"}
+GROUP_COLORS = {"ref": "#1f5fa8", "eu": "#d9480f", "hyb": "#6b7280"}
+GROUP_SHORT = {"ref": "Référence : SPI + facteurs suisses", "eu": "Europe", "hyb": "SPI + fact. européens"}
 
 
 # ------------------------------------------------------------------ formatage
@@ -134,15 +140,16 @@ def compute(ds: dict, asset: str = "BCV") -> dict:
     rf = np.array([ds["data"]["rf_saron"][i] for i in rows])
     contiguous = all(_mdiff(dates[t - 1], dates[t]) == 1 for t in range(1, len(dates)))
 
-    # comparaison des 8 spécifications sur l'échantillon commun
-    specs = [(m, u) for u in UNIVERSES for m in MODELS if has_data(ds, required(m, u, asset))]
-    cols = sorted({c for m, u in specs for c in required(m, u, asset)})
+    # comparaison des spécifications sur l'échantillon commun : référence (univers
+    # suisse, comme le site) puis robustesse (Europe, ancienne variante hybride)
+    specs = [(g, m, u) for g, m, u in REPORT_SPECS if has_data(ds, required(m, u, asset))]
+    cols = sorted({c for _, m, u in specs for c in required(m, u, asset)})
     common = set(rows_for(ds, cols))
     comp = []
-    for m, u in specs:
+    for g, m, u in specs:
         yc, Xc, dc, _ = sample(ds, m, u, common, asset)
         if len(yc) >= max(24, len(MODELS[m]) + 11):
-            comp.append({"model": m, "universe": u, "fit": olsref.fit(yc, Xc, "HAC"), "dates": dc})
+            comp.append({"group": g, "model": m, "universe": u, "fit": olsref.fit(yc, Xc, "HAC"), "dates": dc})
 
     # régression mobile (Single Index, Newey-West)
     roll = []
@@ -177,9 +184,13 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
     grow_bcv = float(np.prod(1 + r["bcv"]))
     grow_spi = float(np.prod(1 + r["spi"]))
     years = n / 12
-    comp = r["comp"]
+    comp_all = r["comp"]
+    comp = [c for c in comp_all if c["group"] == "ref"]  # spécifications de référence (site)
+    rob = [c for c in comp_all if c["group"] != "ref"]
     comp_alpha = [c["fit"].params[0] for c in comp]
     nsig = sum(c["fit"].pvalue[0] < 0.05 for c in comp)
+    rob_alpha = [c["fit"].params[0] for c in rob]
+    rob_sig = sum(c["fit"].pvalue[0] < 0.05 for c in rob)
     roll = r["roll"]
     rb = [x["fit"].params[1] for x in roll]
     ra = [x["fit"].params[0] for x in roll]
@@ -217,16 +228,17 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
     inference_concl = ("la conclusion au seuil de 5~\\% ne dépend pas de la méthode retenue" if len(set(sig)) == 1
                        else "la conclusion au seuil de 5~\\% dépend de la méthode retenue, ce qui appelle à la prudence")
     n_comp = len(comp)
+    signe = "positif" if comp_alpha and np.mean(comp_alpha) > 0 else "négatif"
     if n_comp and nsig == n_comp:
-        fact = "Ajouter des facteurs ne fait pas disparaître l'alpha : il reste positif et significatif à 5~\\% dans toutes les spécifications"
+        fact = f"Ajouter des facteurs ne fait pas disparaître l'alpha : il reste {signe} et significatif à 5~\\% dans toutes les spécifications de référence"
         robust = "L'alpha reste du même ordre et significatif à 5~\\% dans"
     elif nsig == 0:
-        fact = "Dans aucune spécification l'alpha n'est significatif à 5~\\%"
+        fact = "Dans aucune spécification de référence l'alpha n'est significatif à 5~\\%"
         robust = "L'alpha n'est significatif à 5~\\% dans aucune des"
     else:
-        fact = f"L'alpha n'est significatif à 5~\\% que dans {nsig} spécifications sur {n_comp}"
+        fact = f"L'alpha n'est significatif à 5~\\% que dans {nsig} spécifications de référence sur {n_comp}"
         robust = f"L'alpha est significatif à 5~\\% dans {nsig} des"
-    r2_main = next((c["fit"].r2 for c in comp if c["model"] == "CAPM" and c["universe"] == "SPI"), f.r2)
+    r2_main = next((c["fit"].r2 for c in comp if c["model"] == "CAPM"), f.r2)
     r2_gain = max((c["fit"].r2 for c in comp), default=f.r2) - r2_main
     fact_r2 = (f"Les facteurs supplémentaires n'améliorent presque pas l'explication des fluctuations mensuelles {N['de']}"
                f" (gain de $R^2$ d'au plus {num(100 * r2_gain, 1)} point de pourcentage) : ils ne captent visiblement pas ce qui fait varier {N['le']} d'un mois à l'autre"
@@ -246,7 +258,7 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
     fund_checks = [c for c in ds.get("checks", []) if c["id"].startswith("fund-")]
     part_mkt = (b * mean_x / mean_y) if mean_y > 0 else float("nan")
     if n_comp and nsig == n_comp:
-        comp_essentiel = f"L'alpha reste positif et significatif à 5~\\% dans les {n_comp} variantes de modèles testées"
+        comp_essentiel = f"L'alpha reste {signe} et significatif à 5~\\% dans les {n_comp} variantes de modèles testées"
     elif nsig == 0:
         comp_essentiel = f"L'alpha n'est significatif à 5~\\% dans aucune des {n_comp} variantes de modèles testées"
     else:
@@ -262,21 +274,29 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
     else:
         fonds_lecture = ("L'alpha n'est pas distinct de zéro : sur la période, le fonds a rapporté, frais déduits, "
                          "à peu près ce que son exposition au marché laissait attendre.")
-    eu = [c["fit"].params[0] for c in comp if c["universe"] == "EUROPE"]
-    ch = [c["fit"].params[0] for c in comp if c["universe"] == "SPI"]
+    eu = [c["fit"].params[0] for c in rob if c["group"] == "eu"]
+    hy = [c["fit"].params[0] for c in rob if c["group"] == "hyb"]
+    ch = comp_alpha
     if eu and ch and abs(np.mean(eu) - np.mean(ch)) * 12 > 0.01:
         europe_lecture = (f"Avec le marché européen comme référence, l'alpha change nettement (en moyenne {pct(12 * np.mean(eu), 1)} par an, "
-                          f"contre {pct(12 * np.mean(ch), 1)} avec le SPI). Cet écart reflète surtout le fait que le marché européen a évolué "
+                          f"contre {pct(12 * np.mean(ch), 1)} avec le SPI et les facteurs suisses). Cet écart reflète surtout le fait que le marché européen a évolué "
                           "différemment du marché suisse : un fonds investi en actions suisses en hérite mécaniquement, indépendamment de sa gestion. Pour un fonds "
                           "dont l'indice de référence est le SPI, la comparaison pertinente est celle faite avec le SPI.")
     else:
         europe_lecture = "La définition du marché (suisse ou européen) change peu l'alpha estimé."
     if ch:
         spread = 12 * (max(ch) - min(ch))
-        spi_fact = (f"Avec le SPI comme marché, l'ajout des facteurs Fama-French et Carhart change peu l'alpha (de {pct(12 * min(ch), 1)} à {pct(12 * max(ch), 1)} par an)"
-                    if spread < 0.01 else f"Avec le SPI comme marché, l'alpha varie de {pct(12 * min(ch), 1)} à {pct(12 * max(ch), 1)} par an selon les facteurs ajoutés")
+        spi_fact = (f"Avec le SPI et les facteurs suisses, l'ajout des facteurs Fama-French et Carhart change peu l'alpha (de {pct(12 * min(ch), 1)} à {pct(12 * max(ch), 1)} par an)"
+                    if spread < 0.01 else f"Avec le SPI et les facteurs suisses, l'alpha varie de {pct(12 * min(ch), 1)} à {pct(12 * max(ch), 1)} par an selon les facteurs ajoutés")
     else:
-        spi_fact = "Les variantes avec le SPI ne sont pas disponibles"
+        spi_fact = "Les variantes avec les facteurs suisses ne sont pas disponibles"
+    if hy and ch:
+        gap = 12 * (np.mean(hy) - np.mean(ch[1:] or ch))
+        hybride_lecture = (f"L'ancienne spécification, qui combinait le SPI et les facteurs européens, donne un alpha moyen de {pct(12 * np.mean(hy), 1)} par an, "
+                           + ("très proche de celui obtenu avec les facteurs suisses." if abs(gap) < 0.005 else
+                              f"soit {pct(abs(gap), 1)} {'de plus' if gap > 0 else 'de moins'} qu'avec les facteurs suisses : le choix des facteurs de style n'est pas neutre."))
+    else:
+        hybride_lecture = ""
     europe_court = ("Avec le marché européen, l'alpha change surtout parce que les marchés suisse et européen ont évolué différemment."
                     if eu and ch and abs(np.mean(eu) - np.mean(ch)) * 12 > 0.01 else "Avec le marché européen, le résultat est proche.")
     tracking = (f"Le SPI explique {num(100 * f.r2, 1)}~\\% des fluctuations mensuelles : le fonds suit de très près son indice de référence."
@@ -286,6 +306,11 @@ def macros(ds: dict, r: dict) -> dict[str, str]:
     out = {
         "FondsLecture": fonds_lecture,
         "SpiFacteursPhrase": spi_fact,
+        "HybrideLecture": hybride_lecture,
+        "RobNbSpecs": str(len(rob)),
+        "RobNbSig": str(rob_sig),
+        "RobAlphaMinA": pct(12 * min(rob_alpha), 1) if rob else "—",
+        "RobAlphaMaxA": pct(12 * max(rob_alpha), 1) if rob else "—",
         "EuropeCourt": europe_court,
         "EuropeLecture": europe_lecture,
         "TrackingPhrase": tracking,
@@ -418,15 +443,17 @@ def write_tables(ds: dict, r: dict) -> None:
     # comparaison des modèles
     lines = ["\\begin{tabular}{@{}llrcrrrr@{}}", "\\toprule",
              "Marché & Modèle & $\\alpha$ annualisé & IC 95~\\% & $z(\\alpha)$ & $p$-value & $\\beta_M$ & $R^2$ \\\\", "\\midrule"]
-    last_u = None
+    last_g = None
     for c in r["comp"]:
         f = c["fit"]
-        u = "SPI TR" if c["universe"] == "SPI" else "Europe (CHF)"
-        hybrid = "\\textsuperscript{h}" if c["universe"] == "SPI" and c["model"] != "CAPM" else ""
-        if last_u is not None and u != last_u:
-            lines.append("\\midrule")
-        lines.append(f"{u if u != last_u else ''} & {MODEL_NAMES[c['model']]}{hybrid} & {pct(12 * f.params[0], 1)} & [{pct(12 * f.ci_low[0], 1)} ; {pct(12 * f.ci_high[0], 1)}] & {num(f.stat[0], 2)} & {pval(f.pvalue[0])} & {num(f.params[1], 2)} & {num(f.r2, 3)} \\\\")
-        last_u = u
+        g = c["group"]
+        if g != last_g:
+            if last_g is not None:
+                lines.append("\\midrule")
+            lines.append(f"\\multicolumn{{8}}{{@{{}}l}}{{\\emph{{{GROUP_TITLES[g]}}}}} \\\\")
+        name = "Single Index" if c["model"] == "CAPM" and c["universe"] == "SWISS" else MODEL_NAMES[c["model"]]
+        lines.append(f"{GROUP_MARKET[g]} & {name} & {pct(12 * f.params[0], 1)} & [{pct(12 * f.ci_low[0], 1)} ; {pct(12 * f.ci_high[0], 1)}] & {num(f.stat[0], 2)} & {pval(f.pvalue[0])} & {num(f.params[1], 2)} & {num(f.r2, 3)} \\\\")
+        last_g = g
     lines += ["\\bottomrule", "\\end{tabular}"]
     (GEN / "tab_comparaison.tex").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -551,11 +578,11 @@ def write_figures(r: dict) -> None:
         labels = []
         for i, c in enumerate(comp):
             ff = c["fit"]
-            col = BLUE if c["universe"] == "SPI" else ORANGE
+            col = GROUP_COLORS[c["group"]]
             a = 1200 * ff.params[0]
-            ax.errorbar(i, a, yerr=[[a - 1200 * ff.ci_low[0]], [1200 * ff.ci_high[0] - a]], fmt="o" if c["universe"] == "SPI" else "D",
+            ax.errorbar(i, a, yerr=[[a - 1200 * ff.ci_low[0]], [1200 * ff.ci_high[0] - a]], fmt={"ref": "o", "eu": "D", "hyb": "s"}[c["group"]],
                         color=col, ms=5, capsize=3, lw=1.3)
-            labels.append(MODEL_NAMES[c["model"]].replace("Fama-French ", "FF"))
+            labels.append(("SIM" if c["model"] == "CAPM" and c["universe"] == "SWISS" else MODEL_NAMES[c["model"]]).replace("Fama-French ", "FF").replace("Carhart 4", "Carhart"))
         ax.axhline(0, color="#111827", lw=1.3, zorder=0)
         ax.annotate("α = 0", (len(comp) - 0.55, 0), xytext=(0, 3), textcoords="offset points", fontsize=8, color="#111827", ha="right", va="bottom")
         ax.set_xlim(-0.6, len(comp) - 0.4)
@@ -564,11 +591,15 @@ def write_figures(r: dict) -> None:
         ax.set_xticks(range(len(comp)), labels)
         ax.set_ylabel("α annualisé et IC 95 %")
         _pct_axis(ax)
-        n_spi = sum(c["universe"] == "SPI" for c in comp)
-        if 0 < n_spi < len(comp):
-            ax.axvline(n_spi - 0.5, color=GREY, lw=0.6, ls=":")
-            ax.text((n_spi - 1) / 2, ax.get_ylim()[1], "Marché : SPI TR", ha="center", va="bottom", fontsize=8, color=BLUE)
-            ax.text(n_spi + (len(comp) - n_spi - 1) / 2, ax.get_ylim()[1], "Marché : Europe (CHF)", ha="center", va="bottom", fontsize=8, color=ORANGE)
+        groups = [c["group"] for c in comp]
+        start = 0
+        for k in range(1, len(groups) + 1):
+            if k == len(groups) or groups[k] != groups[start]:
+                g = groups[start]
+                if k < len(groups):
+                    ax.axvline(k - 0.5, color=GREY, lw=0.6, ls=":")
+                ax.text((start + k - 1) / 2, ax.get_ylim()[1], GROUP_SHORT[g], ha="center", va="bottom", fontsize=7.5, color=GROUP_COLORS[g])
+                start = k
         fig.savefig(GEN / "fig_alphas.pdf")
         plt.close(fig)
 

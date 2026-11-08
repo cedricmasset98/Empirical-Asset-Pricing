@@ -128,7 +128,7 @@ Les deux nuages sont très différents. Le fonds suit le marché presque point p
 % -----------------------------------------------------------------------------
 \section{Et avec d'autres facteurs ?}
 
-Les modèles de Fama et French et de Carhart ajoutent au marché des facteurs de taille, de valeur, de momentum, de rentabilité et d'investissement. Les facteurs disponibles décrivent le marché européen ; ils sont convertis en francs.
+Les modèles de Fama et French et de Carhart ajoutent au marché des facteurs de taille, de valeur, de momentum, de rentabilité et d'investissement. Les spécifications de référence sont celles du site : le SPI et les facteurs suisses de Global Factor Data (Jensen, Kelly et Pedersen), convertis en francs. Le marché et les facteurs européens de Fama et French servent d'analyse de robustesse.
 
 \begin{figure}[h]
   \centering
@@ -139,10 +139,10 @@ Les modèles de Fama et French et de Carhart ajoutent au marché des facteurs de
 \begin{table}[h]
   \centering\small
   \input{generated/tab_pair_models.tex}
-  \caption{Alphas annualisés (Newey-West). Le premier modèle utilise le SPI ; les suivants le marché européen de Fama et French. Écart = alpha de la régression de la différence de rendement action $-$ fonds.}
+  \caption{Alphas annualisés (Newey-West). Référence : SPI et facteurs suisses, comme sur le site ; robustesse : marché et facteurs européens de Fama et French. Écart = alpha de la régression de la différence de rendement action $-$ fonds.}
 \end{table}
 
-\ActRobustePhrase{} (de \ActAlphaMin{} à \ActAlphaMax{} par an). Celui du fonds varie davantage (de \FdsAlphaMin{} à \FdsAlphaMax{} ; significatif dans \FdsNbSig{} cas). Cette variation tient surtout à la définition du marché : un fonds d'actions suisses mesuré contre un marché européen hérite mécaniquement de l'écart de performance entre les deux marchés. Pour le fonds, dont l'indice de référence est le SPI, le modèle de marché suisse reste la référence pertinente. L'écart entre l'action et le fonds est significatif à 5~\% dans \DifNbSig{} spécifications sur \NbSpecs.
+\ActRobustePhrase{} de référence (de \ActAlphaMin{} à \ActAlphaMax{} par an). Celui du fonds va de \FdsAlphaMin{} à \FdsAlphaMax{} (significatif dans \FdsNbSig{} cas sur \NbSpecs). Avec le marché européen, l'alpha de l'action va de \RobActAlphaMin{} à \RobActAlphaMax{} (significatif dans \RobActNbSig{} cas sur \RobNbSpecs) et celui du fonds de \RobFdsAlphaMin{} à \RobFdsAlphaMax{} : un fonds d'actions suisses mesuré contre un marché européen hérite mécaniquement de l'écart de performance entre les deux marchés. Pour le fonds, dont l'indice de référence est le SPI, les spécifications suisses restent la référence pertinente. L'écart entre l'action et le fonds est significatif à 5~\% dans \DifNbSig{} spécifications de référence sur \NbSpecs.
 
 % -----------------------------------------------------------------------------
 \section{Ce que la comparaison permet d'apprendre}
@@ -162,7 +162,7 @@ Trois nuances permettent de lire ce constat correctement, sans l'effacer :
 \appendix
 \section{Méthode}
 
-\paragraph{Échantillon.} Mois pour lesquels l'action, le fonds, le SPI, le SARON et tous les facteurs européens sont disponibles (identique à l'onglet « Action BCV vs Fonds BCV » du site avec « Marché = Europe FF »). Aucune interpolation.
+\paragraph{Échantillon.} Mois pour lesquels l'action, le fonds, le SPI, le SARON et tous les facteurs suisses et européens sont disponibles. Aucune interpolation. L'échantillon s'arrête au dernier mois publié des facteurs suisses (mise à jour annuelle) ; la rubrique « Compare » du site, univers « Switzerland », utilise les mêmes spécifications de référence, mais seulement les facteurs suisses pour fixer l'échantillon commun.
 
 \paragraph{Test de l'écart d'alpha.} Pour chaque modèle, on régresse $R_{\text{action},t} - R_{\text{fonds},t}$ sur les mêmes facteurs. Comme les MCO sont linéaires, la constante vaut exactement $\alpha_{\text{action}} - \alpha_{\text{fonds}}$, et son erreur standard (Newey-West) tient compte de la corrélation entre les deux actifs. Alpha annualisé = $12\,\alpha$.
 

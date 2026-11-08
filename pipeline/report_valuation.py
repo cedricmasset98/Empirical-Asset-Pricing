@@ -33,9 +33,10 @@ def compute_valuation(ds: dict) -> dict:
     # TER lu sur la page Gérifonds lors de la construction des données ; à défaut,
     # valeur documentée dans la configuration.
     info = ds.get("fund_info") or {k: C.FUND[k] for k in ("ter", "ter_date") if k in C.FUND}
-    car = next((c for c in r["comp"] if c["model"] == "CARHART" and c["universe"] == "SPI"), None)
+    # Carhart de référence (site) : SPI TR et facteurs suisses, momentum JKP (ret_12_1)
+    car = next((c for c in r["comp"] if c["model"] == "CARHART" and c["universe"] == "SWISS"), None)
     if car is not None:
-        _, Xc, dc, _ = R.sample(ds, "CARHART", "SPI", asset="FUND")
+        _, Xc, dc, _ = R.sample(ds, "CARHART", "SWISS", asset="FUND")
         keep = set(car["dates"])
         car = {**car, "mom_mean": float(np.mean([Xc[i, 4] for i, d in enumerate(dc) if d in keep]))}
     return {"fund": r, "info": info, "carhart": car}
