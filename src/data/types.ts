@@ -80,6 +80,8 @@ export interface Dataset {
   /** Frais publiés des fonds (TER), lus par le pipeline. */
   fund_info?: FeeInfo;
   raif_info?: FeeInfo;
+  /** Segments du taux sans risque (SARON quotidien, puis prolongements). */
+  rf_info?: { segments: { start: string; end: string; method: string }[] } | null;
 }
 
 export interface FeeInfo {

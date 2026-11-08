@@ -94,7 +94,7 @@ Le \textbf{bêta} mesure la sensibilité du fonds aux mouvements du marché. L'\
 L'étude porte sur \NObs{} rendements mensuels, de \PeriodeDebut{} à \PeriodeFin{}\Contigu. Les rendements du fonds proviennent de la série officielle de Gérifonds, la direction de fonds de la BCV : « évolution de la performance, dividendes réinvestis ». Ils sont nets des frais incorporés dans la VNI. Les distributions y sont réinvesties pour leur montant brut, avant fiscalité personnelle de l'investisseur. Le pipeline a vérifié cette série de façon indépendante (contrôles \FundChecksOK) :
 {\small \FundChecks}
 
-Le marché suisse est représenté par le SPI \emph{Total Return}, dividendes réinvestis. Le taux sans risque est le SARON, capitalisé jour après jour (\RendAnnRf{} par an en moyenne sur la période). L'historique du fonds remonte à 1997, mais l'analyse commence quand l'historique du SPI devient disponible, comme pour l'action BCV.
+Le marché suisse est représenté par le SPI \emph{Total Return}, dividendes réinvestis. Le taux sans risque est le SARON, capitalisé jour après jour depuis 2009 et prolongé auparavant par les taux du marché monétaire suisse publiés par la BNS (\RendAnnRf{} par an en moyenne sur la période). L'analyse couvre toute la période où les rendements du fonds, le SPI et le taux sans risque sont disponibles.
 
 \begin{figure}[h]
   \centering
@@ -228,7 +228,7 @@ Le site interactif permet de refaire ces estimations, et de comparer directement
 
 \paragraph{Rendements du fonds.} Indice officiel de performance Gérifonds (dividendes réinvestis) pris en fin de mois ; $R_t = I_t / I_{t-1} - 1$. Contrôle : $R^{TR}_t = (\mathrm{VNI}_t + D_t)/\mathrm{VNI}_{t-1} - 1$ chaque jour, avec $D_t$ la distribution brute à la date de détachement. Un mois incomplet est laissé manquant, sans interpolation.
 
-\paragraph{Taux sans risque.} Indice capitalisé $I_{d_{i+1}} = I_{d_i}\,(1 + r_i\, n_i/360)$ du SARON ; rendement du mois $m$ : $I(\text{fin } m)/I(\text{fin } m-1) - 1$.
+\paragraph{Taux sans risque.} Depuis septembre 2009 : indice capitalisé $I_{d_{i+1}} = I_{d_i}\,(1 + r_i\, n_i/360)$, où $r_i$ est le SARON du jour et $n_i$ le nombre de jours calendaires jusqu'au fixing suivant ; rendement du mois $m$ : $I(\text{fin } m)/I(\text{fin } m-1) - 1$. Auparavant, faute de SARON quotidien : $r_{m-1}\, j_m/360$, où $r_{m-1}$ est le SARON de fin de mois précédent (depuis 1999), puis le rendement des créances comptables à court terme de la Confédération à 3 mois (BNS), et $j_m$ le nombre de jours du mois. Chaque raccord n'est retenu que s'il concorde avec la série qu'il prolonge sur leur période commune.
 
 \paragraph{Facteurs en CHF.} Marché européen $R^{\text{CHF}}_M = (1 + \text{Mkt-RF} + \text{RF}_{\text{US}})(1 + s_t) - 1$, facteurs long-short $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$, $s_t$ variation du cours USD/CHF.
 

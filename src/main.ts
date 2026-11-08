@@ -305,7 +305,7 @@ function renderTab(): void {
       $('scatter-title').textContent = isSim
         ? `Relation with the market: ${ASSET_INFO[state.asset].label} against the SPI Total Return (Single Index)`
         : `For reference: the Single Index of the ${ASSET_INFO[state.asset].label} against the SPI Total Return`;
-      $('scatter-lead').innerHTML = `R<sub>${who},t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, monthly returns in CHF${ASSET_INFO[state.asset].fund ? ' (net of fund fees, distributions reinvested)' : ' (dividends reinvested)'}, R<sub>f</sub> = compounded SARON.`;
+      $('scatter-lead').innerHTML = `R<sub>${who},t</sub> − R<sub>f,t</sub> = α + β<sub>M</sub>(R<sub>SPI,t</sub> − R<sub>f,t</sub>) + ε<sub>t</sub>, monthly returns in CHF${ASSET_INFO[state.asset].fund ? ' (net of fund fees, distributions reinvested)' : ' (dividends reinvested)'}, R<sub>f</sub> = Swiss risk-free rate (SARON; money market rates before September 2009).`;
       $('scatter-note').innerHTML = isSim
         ? ''
         : `<p class="muted small">This chart is not the selected model: it is the one-factor benchmark, kept for comparison. The table and the charts above belong to the selected model (${h(specLabel(state.model, state.universe))}).</p>`;

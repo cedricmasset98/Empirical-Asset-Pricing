@@ -37,6 +37,22 @@ SNB_CUBE = "snbgwdzid"
 SNB_DIMENSIONS_URL = f"https://data.snb.ch/api/cube/{SNB_CUBE}/dimensions/en"
 SNB_DATA_URL = f"https://data.snb.ch/api/cube/{SNB_CUBE}/data/csv/en"
 SNB_FROM_DATE = "1999-01-01"
+# Taux du marché monétaire, valeurs mensuelles (cube zimoma) : SARON en fin de
+# mois (depuis juin 1999) et créances comptables à court terme de la Confédération
+# à 3 mois (GMBF, dernière enchère du mois, depuis 1992). Servent à prolonger le
+# taux sans risque avant le SARON quotidien (août 2009).
+SNB_MM_CUBE = "zimoma"
+SNB_MM_DATA_URL = f"https://data.snb.ch/api/cube/{SNB_MM_CUBE}/data/csv/en"
+SNB_MM_ITEMS = {"saron_eom": "SARON", "tbill_3m": "EG3M"}
+SNB_MM_FROM = "1988-01"
+# Raccord : approximation par le taux de fin de mois précédent acceptée si, sur la
+# période du SARON quotidien, corrélation ≥ 0,95 et écart moyen ≤ 0,20 pt/an ;
+# GMBF acceptées si, sur la période commune avec le SARON de fin de mois,
+# corrélation ≥ 0,90 et écart moyen ≤ 0,75 pt/an.
+RF_APPROX_MIN_CORR = 0.95
+RF_APPROX_MAX_DIFF = 0.0020
+RF_TBILL_MIN_CORR = 0.90
+RF_TBILL_MAX_DIFF = 0.0075
 SNB_FX_DIMENSIONS_URL = "https://data.snb.ch/api/cube/devkum/dimensions/en"
 SNB_FX_DATA_URL = "https://data.snb.ch/api/cube/devkum/data/csv/en"
 

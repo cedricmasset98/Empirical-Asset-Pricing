@@ -58,7 +58,7 @@ Dernier point de la série dans chaque mois, puis $R_t = I_t/I_{t-1} - 1$. Les r
 - Historique long : Yahoo ne remonte qu'à mars 2013. Avant, la série est prolongée par `data/history/spi_tr_history.csv` (SPI TR quotidien depuis janvier 1988). Le raccord n'a lieu que si les deux séries concordent sur leur période commune : niveau, absence de dérive (qui trahirait un indice de prix) et jours divergents. Sinon, il est refusé et signalé dans le rapport de construction. Les niveaux Yahoo sont conservés ; l'historique est remis à leur échelle à la date de jonction.
 - Alternative : import manuel `data/manual/spi_tr_daily.csv`, par exemple un export SIX. Il remplace alors entièrement la source Yahoo et l'historique.
 
-## 4. Taux sans risque : SARON
+## 4. Taux sans risque : SARON et prolongement
 
 - Source : fixing quotidien publié par la BNS (cube `snbgwdzid`, data.snb.ch). SIX Index AG est l'administrateur du taux.
 - Le SARON est un **taux overnight annualisé** (ACT/360). Le pipeline construit l'indice capitalisé :
@@ -70,6 +70,26 @@ Dernier point de la série dans chaque mois, puis $R_t = I_t/I_{t-1} - 1$. Les r
 - **Le SARON annualisé n'est jamais soustrait directement à un rendement mensuel.**
 - Les taux négatifs (2015-2022) donnent des rendements sans risque négatifs, conservés tels quels.
 - Dans tous les univers, le rendement excédentaire de l'actif et celui du marché sont calculés avec le SARON.
+
+### 4.1 Prolongement avant le SARON quotidien
+
+Le SARON quotidien du portail BNS commence le 24 août 2009. Pour les mois antérieurs, la colonne `rf_saron` est prolongée par des taux mensuels du cube `zimoma` de la BNS, relevés en fin de mois :
+
+| Période | Taux r_{m−1} (% annualisé, fin du mois m−1) | Remarque |
+|---|---|---|
+| depuis septembre 2009 | — | SARON quotidien capitalisé (ci-dessus) |
+| juillet 1999 – août 2009 | SARON de fin de mois | même taux, mais un seul relevé par mois |
+| 1992 – juin 1999 | Créances comptables à court terme de la Confédération (GMBF) à 3 mois | équivalent suisse des T-bills, rendement de la dernière enchère du mois |
+
+- **Formule** : R_f,m = r_{m−1}/100 × j_m/360, où j_m est le nombre de jours du mois m. Le taux est connu au début du mois (ex ante), comme le T-bill utilisé par K. French, alors que le SARON capitalisé est un rendement réalisé.
+- **Vérification de la convention** : sur 2009-2026, la valeur mensuelle du cube `zimoma` est le fixing du dernier jour du mois (écart maximal 0,005 point avec le fixing quotidien arrondi), et non une moyenne mensuelle.
+- **Contrôles de raccord**, publiés dans les contrôles du jeu de données :
+  1. l'approximation par le SARON de fin de mois est comparée au SARON capitalisé sur la période commune (depuis septembre 2009) : elle est retenue si la corrélation est d'au moins 0,95 et l'écart moyen d'au plus 0,20 point par an ;
+  2. le taux GMBF est comparé au SARON de fin de mois sur 1999-2009 : il est retenu si la corrélation est d'au moins 0,90 et l'écart moyen d'au plus 0,75 point par an.
+
+  Un raccord refusé laisse le taux sans risque manquant pour les mois concernés. Un mois manquant dans la série GMBF interrompt le prolongement : seuls les mois contigus au segment suivant sont utilisés, sans interpolation.
+- **Limites** : le taux GMBF à 3 mois contient une petite prime de terme par rapport à un taux au jour le jour ; un taux fixé en début de mois ne reflète pas les changements de taux intervenus pendant le mois (par exemple les baisses d'octobre 2008), ce qui crée des écarts mensuels de quelques centièmes de point, sans effet notable sur les régressions.
+- Les taux spot des obligations de la Confédération, également publiés par la BNS, n'ont pas été retenus : leur échéance la plus courte est d'un an, ce qui ajouterait une prime de terme et un risque de taux sur l'horizon mensuel.
 
 ## 5. Facteurs
 
@@ -203,7 +223,7 @@ Tolérance relative : 10⁻⁸ à 10⁻⁹.
 ## 11. Limites connues
 
 - Les ajustements de Yahoo Finance peuvent contenir des erreurs. Les contrôles automatiques en détectent une partie seulement. En cas de doute, utilisez l'import manuel.
-- Le SPI TR remonte à 1988 grâce à l'historique raccordé. La contrainte devient le SARON quotidien du portail BNS, disponible depuis août 2009 : les modèles avec taux sans risque commencent en septembre 2009. Le fonds Raiffeisen commence en décembre 2009.
+- Le SPI TR remonte à 1988 et le taux sans risque prolongé à 1992 (section 4.1). Les échantillons sont désormais limités par les actifs eux-mêmes : action BCV depuis 2003 (historique Yahoo), fonds BCV depuis 1998, fonds Raiffeisen depuis décembre 2009, et, dans l'univers suisse, par la disponibilité des facteurs JKP.
 - Les facteurs suisses JKP sont publiés une fois par an : les derniers mois manquent jusqu'à la mise à jour suivante. Ils ne reproduisent pas exactement la construction Fama-French (terciles par caractéristique, pas de tri double).
 - Les rendements French et JKP sont révisés occasionnellement par leurs auteurs : les résultats peuvent changer légèrement d'une mise à jour à l'autre.
 - Le facteur momentum européen démarre plus tard que les fichiers 3 et 5 facteurs. Dans l'univers européen, l'échantillon commun commence donc à cette date au plus tôt.

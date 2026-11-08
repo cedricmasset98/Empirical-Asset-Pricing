@@ -85,7 +85,7 @@ La question utile n'est donc pas seulement « l'action a-t-elle bien rapporté ?
 Le \textbf{bêta} mesure la sensibilité de l'action aux mouvements du marché. L'\textbf{alpha} est la part du rendement moyen que cette sensibilité n'explique pas. Le terme $\varepsilon_t$ regroupe tout ce qui fait varier l'action indépendamment du marché ce mois-là.
 
 \begin{lexique}\small
-\textbf{Rendement excédentaire} : rendement diminué de celui d'un placement sans risque, ici le SARON, le taux interbancaire au jour le jour en CHF. \textbf{Erreur standard} : ordre de grandeur de l'imprécision d'une estimation. \textbf{Statistique $t$ ou $z$} : estimation divisée par son erreur standard ; au-delà d'environ 2 en valeur absolue, on qualifie l'estimation de significativement différente de zéro au seuil de 5~\%. \textbf{$p$-value} : mesure à quel point le résultat observé serait surprenant si la vraie valeur était nulle, sous les hypothèses du test. Une $p$-value de 0,02 \emph{ne signifie pas} qu'il y a 98~\% de chances que l'alpha soit positif. \textbf{Intervalle de confiance (IC) à 95~\%} : fourchette de valeurs compatibles avec les données, selon la méthode statistique utilisée. \textbf{$R^2$} : part des fluctuations mensuelles de l'action expliquée par le modèle.
+\textbf{Rendement excédentaire} : rendement diminué de celui d'un placement sans risque, ici le SARON, le taux interbancaire au jour le jour en CHF (prolongé avant 2009 par les taux du marché monétaire suisse publiés par la BNS). \textbf{Erreur standard} : ordre de grandeur de l'imprécision d'une estimation. \textbf{Statistique $t$ ou $z$} : estimation divisée par son erreur standard ; au-delà d'environ 2 en valeur absolue, on qualifie l'estimation de significativement différente de zéro au seuil de 5~\%. \textbf{$p$-value} : mesure à quel point le résultat observé serait surprenant si la vraie valeur était nulle, sous les hypothèses du test. Une $p$-value de 0,02 \emph{ne signifie pas} qu'il y a 98~\% de chances que l'alpha soit positif. \textbf{Intervalle de confiance (IC) à 95~\%} : fourchette de valeurs compatibles avec les données, selon la méthode statistique utilisée. \textbf{$R^2$} : part des fluctuations mensuelles de l'action expliquée par le modèle.
 \end{lexique}
 
 % -----------------------------------------------------------------------------
@@ -246,7 +246,6 @@ En somme, l'analyse suggère que BCV a fait mieux, sur la période étudiée, qu
 \begin{itemize}[leftmargin=*]
   \item Comparer BCV à un groupe défini à l'avance, par exemple toutes les banques cantonales cotées, et tester conjointement leurs alphas.
   \item Ajouter un facteur de taux d'intérêt et un facteur \emph{betting against beta}, idéalement construits sur le marché suisse.
-  \item Allonger l'historique du taux sans risque avant le SARON (août 2009) : le SPI Total Return remonte désormais à 1988, c'est le taux sans risque qui limite l'échantillon.
 \end{itemize}
 
 Le site interactif permet de refaire toutes ces estimations en changeant la période, le modèle, la méthode d'inférence et la fenêtre glissante : \URLSite.
@@ -257,7 +256,7 @@ Le site interactif permet de refaire toutes ces estimations en changeant la pér
 
 \paragraph{Rendements.} $R_t = P^{\text{adj}}_t / P^{\text{adj}}_{t-1} - 1$ sur le dernier cours de chaque mois, avec des cours ajustés des dividendes et des opérations sur titres. Un mois incomplet est laissé manquant, sans interpolation.
 
-\paragraph{Taux sans risque.} Indice capitalisé $I_{d_{i+1}} = I_{d_i}\,(1 + r_i\, n_i/360)$, où $r_i$ est le SARON du jour et $n_i$ le nombre de jours calendaires jusqu'au fixing suivant ; rendement du mois $m$ : $I(\text{fin } m)/I(\text{fin } m-1) - 1$.
+\paragraph{Taux sans risque.} Depuis septembre 2009 : indice capitalisé $I_{d_{i+1}} = I_{d_i}\,(1 + r_i\, n_i/360)$, où $r_i$ est le SARON du jour et $n_i$ le nombre de jours calendaires jusqu'au fixing suivant ; rendement du mois $m$ : $I(\text{fin } m)/I(\text{fin } m-1) - 1$. Auparavant, faute de SARON quotidien : $r_{m-1}\, j_m/360$, où $r_{m-1}$ est le SARON de fin de mois précédent (depuis 1999), puis le rendement des créances comptables à court terme de la Confédération à 3 mois (BNS), et $j_m$ le nombre de jours du mois. Chaque raccord n'est retenu que s'il concorde avec la série qu'il prolonge sur leur période commune.
 
 \paragraph{Facteurs en CHF.} Avec $s_t$ la variation du cours USD/CHF : marché européen $R^{\text{CHF}}_M = (1 + \text{Mkt-RF} + \text{RF}_{\text{US}})(1 + s_t) - 1$, puis rendement excédentaire $R^{\text{CHF}}_M - R_f^{\text{SARON}}$ ; facteurs long-short $F^{\text{CHF}} = F^{\text{USD}}(1 + s_t)$.
 

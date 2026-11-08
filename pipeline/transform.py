@@ -81,6 +81,94 @@ def saron_monthly_returns(daily_rate_pct: pd.Series, max_gap_days: int, last_com
     return simple_returns(lv.values), lv.stale, gaps
 
 
+def rf_from_rates(rate_pct: pd.Series) -> pd.Series:
+    """Rendement sans risque approché du mois m à partir d'un taux annualisé
+    relevé en fin de mois m−1 (connu ex ante) : R_m = r_{m−1}/100 × j_m/360,
+    j_m = nombre de jours du mois m (ACT/360). Mois consécutifs uniquement."""
+    r = rate_pct.dropna().sort_index()
+    if r.empty:
+        return pd.Series(dtype=float)
+    idx = pd.period_range(r.index.min(), r.index.max(), freq="M")
+    prev = r.reindex(idx).shift(1)
+    days = pd.Series(idx.days_in_month, index=idx)
+    return (prev / 100 * days / 360).iloc[1:].dropna()
+
+
+@dataclass
+class RfSegment:
+    start: str
+    end: str
+    method: str
+
+
+@dataclass
+class RfExtension:
+    series: pd.Series
+    segments: list[RfSegment]
+    # (corrélation, écart moyen annualisé, écart absolu max mensuel, n) ou None
+    approx_check: tuple[float, float, float, int] | None
+    tbill_check: tuple[float, float, float, int] | None
+    approx_ok: bool
+    tbill_ok: bool
+
+
+def _compare(a: pd.Series, b: pd.Series) -> tuple[float, float, float, int] | None:
+    common = a.dropna().index.intersection(b.dropna().index)
+    if len(common) < 24:
+        return None
+    x, y = a[common], b[common]
+    d = x - y
+    return float(np.corrcoef(x, y)[0, 1]), float(12 * d.mean()), float(d.abs().max()), len(common)
+
+
+def extend_rf(realised: pd.Series, saron_eom_pct: pd.Series, tbill_pct: pd.Series,
+              min_corr: tuple[float, float], max_diff: tuple[float, float]) -> RfExtension:
+    """Prolonge le rendement sans risque réalisé (SARON quotidien capitalisé)
+    vers le passé, sans jamais remplacer un mois réalisé :
+      1. avant le SARON quotidien : SARON de fin de mois m−1, × j_m/360 ;
+      2. avant le premier SARON de fin de mois : GMBF à 3 mois de fin de mois m−1.
+    Chaque raccord n'est accepté que si l'approximation concorde avec la série
+    qu'elle prolonge sur leur période commune (corrélation et écart moyen).
+    Les mois manquants d'une source ne sont pas comblés par l'autre au milieu
+    d'un segment : seuls les mois antérieurs au segment suivant sont ajoutés."""
+    real = realised.dropna()
+    approx = rf_from_rates(saron_eom_pct)
+    tbill = rf_from_rates(tbill_pct)
+    approx_check = _compare(approx, real)
+    approx_ok = approx_check is not None and approx_check[0] >= min_corr[0] and abs(approx_check[1]) <= max_diff[0]
+    out = real.copy()
+    segments: list[RfSegment] = []
+    first_real = real.index.min() if len(real) else None
+    tbill_check = None
+    tbill_ok = False
+    if approx_ok and first_real is not None:
+        early = approx[approx.index < first_real]
+        if len(early):
+            out = pd.concat([early, out])
+            segments.append(RfSegment(str(early.index.min()), str(early.index.max()), "month-end SARON of the previous month × days/360"))
+        # la série GMBF est comparée au segment qu'elle prolonge
+        tbill_check = _compare(tbill, early if len(early) else approx)
+        tbill_ok = tbill_check is not None and tbill_check[0] >= min_corr[1] and abs(tbill_check[1]) <= max_diff[1]
+        if tbill_ok:
+            first = out.index.min()
+            older = tbill[tbill.index < first]
+            # segment continu jusqu'au premier mois du segment suivant
+            if len(older):
+                full = older.reindex(pd.period_range(older.index.min(), first - 1, freq="M"))
+                gap = full[full.isna()]
+                if len(gap):
+                    full = full[full.index > gap.index.max()]
+                full = full.dropna()
+                if len(full):
+                    out = pd.concat([full, out])
+                    segments.append(RfSegment(str(full.index.min()), str(full.index.max()), "3-month Confederation money market debt register claims (end of previous month) × days/360"))
+    if len(real):
+        segments.append(RfSegment(str(real.index.min()), str(real.index.max()), "daily SARON compounded over the month (ACT/360)"))
+    segments.sort(key=lambda g: g.start)
+    out = out[~out.index.duplicated(keep="last")].sort_index()
+    return RfExtension(out, segments, approx_check, tbill_check, approx_ok, tbill_ok)
+
+
 # --------------------------------------------------------------- Fama-French
 
 def parse_french_csv(text: str) -> pd.DataFrame:

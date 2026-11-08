@@ -37,6 +37,8 @@ class TestBuildOffline(unittest.TestCase):
             pd.DataFrame({"date": days.date, "adj_close": px}).to_csv(manual / "bcv_daily.csv", index=False)
             pd.DataFrame({"date": days.date, "spi_tr": px * 0.9}).to_csv(manual / "spi_tr_daily.csv", index=False)
             pd.DataFrame({"date": days.date, "rate_pct": 0.25}).to_csv(manual / "saron_daily.csv", index=False)
+            mm_months = pd.period_range("2007-01", "2012-05", freq="M")
+            pd.DataFrame({"date": mm_months.astype(str), "saron_eom": 0.25, "tbill_3m": 0.2}).to_csv(manual / "money_market_monthly.csv", index=False)
             pd.DataFrame({"date": days.date, "tr_index": px * 1.7}).to_csv(manual / "fund_tr_daily.csv", index=False)
             pd.DataFrame({"date": days.date, "tr_index": px * 2.3}).to_csv(manual / "raif_tr_daily.csv", index=False)
             pd.DataFrame({"date": days.date, "chf_per_usd": 1.0 + 0.0001 * np.arange(len(days))}).to_csv(manual / "usdchf_daily.csv", index=False)
@@ -80,6 +82,11 @@ class TestBuildOffline(unittest.TestCase):
             self.assertAlmostEqual(ds["data"]["smb_ch"][j], usd * (1 + s), places=10)
             self.assertIsNone(ds["data"]["mom_ch"][ds["dates"].index("2012-03")])
             self.assertTrue((tmp / "processed" / "build_report.md").exists())
+            # SARON constant : corrélation indéfinie, raccord refusé, rf commence avec le SARON quotidien
+            self.assertTrue(any(c["id"] == "rf-approx" and c["status"] == "warn" for c in ds["checks"]))
+            first_rf = next(d for d, v in zip(ds["dates"], ds["data"]["rf_saron"]) if v is not None)
+            self.assertEqual(first_rf, "2010-01")
+            self.assertIsNone(ds["rf_info"]["segments"][1:] or None)
 
 
 if __name__ == "__main__":

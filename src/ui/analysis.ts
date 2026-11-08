@@ -243,7 +243,7 @@ export function compareAssets(ds: Dataset, st: Settings, pair: Pair = DEFAULT_PA
     perfStats('a', ASSET_INFO[pair[0]].label, col(ASSET_INFO[pair[0]].column)),
     perfStats('b', ASSET_INFO[pair[1]].label, col(ASSET_INFO[pair[1]].column)),
     perfStats('spi', 'SPI Total Return', col('spi_ret')),
-    perfStats('rf', 'SARON deposit', col('rf_saron')),
+    perfStats('rf', 'Risk-free deposit (SARON)', col('rf_saron')),
   ];
   const models = MODEL_IDS.map((model) => ({
     model,

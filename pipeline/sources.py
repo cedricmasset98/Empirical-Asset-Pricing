@@ -258,6 +258,48 @@ def fetch_french(key: str) -> tuple[str | None, Info]:
 
 # --------------------------------------------------------------------- USD/CHF
 
+def fetch_money_market() -> tuple[pd.DataFrame | None, Info]:
+    """Taux mensuels du marché monétaire suisse (% annualisé, valeur de fin de
+    mois) : SARON et GMBF à 3 mois. Index : périodes mensuelles."""
+    info: Info = {
+        "id": "snb_mm", "name": "Swiss money market rates, monthly: month-end SARON and 3-month Confederation money market debt register claims (%)",
+        "provider": f"Swiss National Bank, data.snb.ch (cube {C.SNB_MM_CUBE})",
+        "url": f"https://data.snb.ch/en/topics/ziredev/cube/{C.SNB_MM_CUBE}",
+        "license": C.LICENSES["snb"] + " " + C.LICENSES["six"], "columns": ["rf_saron"], "retrieved_at": _now(),
+    }
+    try:
+        path = C.MANUAL_DIR / "money_market_monthly.csv"
+        if path.exists():
+            raw = pd.read_csv(path)
+            need = {"date", *C.SNB_MM_ITEMS}
+            if not need <= set(raw.columns):
+                raise ValueError(f"{path.name}: expected columns {sorted(need)}.")
+            df = raw.set_index(pd.PeriodIndex(raw["date"].astype(str).str[:7], freq="M"))[list(C.SNB_MM_ITEMS)].apply(pd.to_numeric, errors="coerce")
+            info.update(status="manual", provider=f"Manual import data/manual/{path.name}", coverage=_coverage(df.dropna(how="all").index.to_timestamp()))
+            return df.sort_index(), info
+        sel = ",".join(C.SNB_MM_ITEMS.values())
+        params = {"dimSel": f"D0({sel})", "fromDate": C.SNB_MM_FROM}
+        text = _retry(lambda: _get(C.SNB_MM_DATA_URL, params=params).text)
+        raw = parse_snb_csv(text)
+        item_col = next(c for c in raw.columns if c not in ("Date", "Value"))
+        wide = raw.pivot_table(index="Date", columns=item_col, values="Value", aggfunc="last")
+        missing = [i for i in C.SNB_MM_ITEMS.values() if i not in wide.columns]
+        if missing:
+            raise RuntimeError(f"SNB series not found in cube {C.SNB_MM_CUBE}: {missing}")
+        df = wide.rename(columns={v: k for k, v in C.SNB_MM_ITEMS.items()})[list(C.SNB_MM_ITEMS)]
+        df.index = pd.PeriodIndex(df.index.astype(str), freq="M")
+        df = df.sort_index()
+        out = df.copy()
+        out.index = pd.Index(df.index.astype(str), name="date")
+        _save_raw("money_market_monthly.csv", out)
+        firsts = "; ".join(f"{k} from {df[k].first_valid_index()}" for k in df.columns)
+        info.update(status="ok", coverage=_coverage(df.dropna(how="all").index.to_timestamp()), message=f"SNB series D0({sel}); {firsts}.")
+        return df, info
+    except Exception as exc:  # noqa: BLE001
+        info.update(status="error", message=f"{type(exc).__name__}: {exc}")
+        return None, info
+
+
 def fetch_usdchf_snb() -> tuple[pd.Series, str]:
     """Cours USD/CHF de fin de mois publié par la BNS (cube devkum)."""
     dims = _retry(lambda: _get(C.SNB_FX_DIMENSIONS_URL).json())

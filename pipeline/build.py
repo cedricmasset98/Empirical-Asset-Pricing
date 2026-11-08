@@ -27,6 +27,7 @@ from .transform import (
     fx_returns,
     month_end_levels,
     parse_french_csv,
+    extend_rf,
     saron_monthly_returns,
     simple_returns,
 )
@@ -41,7 +42,7 @@ COLUMN_INFO = {
     "cma_ch": ("Swiss CMA (JKP, CHF)", "Global Factor Data, Switzerland: asset growth (at_gr1)"),
     "mom_ch": ("Swiss MOM (JKP, CHF)", "Global Factor Data, Switzerland: return from t−12 to t−1 (ret_12_1)"),
     "spi_ret": ("SPI TR return", "Swiss Performance Index (total return index, CHF)"),
-    "rf_saron": ("Realised SARON risk-free rate", "Daily ACT/360 compounding of SARON over the month"),
+    "rf_saron": ("Swiss risk-free rate (SARON, extended)", "Daily ACT/360 compounding of SARON over the month; before daily SARON, month-end SARON then 3-month Confederation money market debt register claims of the previous month × days/360"),
     "mkt_eu_chf": ("FF European market, total return in CHF", "(1 + Mkt−RF + RF_US)(1 + s) − 1"),
     "smb3_chf": ("SMB (FF3 Europe) in CHF", "SMB_USD × (1 + s)"),
     "hml3_chf": ("HML (FF3 Europe) in CHF", "HML_USD × (1 + s)"),
@@ -138,6 +139,36 @@ def jkp_block(fx_r, cols: dict, sources: list, checks: list[dict]) -> None:
         check(checks, "jkp-vs-europe", "pass",
               "Correlation of Swiss JKP / European Fama-French factors (USD): " + ", ".join(f"{k} {v:.2f}" for k, v in cor.items())
               + ". Moderate correlations expected: different markets and methods.")
+
+
+def rf_extension(cols: dict, sources: list, checks: list, last_complete: pd.Period) -> dict | None:
+    """Prolonge rf_saron avant le SARON quotidien (SARON de fin de mois, puis
+    GMBF à 3 mois), après contrôle de concordance de chaque raccord."""
+    mm, info = S.fetch_money_market()
+    sources.append(info)
+    real = cols.get("rf_saron")
+    if mm is None or real is None or real.dropna().empty:
+        if mm is None:
+            check(checks, "rf-extension", "warn", "Monthly money market rates unavailable: the risk-free rate starts with daily SARON.")
+        return None
+    mm = mm[mm.index <= last_complete]
+    ext = extend_rf(real, mm["saron_eom"], mm["tbill_3m"],
+                    (C.RF_APPROX_MIN_CORR, C.RF_TBILL_MIN_CORR), (C.RF_APPROX_MAX_DIFF, C.RF_TBILL_MAX_DIFF))
+    fmt = lambda c: f"correlation {c[0]:.3f}, mean difference {c[1] * 100:+.3f} pt/yr, max monthly gap {c[2] * 100:.3f} pt, {c[3]} months"
+    if ext.approx_check is None:
+        check(checks, "rf-approx", "warn", "Month-end SARON approximation not tested (overlap too short): no extension.")
+    else:
+        check(checks, "rf-approx", "pass" if ext.approx_ok else "warn",
+              ("Month-end SARON of the previous month × days/360 vs realised compounded SARON: " + fmt(ext.approx_check)
+               + (". Approximation accepted." if ext.approx_ok else ". Approximation rejected: no extension.")))
+    if ext.tbill_check is not None:
+        check(checks, "rf-tbill", "pass" if ext.tbill_ok else "warn",
+              ("3-month Confederation money market debt register claims vs month-end SARON (both × days/360): " + fmt(ext.tbill_check)
+               + (". Splice accepted." if ext.tbill_ok else ". Splice rejected.")))
+    cols["rf_saron"] = ext.series
+    segs = [{"start": g.start, "end": g.end, "method": g.method} for g in ext.segments]
+    check(checks, "rf-segments", "pass", "Risk-free rate: " + "; ".join(f"{g['start']} → {g['end']}: {g['method']}" for g in segs) + ".")
+    return {"segments": segs}
 
 
 def raif_checks(ser, checks: list[dict]) -> None:
@@ -276,6 +307,7 @@ def main(argv: list[str] | None = None) -> int:
                   + ", ".join(gaps[:8]) + (" …" if len(gaps) > 8 else ""))
         check(checks, "saron-coverage", "pass",
               f"Daily SARON available from {saron.index.min().date()} to {saron.index.max().date()}; monthly return = ACT/360 compounding.")
+    rf_info = rf_extension(cols, sources, checks, last_complete)
 
     # --- USD/CHF
     fx, info = S.fetch_usdchf()
@@ -380,6 +412,7 @@ def main(argv: list[str] | None = None) -> int:
         "sources": sources,
         "checks": checks,
         "fund_info": fund_info,
+        "rf_info": rf_info,
         "raif_info": raif_info,
         "notes": [
             f"Last complete month kept: {last_complete} (run date {today.date()}).",

@@ -22,7 +22,7 @@ Toutes les statistiques sont **recalculées dans le navigateur** à partir de fi
 
 ```
 pipeline/            Python : récupération, transformation, contrôles, références statsmodels
-  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds BCV), Swiss Fund Data (fonds Raiffeisen), BNS (SARON, USD/CHF), K. French (Europe), Global Factor Data (Suisse)
+  sources.py         Yahoo Finance (BCV, SPI), Gérifonds (fonds BCV), Swiss Fund Data (fonds Raiffeisen), BNS (SARON, taux du marché monétaire, USD/CHF), K. French (Europe), Global Factor Data (Suisse)
   fund.py            lecture de la série officielle du fonds et contrôles (VNI + distributions, YTD)
   transform.py       fins de mois, rendements, capitalisation SARON ACT/360, conversion CHF
   build.py           -> public/data/dataset.json, data/processed/monthly.csv, build_report.md
@@ -99,6 +99,7 @@ Le workflow installe LaTeX et régénère le rapport à chaque exécution. L'arc
 | BCV | Yahoo Finance `BCVN.SW`, `Adj Close` | Dividendes et splits ajustés ; split 10:1 de mai 2020 contrôlé |
 | SPI TR | Yahoo Finance `^SSHI` (SPI, SXGE) | Indice de performance ; jamais remplacé par un indice de prix. Historique Yahoo disponible depuis mars 2013 seulement ; prolongé jusqu'en 1988 par `data/history/spi_tr_history.csv`, après contrôle de concordance (cf. `data/history/README.md`) |
 | SARON | BNS data.snb.ch, cube `snbgwdzid` | Fixing quotidien depuis août 2009, capitalisé ACT/360 |
+| Taux du marché monétaire | BNS data.snb.ch, cube `zimoma` | SARON de fin de mois (depuis 1999) et GMBF à 3 mois (depuis 1992) : prolongent le taux sans risque avant août 2009, après contrôle de concordance |
 | Facteurs Europe | Kenneth R. French Data Library | 3F, 5F, Momentum ; USD, RF US |
 | Fonds BCV Swiss Equity A | Gérifonds, page publique du fonds : graphique « Évolution de la performance (dividendes réinvestis) », quotidien depuis 1997 | Série officielle, distributions brutes réinvesties, nette de frais. Contrôles automatiques : rendements quotidiens recalculés à partir des VNI et des distributions publiées, chaque distribution retrouvée une seule fois, performance YTD = publiée |
 | Fonds Raiffeisen Futura - Swiss Stock A | Swiss Fund Data (swissfunddata.ch, SIX Financial Information / AMAS), export quotidien de la fiche du fonds, « Total Return Chart Price », depuis novembre 2009 | Distributions réinvesties, nette de frais. Contrôles automatiques : Chart Price = VNI, rendement total = rendement de la VNI hors distributions, distributions implicites plausibles (montant, fréquence), TER publié = configuration. Rendements annuels vérifiés contre la fiche mensuelle officielle |
