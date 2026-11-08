@@ -40,6 +40,21 @@ class TestRaif(unittest.TestCase):
         self.assertEqual([d for d, _ in c.distributions], [str(d.date()) for d in self.ex])
         self.assertEqual(c.anomalies, [])
 
+    def test_thousands_separator(self):
+        """Valeurs ≥ 1000 exportées avec « ' » (1'442.88) : aucune ligne perdue."""
+        text = "\n".join([
+            "sep=;", "Pictet CH - Swiss Equities -P dy CHF - CH0002783923 (CHF)",
+            "Date;CCY Chart Price;Chart Price;CCY Adjusted Chart Price;Adjusted Chart Price;CCY Total Return Chart Price;"
+            "Total Return Chart Price;Net Asset Value;Issue Price;Redemption Price;Closing Price",
+            "2009-08-18;CHF;998.50;CHF;990.1;CHF;998.50;998.50;;;",
+            "2009-08-19;CHF;1'442.88;CHF;1'333.868;CHF;1'442.88;1'442.88;;;",
+            "2009-08-20;CHF;1'460.22;CHF;1'349.898;CHF;1'460.22;1'460.22;;;",
+        ]) + "\n"
+        s = parse_csv(text)
+        self.assertEqual(len(s.tr), 3)
+        self.assertAlmostEqual(s.nav.iloc[-1], 1460.22)
+        self.assertTrue(check(s).chart_eq_nav)
+
     def test_missing_header(self):
         with self.assertRaises(ValueError):
             parse_csv("sep=;\nautre chose\n")

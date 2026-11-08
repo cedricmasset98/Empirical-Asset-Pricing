@@ -48,7 +48,11 @@ def parse_csv(text: str) -> SfdSeries:
         start = next(i for i, l in enumerate(lines) if l.startswith("Date;"))
     except StopIteration as exc:
         raise ValueError("Swiss Fund Data export: header line \"Date;\" not found.") from exc
-    df = pd.read_csv(io.StringIO("\n".join(lines[start:])), sep=";")
+    # les valeurs ≥ 1000 portent un séparateur de milliers « ' » (1'442.88)
+    df = pd.read_csv(io.StringIO("\n".join(lines[start:])), sep=";", dtype=str)
+    for col in df.columns:
+        if col != "Date" and not col.startswith("CCY"):
+            df[col] = df[col].str.replace("'", "", regex=False).str.replace("’", "", regex=False)
     need = {"Date", "Net Asset Value", "Total Return Chart Price"}
     if not need <= set(df.columns):
         raise ValueError(f"Swiss Fund Data export: missing columns {sorted(need - set(df.columns))}.")
