@@ -36,8 +36,9 @@ jobs:
           cache: pip
           cache-dependency-path: pipeline/requirements.txt
 
-      - name: Dépendances Python
-        run: pip install -r pipeline/requirements.txt
+      # versions exactes et empreintes SHA-256 (pipeline/requirements.txt, produit par pip-compile)
+      - name: Dépendances Python (verrouillées)
+        run: python -m pip install --require-hashes --no-deps -r pipeline/requirements.txt
 
       - name: Tests du pipeline
         run: mkdir -p logs && python -m unittest discover -s pipeline/tests -t . -v 2>&1 | tee logs/pipeline-tests.log
@@ -106,9 +107,11 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
+          cache: npm
 
-      - name: Dépendances Node
-        run: npm install --no-audit --no-fund
+      # npm ci installe exactement package-lock.json et échoue s'il ne correspond pas à package.json
+      - name: Dépendances Node (verrouillées)
+        run: npm ci --no-audit --no-fund
 
       - name: Vérification des types
         run: npm run typecheck 2>&1 | tee logs/typecheck.log

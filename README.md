@@ -52,17 +52,26 @@ La préparation des données, le moteur statistique et l'interface sont séparé
 
 ## Installation locale
 
-Prérequis : Node.js ≥ 22.6 et Python ≥ 3.11.
+Prérequis : Node.js ≥ 22.6 et Python 3.12 (version du workflow, pour laquelle les dépendances sont verrouillées).
 
 ```bash
-npm install
-python -m pip install -r pipeline/requirements.txt
+npm ci                                                        # versions exactes de package-lock.json
+python -m pip install --require-hashes -r pipeline/requirements.txt   # versions exactes et empreintes
 
 npm run data        # télécharge les données et calcule les références statsmodels
 npm test            # tests du moteur, comparaison à statsmodels, couche UI
 npm run dev         # http://localhost:5173
 npm run build       # site statique dans dist/
 ```
+
+### Dépendances verrouillées
+
+- **Node** : `package.json` fixe les plages acceptées, `package-lock.json` les versions exactes installées par `npm ci` (workflow et installation locale). Mise à jour : `npm update` puis commit du nouveau `package-lock.json`.
+- **Python** : `pipeline/requirements.in` liste les dépendances directes avec leurs versions minimales ; `pipeline/requirements.txt`, généré par `pip-compile`, fixe toutes les versions (dépendances indirectes comprises) avec leurs empreintes SHA-256. Mise à jour, sous Python 3.12 :
+  ```bash
+  pip install pip-tools
+  pip-compile --generate-hashes --strip-extras --allow-unsafe --no-emit-index-url -o pipeline/requirements.txt pipeline/requirements.in
+  ```
 
 Pour lancer les tests Python :
 

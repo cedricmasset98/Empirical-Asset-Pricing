@@ -1,0 +1,12 @@
+# Dépendances directes du pipeline Python (versions minimales).
+# Le fichier verrouillé utilisé par le workflow est pipeline/requirements.txt,
+# produit par pip-compile (versions exactes et empreintes SHA-256) :
+#   pip-compile --generate-hashes --strip-extras --allow-unsafe -o pipeline/requirements.txt pipeline/requirements.in
+# (Python 3.12, Linux, comme le workflow). Ne pas modifier requirements.txt à la main.
+pandas>=2.2
+numpy>=1.26
+scipy>=1.11
+statsmodels>=0.14.2
+yfinance>=0.2.54
+requests>=2.31
+matplotlib>=3.8
