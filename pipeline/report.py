@@ -56,7 +56,7 @@ REPORTS = {
 
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
 MODEL_NAMES = {"CAPM": "CAPM", "FF3": "Fama-French 3", "CARHART": "Carhart 4", "FF5": "Fama-French 5"}
-GROUP_TITLES = {"ref": "Référence (comme le site) : SPI TR et facteurs suisses (JKP)",
+GROUP_TITLES = {"ref": "Référence : SPI TR et facteurs suisses (JKP)",
                 "eu": "Robustesse : marché et facteurs européens (Fama-French, en CHF)",
                 "hyb": "Robustesse : ancienne spécification, SPI TR et facteurs européens"}
 GROUP_MARKET = {"ref": "SPI TR", "eu": "Europe", "hyb": "SPI TR"}

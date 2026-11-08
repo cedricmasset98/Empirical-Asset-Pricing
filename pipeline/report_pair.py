@@ -179,7 +179,7 @@ def write_pair(ds: dict, r: dict, gen: Path) -> dict[str, str]:
     for mm, u in ALL_SPECS:
         fa_, ff_, fd_ = F[(mm, u, "BCV")], F[(mm, u, "FUND")], F[(mm, u, "DIFF")]
         if (mm, u) == SPECS[0]:
-            t.append("\\multicolumn{7}{@{}l}{\\emph{Référence (comme le site) : SPI TR et facteurs suisses (JKP)}} \\\\")
+            t.append("\\multicolumn{7}{@{}l}{\\emph{Référence : SPI TR et facteurs suisses (JKP)}} \\\\")
         if (mm, u) == ROBUST[0]:
             t += ["\\midrule", "\\multicolumn{7}{@{}l}{\\emph{Robustesse : marché et facteurs européens (Fama-French, en CHF)}} \\\\"]
         t.append(f"{SPEC_NAMES[(mm, u)]} & {pct(12 * fa_.params[0], 1)} & {pval(fa_.pvalue[0])} & {pct(12 * ff_.params[0], 1)} & {pval(ff_.pvalue[0])} & {pct(12 * fd_.params[0], 1)} & {pval(fd_.pvalue[0])} \\\\")

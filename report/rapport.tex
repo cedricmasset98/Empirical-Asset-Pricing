@@ -67,7 +67,7 @@
   \item \textbf{Performance observée.} Sur la période étudiée (\Annees{} ans), BCV \PerfPhrase{} le marché suisse : 100~CHF investis dans l'action, dividendes réinvestis, sont devenus \CroissanceBCV{}, contre \CroissanceSPI{} pour le SPI. Cela correspond à \RendAnnBCV{} par an contre \RendAnnSPI{}.
   \item \textbf{Exposition au marché.} Le bêta de BCV vaut \BetaM{} : l'action est \BetaSens. Cette exposition n'est associée qu'à environ \PartMarchePct{} de son rendement moyen excédentaire.
   \item \textbf{Alpha.} L'écart restant, l'alpha, est estimé à \AlphaA{} par an. Il est \AlphaVerdict{}. Mais il reste très incertain (de \AlphaALo{} à \AlphaAHi{} par an à 95~\%), et la régression n'en identifie pas l'origine économique.
-  \item \textbf{Autres modèles.} \CompEssentiel{} avec les facteurs suisses du site (de \AlphaMinA{} à \AlphaMaxA{} par an), et de \RobAlphaMinA{} à \RobAlphaMaxA{} dans les variantes de robustesse. Ces variantes reposent toutefois sur les mêmes données : ce ne sont pas des confirmations indépendantes.
+  \item \textbf{Autres modèles.} \CompEssentiel{} avec les facteurs suisses (de \AlphaMinA{} à \AlphaMaxA{} par an), et de \RobAlphaMinA{} à \RobAlphaMaxA{} dans les variantes de robustesse. Ces variantes reposent toutefois sur les mêmes données : ce ne sont pas des confirmations indépendantes.
   \item \textbf{Prudence.} Ce constat porte sur le passé d'une seule action. Il ne permet de conclure ni que BCV continuera de faire mieux que le marché, ni que les marchés sont inefficients (section~\ref{sec:limites}).
 \end{enumerate}
 \end{essentiel}
@@ -180,7 +180,7 @@ Investissement (CMA) & Différence de rendement entre entreprises investissant p
 
 Ces facteurs résument des régularités observées dans les rendements. Leur interprétation économique reste débattue. Il peut s'agir de primes de risque, d'erreurs de valorisation persistantes ou d'autres mécanismes : tous ne correspondent pas nécessairement à un risque rémunéré. Si l'alpha de BCV provenait simplement d'une exposition à l'un d'eux, il devrait diminuer une fois ce facteur ajouté.
 
-Les spécifications de référence sont celles du site : le marché est le SPI et les facteurs de style sont les facteurs suisses de Global Factor Data (Jensen, Kelly et Pedersen), convertis en francs ; le taux sans risque reste le SARON. Deux groupes d'analyses de robustesse les complètent : le marché et les facteurs européens de Fama et French, et l'ancienne spécification de ces rapports, qui combinait le SPI et les facteurs européens. Toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode), pour que la comparaison soit équitable ; l'échantillon s'arrête au dernier mois publié des facteurs suisses, mis à jour une fois par an.
+Dans les spécifications de référence, le marché est le SPI et les facteurs de style sont les facteurs suisses de Global Factor Data (Jensen, Kelly et Pedersen), convertis en francs ; le taux sans risque reste le SARON. Deux groupes d'analyses de robustesse les complètent : le marché et les facteurs européens de Fama et French, et l'ancienne spécification de ces rapports, qui combinait le SPI et les facteurs européens. Toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode), pour que la comparaison soit équitable ; l'échantillon s'arrête au dernier mois publié des facteurs suisses, mis à jour une fois par an.
 
 \begin{figure}[h]
   \centering
@@ -191,7 +191,7 @@ Les spécifications de référence sont celles du site : le marché est le SPI e
 \begin{table}[h]
   \centering\small
   \input{generated/tab_comparaison.tex}
-  \caption{Comparaison des modèles (erreurs standards de Newey-West, échantillon commun). Les spécifications de référence sont celles du site ; les deux autres groupes sont des analyses de robustesse.}
+  \caption{Comparaison des modèles (erreurs standards de Newey-West, échantillon commun). Spécifications de référence : SPI et facteurs suisses ; les deux autres groupes sont des analyses de robustesse.}
 \end{table}
 
 \FacteursPhrase{} ; l'alpha y varie entre \AlphaMinA{} et \AlphaMaxA{} par an. Dans les \RobNbSpecs{} variantes de robustesse, il varie entre \RobAlphaMinA{} et \RobAlphaMaxA{} par an et est significatif à 5~\% dans \RobNbSig{} cas. \HybrideLecture{} Cette stabilité est intéressante, mais elle doit être lue avec mesure. Les variantes utilisent les mêmes rendements de BCV et des facteurs très proches : ce ne sont pas des confirmations indépendantes. \FacteursRDeuxPhrase.

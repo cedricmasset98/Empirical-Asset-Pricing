@@ -163,7 +163,7 @@ Investissement (CMA) & Différence de rendement entre entreprises investissant p
 \end{tabularx}
 \end{center}
 
-Pour un fonds, ces facteurs permettent de vérifier si un éventuel alpha provient simplement d'un \emph{style} : surpondération des petites entreprises, des actions « valeur », des gagnantes récentes, etc. Leur interprétation économique reste débattue : primes de risque, erreurs de valorisation persistantes ou autres mécanismes. Les spécifications de référence sont celles du site : le SPI et les facteurs suisses de Global Factor Data (Jensen, Kelly et Pedersen), convertis en francs. Deux groupes de robustesse les complètent : le marché et les facteurs européens de Fama et French, et l'ancienne spécification de ce rapport (SPI et facteurs européens). Toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode) ; l'échantillon s'arrête au dernier mois publié des facteurs suisses, mis à jour une fois par an.
+Pour un fonds, ces facteurs permettent de vérifier si un éventuel alpha provient simplement d'un \emph{style} : surpondération des petites entreprises, des actions « valeur », des gagnantes récentes, etc. Leur interprétation économique reste débattue : primes de risque, erreurs de valorisation persistantes ou autres mécanismes. Les spécifications de référence reposent sur le SPI et les facteurs suisses de Global Factor Data (Jensen, Kelly et Pedersen), convertis en francs. Deux groupes de robustesse les complètent : le marché et les facteurs européens de Fama et French, et l'ancienne spécification de ce rapport (SPI et facteurs européens). Toutes les variantes sont estimées sur les mêmes \CommonN{} mois (\CommonPeriode) ; l'échantillon s'arrête au dernier mois publié des facteurs suisses, mis à jour une fois par an.
 
 \begin{figure}[h]
   \centering
@@ -174,7 +174,7 @@ Pour un fonds, ces facteurs permettent de vérifier si un éventuel alpha provie
 \begin{table}[h]
   \centering\small
   \input{generated/tab_comparaison.tex}
-  \caption{Comparaison des modèles (erreurs standards de Newey-West, échantillon commun). Les spécifications de référence sont celles du site ; les deux autres groupes sont des analyses de robustesse.}
+  \caption{Comparaison des modèles (erreurs standards de Newey-West, échantillon commun). Spécifications de référence : SPI et facteurs suisses ; les deux autres groupes sont des analyses de robustesse.}
 \end{table}
 
 \SpiFacteursPhrase. \EuropeLecture{} \HybrideLecture{} \FacteursRDeuxPhrase. Les variantes reposent sur les mêmes rendements du fonds : ce ne sont pas des confirmations indépendantes.
