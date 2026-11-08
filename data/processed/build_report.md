@@ -1,6 +1,6 @@
 # Data build report
 
-Generated on 2026-11-07T21:05:26Z
+Generated on 2026-11-08T09:47:24Z
 
 ## Sources
 
@@ -11,6 +11,7 @@ Generated on 2026-11-07T21:05:26Z
 | Raiffeisen Futura - Swiss Stock A (CH0011980981) — total return, distributions reinvested | ok | 2009-11-23 → 2026-11-05 | 4261 daily values (NAV and total return). |
 | SPI — Swiss Performance Index (SXGE), total return index, CHF | ok | 1988-01-04 → 2026-11-06 |  |
 | SARON — daily fixing (annualised overnight rate, %) | ok | 2009-08-24 → 2026-10-30 | SNB series D0(SARON) "SARON fixing at the close of the trading day" |
+| Swiss money market rates, monthly: month-end SARON and 3-month Confederation money market debt register claims (%) | ok | 1992-01-01 → 2026-10-01 | SNB series D0(SARON,EG3M); saron_eom from 1999-06; tbill_3m from 1992-01. |
 | USD/CHF (CHF per USD), month-end rate | ok | 1980-01-31 → 2026-10-31 | SNB series devkum D0(M1),D1(USD1) |
 | European Fama-French 3 Factors (monthly, USD, RF = 1-month US T-bill) | ok | 1990-07 → 2026-09 | Columns: Mkt-RF, SMB, HML, RF. |
 | European Fama-French 5 Factors (monthly, USD, RF = 1-month US T-bill) | ok | 1990-07 → 2026-09 | Columns: Mkt-RF, SMB, HML, RMW, CMA, RF. |
@@ -37,6 +38,9 @@ Generated on 2026-11-07T21:05:26Z
 - **warn** — SPI: 1 months dropped (last observation more than 5 days before month-end): 2026-11
 - **pass** — SPI total-return plausibility: mean return SPI − SMI (price index) = +2.09% per year over 431 months. Indicative only (different constituents); the TR nature rests on SIX's definition of the SPI.
 - **pass** — Daily SARON available from 2009-08-24 to 2026-10-30; monthly return = ACT/360 compounding.
+- **pass** — Month-end SARON of the previous month × days/360 vs realised compounded SARON: correlation 0.997, mean difference +0.006 pt/yr, max monthly gap 0.029 pt, 206 months. Approximation accepted.
+- **pass** — 3-month Confederation money market debt register claims vs month-end SARON (both × days/360): correlation 0.954, mean difference -0.002 pt/yr, max monthly gap 0.143 pt, 122 months. Splice accepted.
+- **pass** — Risk-free rate: 1994-02 → 1999-06: 3-month Confederation money market debt register claims (end of previous month) × days/360; 1999-07 → 2009-08: month-end SARON of the previous month × days/360; 2009-09 → 2026-10: daily SARON compounded over the month (ACT/360).
 - **pass** — Consistency of Mkt−RF and RF between the FF3 and FF5 files: max differences 0.00e+00 and 0.00e+00.
 - **pass** — Swiss JKP factors from 1993-07 to 2025-12 (months kept: at least 30 stocks per factor), converted to CHF as F_USD(1+s). Updated annually: the latest months of the sample may be missing.
 - **pass** — Correlation of Swiss JKP / European Fama-French factors (USD): SMB 0.58, HML 0.64, RMW 0.40, CMA 0.34, MOM 0.78. Moderate correlations expected: different markets and methods.
@@ -50,7 +54,7 @@ Generated on 2026-11-07T21:05:26Z
 | fund_ret | 1998-01 | 2026-10 | 346 |
 | raif_ret | 2009-12 | 2026-10 | 203 |
 | spi_ret | 1988-02 | 2026-10 | 465 |
-| rf_saron | 2009-09 | 2026-10 | 206 |
+| rf_saron | 1994-02 | 2026-10 | 393 |
 | fx_usdchf_ret | 1988-02 | 2026-10 | 465 |
 | mkt_rf_usd | 1990-07 | 2026-09 | 435 |
 | rf_us | 1990-07 | 2026-09 | 435 |
